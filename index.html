@@ -1323,15 +1323,155 @@ function renderVendors(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
       <div><div class="page-title">Vendors</div><div class="page-sub">${vendors.length} vendors · ${active.length} active</div></div>
-      <button class="btn primary" onclick="openAddVendor()">＋ Add vendor</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="downloadVendorTemplate()">&#11015; Download template</button>
+        <button class="btn primary" onclick="openImportVendors()">&#128229; Import from Excel / CSV</button>
+        <button class="btn" onclick="openAddVendor()">&#65291; Add single</button>
+        <button class="btn" onclick="exportVendors()">&#128228; Export list</button>
+      </div>
+    </div>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:1rem;font-size:13px">
+      <strong>Bulk import:</strong> Download the template &rarr; fill in your vendor list in Excel or Google Sheets &rarr; save as CSV &rarr; import here.
     </div>
     <div class="tab-btns">
       <button class="tab-btn active" onclick="showT2('v-active','v-inactive',this)">Active (${active.length})</button>
       <button class="tab-btn" onclick="showT2('v-inactive','v-active',this)">Inactive (${inactive.length})</button>
     </div>
-    <div id="v-active">${active.length?active.map(v=>vendorCard(v)).join(''):'<div class="empty">No vendors yet</div>'}</div>
+    <div id="v-active">${active.length?active.map(v=>vendorCard(v)).join(''):'<div class="empty">No vendors yet.<br><br>Download the template, fill it in, and import.</div>'}</div>
     <div id="v-inactive" style="display:none">${inactive.length?inactive.map(v=>vendorCard(v)).join(''):'<div class="empty">No inactive vendors</div>'}</div>`;
 }
+
+function downloadVendorTemplate(){
+  const csv = '"name","phone","email","specialty","address","gstin","notes"\n"Sharma Electricals","+919876543210","sharma@email.com","Electrical","Andheri Mumbai","27AABCS1234Z1Z5","Preferred for wiring"\n"Kumar Plumbing","+919765432109","","Plumbing","Bandra Mumbai","","Available 24/7"';
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='vendor_import_template.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Template downloaded — fill it in and import');
+}
+
+function exportVendors(){
+  const headers = ['name','phone','email','specialty','address','gstin','notes','active'];
+  const rows = vendors.map(v=>[v.name,v.phone||'',v.email||'',v.specialty||'',v.address||'',v.gstin||'',v.notes||'',v.active?'yes':'no']);
+  const csv = [headers,...rows].map(r=>r.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='vendors_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('Vendors exported as CSV');
+}
+
+function openImportVendors(){
+  document.getElementById('m-title').textContent='Import vendors';
+  document.getElementById('m-body').innerHTML=`
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:1rem;font-size:13px;line-height:1.8">
+      <strong>Accepted:</strong> CSV, XLSX (Excel), Google Sheets export<br>
+      <strong>Required column:</strong> <code style="background:#e0f2fe;padding:1px 5px;border-radius:4px">name</code><br>
+      <strong>Optional:</strong> phone, email, specialty, address, gstin, notes
+    </div>
+    <div class="fg">
+      <label>Select your file</label>
+      <input type="file" id="vendor-file" accept=".csv,.xls,.xlsx" style="width:100%;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit">
+    </div>
+    <div id="import-preview" style="margin-top:10px"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="previewVendorImport()">Preview import</button>
+    </div>`;
+  openModal();
+}
+
+function previewVendorImport(){
+  const file = document.getElementById('vendor-file')?.files?.[0];
+  if(!file){alert('Select a file');return;}
+  const ext = file.name.split('.').pop().toLowerCase();
+  if(ext==='csv'){
+    const reader=new FileReader();
+    reader.onload=e=>parseVendorCSV(e.target.result);
+    reader.readAsText(file);
+  } else {
+    document.getElementById('import-preview').innerHTML=`<div style="background:#fef3c7;border-radius:8px;padding:10px 12px;font-size:13px">
+      For XLSX files, please save as CSV first:<br>
+      <strong>Excel:</strong> File &rarr; Save As &rarr; CSV (Comma delimited)<br>
+      <strong>Google Sheets:</strong> File &rarr; Download &rarr; CSV
+    </div>`;
+  }
+}
+
+function parseVendorCSV(text){
+  const lines = text.trim().split('\n').filter(l=>l.trim());
+  if(lines.length<2){alert('File is empty or has only headers');return;}
+  function parseCSVLine(line){
+    const res=[]; let cur='', inQ=false;
+    for(let i=0;i<line.length;i++){
+      if(line[i]==='"'){inQ=!inQ;}
+      else if(line[i]===','&&!inQ){res.push(cur.trim().replace(/^"|"$/g,''));cur='';}
+      else{cur+=line[i];}
+    }
+    res.push(cur.trim().replace(/^"|"$/g,''));
+    return res;
+  }
+  const headers=parseCSVLine(lines[0]).map(h=>h.toLowerCase().trim().replace(/[^a-z0-9]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''));
+  const rows=lines.slice(1).map(l=>parseCSVLine(l));
+  const nameIdx=headers.findIndex(h=>h==='name'||h.includes('vendor')||h.includes('company'));
+  if(nameIdx===-1){document.getElementById('import-preview').innerHTML='<div style="color:#dc2626;font-size:13px;padding:10px">Could not find a "name" column. Check your headers.</div>';return;}
+  const fi=(terms)=>headers.findIndex(h=>terms.some(t=>h.includes(t)));
+  const phoneIdx=fi(['phone','mobile','contact','number']);
+  const emailIdx=fi(['email','mail']);
+  const specIdx=fi(['specialty','category','type','service']);
+  const addrIdx=fi(['address','location','city','area']);
+  const gstIdx=fi(['gst','gstin','tax']);
+  const notesIdx=fi(['note','remark','comment']);
+  const parsed=rows.filter(r=>r[nameIdx]?.trim()).map(r=>({
+    name:r[nameIdx]?.trim()||'',
+    phone:phoneIdx>-1?r[phoneIdx]?.trim()||'':'',
+    email:emailIdx>-1?r[emailIdx]?.trim()||'':'',
+    specialty:specIdx>-1?r[specIdx]?.trim()||'':'',
+    address:addrIdx>-1?r[addrIdx]?.trim()||'':'',
+    gstin:gstIdx>-1?r[gstIdx]?.trim()||'':'',
+    notes:notesIdx>-1?r[notesIdx]?.trim()||'':'',
+  }));
+  if(!parsed.length){alert('No valid rows found');return;}
+  window._vendorImport=parsed;
+  document.getElementById('import-preview').innerHTML=`
+    <div style="background:#d1fae5;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px">
+      &#10003; Found <strong>${parsed.length} vendors</strong> ready to import
+    </div>
+    <div style="max-height:180px;overflow-y:auto;border:1px solid #e8e8e4;border-radius:8px;margin-bottom:10px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f9f9f7"><th style="padding:7px 10px;text-align:left;border-bottom:1px solid #e8e8e4">Name</th><th style="padding:7px 10px;text-align:left;border-bottom:1px solid #e8e8e4">Phone</th><th style="padding:7px 10px;text-align:left;border-bottom:1px solid #e8e8e4">Specialty</th></tr></thead>
+        <tbody>${parsed.slice(0,15).map(v=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef">${v.name}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef;color:#555">${v.phone||'—'}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef;color:#555">${v.specialty||'—'}</td></tr>`).join('')}
+        ${parsed.length>15?`<tr><td colspan="3" style="padding:7px 10px;color:#aaa;font-style:italic">... and ${parsed.length-15} more</td></tr>`:''}
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="confirmVendorImport()">&#10003; Import ${parsed.length} vendors</button>
+    </div>`;
+}
+
+async function confirmVendorImport(){
+  const parsed=window._vendorImport;
+  if(!parsed?.length)return;
+  let imported=0,skipped=0;
+  for(const v of parsed){
+    if(!v.name){skipped++;continue;}
+    if(vendors.find(x=>x.name.toLowerCase()===v.name.toLowerCase())){skipped++;continue;}
+    const row={id:'v'+Date.now()+Math.random().toString(36).slice(2,5),...v,active:true};
+    if(isLive){await dbInsert('vendors',row);}
+    else{vendors.push(row);}
+    imported++;
+  }
+  if(isLive)await loadLiveData();
+  LOG('Vendors imported',imported+' vendors added','p');
+  closeModal();renderVendors();
+  showToast('Imported '+imported+' vendors'+(skipped>0?' · '+skipped+' duplicates skipped':''));
+}
+
+
 function vendorCard(v){
   const vTickets=tickets.filter(t=>t.vendor_id===v.id&&!['Resolved','Closed'].includes(t.status));
   return`<div class="card" style="margin-bottom:10px">
@@ -1982,12 +2122,20 @@ window.doLogin = async function() {
   const pass = document.getElementById('login-pass')?.value?.trim();
   if (isLive) {
     const { data, error } = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
-    if (error||!data) { 
-      const errEl = document.getElementById('login-error');
-      if (errEl) { errEl.textContent = 'Invalid email or password. Please try again.'; errEl.style.display = 'block'; }
-      return; 
+    
+    // If not found in Supabase, check local users (superadmin is local-only for security)
+    let userData = data;
+    if (error || !data) {
+      const localUser = users.find(u => u.email === email && u.pass === pass);
+      if (localUser) {
+        userData = localUser;
+      } else {
+        const errEl = document.getElementById('login-error');
+        if (errEl) { errEl.textContent = 'Invalid email or password. Please try again.'; errEl.style.display = 'block'; }
+        return;
+      }
     }
-    session = {...data,stateId:data.state_id,locationId:data.location_id};
+    session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId};
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     document.getElementById('sb-name').textContent=session.name;
