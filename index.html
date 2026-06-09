@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MaintOS">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a1a18">
+<meta name="description" content="Multi-location restaurant maintenance management">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.svg">
+<title>MaintenanceOS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f4f3ef;color:#1a1a18;font-size:14px;min-height:100vh}
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;background:#f4f3ef}
+.auth-card{background:#fff;border-radius:16px;padding:2.5rem;width:400px;max-width:100%;box-shadow:0 4px 24px rgba(0,0,0,.08);border:1px solid #e8e8e4}
+.auth-logo{font-size:24px;font-weight:800;margin-bottom:4px;letter-spacing:-.5px}
+.auth-sub{font-size:13px;color:#888;margin-bottom:2rem}
+.auth-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.5rem}
+.role-btn{padding:12px 8px;border-radius:12px;border:2px solid #e8e8e4;background:#fff;cursor:pointer;text-align:center;font-size:12px;font-weight:600;color:#555;font-family:inherit}
+.role-btn.selected{border-color:#1a1a18;background:#1a1a18;color:#fff}
+.role-icon{font-size:22px;display:block;margin-bottom:5px}
+.inp{width:100%;border:1.5px solid #e8e8e4;border-radius:10px;padding:10px 12px;font-size:13px;font-family:inherit;background:#fff;color:#1a1a18;margin-bottom:10px}
+.inp:focus{outline:none;border-color:#1a1a18}
+.btn-full{width:100%;padding:12px;border-radius:10px;border:none;background:#1a1a18;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.demo-hint{font-size:11px;color:#aaa;text-align:center;margin-top:1rem;line-height:1.8;white-space:pre-line}
+.app{display:flex;min-height:100vh}
+.sidebar{width:230px;background:#1a1a18;color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:50;overflow-y:auto}
+.sidebar-logo{padding:1.25rem;font-size:17px;font-weight:800;letter-spacing:-.3px;border-bottom:1px solid #2a2a28}
+.sidebar-user{padding:.85rem 1.25rem;border-bottom:1px solid #2a2a28}
+.sb-name{font-weight:600;color:#e0e0d8;font-size:13px}
+.sb-loc{font-size:11px;color:#666;margin-top:2px}
+.sb-role{font-size:11px;padding:2px 8px;border-radius:6px;display:inline-block;margin-top:5px}
+.r-admin{background:#7c3aed;color:#ede9fe}
+.r-manager{background:#0369a1;color:#e0f2fe}
+.r-tech{background:#065f46;color:#d1fae5}
+.r-outlet{background:#92400e;color:#fef3c7}
+.sidebar-nav{flex:1;padding:.5rem 0}
+.nav-section{font-size:10px;color:#3a3a38;text-transform:uppercase;letter-spacing:1px;padding:12px 1.25rem 4px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 1.25rem;font-size:13px;color:#888;cursor:pointer;border-left:3px solid transparent;transition:all .12s}
+.nav-item:hover{color:#e0e0d8;background:#252523}
+.nav-item.active{color:#fff;background:#252523;border-left-color:#fff}
+.nav-item .ni{font-size:15px;width:20px;text-align:center}
+.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid #2a2a28;font-size:12px}
+.logout-btn{color:#555;cursor:pointer;display:flex;align-items:center;gap:6px;margin-top:6px}
+.logout-btn:hover{color:#ccc}
+.main{margin-left:230px;flex:1;padding:1.75rem;min-height:100vh}
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:10px}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.3px}
+.page-sub{font-size:13px;color:#888;margin-top:2px}
+.btn{padding:7px 14px;border-radius:8px;border:1px solid #e0e0d8;background:#fff;color:#1a1a18;cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap;text-decoration:none;font-weight:500}
+.btn:hover{background:#f4f3ef}
+.btn.primary{background:#1a1a18;color:#fff;border-color:transparent}
+.btn.primary:hover{background:#333}
+.btn.success{background:#d1fae5;color:#065f46;border-color:#6ee7b7}
+.btn.danger{color:#991b1b;border-color:#fca5a5;background:#fff}
+.btn.danger:hover{background:#fee2e2}
+.btn.wa{background:#25D366;color:#fff;border-color:transparent}
+.btn.sm{padding:4px 9px;font-size:11px;border-radius:6px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem}
+.met{background:#fff;border-radius:14px;padding:14px 16px;border:1px solid #e8e8e4;position:relative;overflow:hidden}
+.met-bar{position:absolute;top:0;left:0;bottom:0;width:3px}
+.ml{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:600}
+.mv{font-size:26px;font-weight:800;letter-spacing:-.5px}
+.mv.r{color:#dc2626}.mv.w{color:#d97706}.mv.g{color:#059669}.mv.b{color:#2563eb}.mv.p{color:#7c3aed}
+.card{background:#fff;border-radius:12px;border:1px solid #e8e8e4;padding:14px 16px;margin-bottom:10px}
+.card.ov{border-left:3px solid #fca5a5}
+.card.es{border-left:3px solid #dc2626;background:#fffafa}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.card-title{font-size:13px;font-weight:600;flex:1;line-height:1.4}
+.badges{display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0}
+.badge{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;white-space:nowrap}
+.b-open{background:#fef3c7;color:#92400e}
+.b-wip{background:#dbeafe;color:#1e40af}
+.b-done{background:#d1fae5;color:#065f46}
+.b-ov{background:#fee2e2;color:#991b1b}
+.b-esc{background:#dc2626;color:#fff}
+.b-high{background:#fee2e2;color:#991b1b}
+.b-med{background:#fef3c7;color:#92400e}
+.b-low{background:#d1fae5;color:#065f46}
+.b-ck{background:#e0f2fe;color:#0369a1}
+.b-grey{background:#f3f3ef;color:#555;border:1px solid #e8e8e4}
+.b-amc{background:#f3e8ff;color:#6b21a8}
+.b-exp{background:#fef9c3;color:#854d0e}
+.card-meta{display:flex;gap:10px;font-size:12px;color:#888;flex-wrap:wrap;align-items:center;margin-top:4px}
+.card-actions{display:flex;gap:5px;margin-top:10px;padding-top:10px;border-top:1px solid #f0f0ec;flex-wrap:wrap}
+.card-note{font-size:12px;color:#666;margin-top:6px;padding-top:6px;border-top:1px solid #f4f3ef;line-height:1.5}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:1.75rem;width:600px;max-width:100%;border:1px solid #e8e8e4;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.modal-title{font-size:17px;font-weight:700}
+.fg{margin-bottom:12px}
+.fg label{font-size:12px;color:#555;font-weight:600;display:block;margin-bottom:4px}
+.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff;color:#1a1a18}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#1a1a18}
+.fg textarea{min-height:70px;resize:vertical}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.tbl-wrap{background:#fff;border-radius:12px;border:1px solid #e8e8e4;overflow:hidden;margin-bottom:1.5rem}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px;padding:10px 14px;background:#f9f9f7;border-bottom:1px solid #e8e8e4;text-align:left}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f4f3ef;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.tfoot-row td{background:#f9f9f7;font-weight:700;border-top:2px solid #e8e8e4}
+.empty{text-align:center;padding:3rem;color:#aaa;font-size:13px;line-height:2}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem}
+.section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-title{font-size:15px;font-weight:700}
+.avatar{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.notif-box{background:#f8f8f5;border-radius:8px;padding:12px;font-size:12px;line-height:1.7;white-space:pre-wrap;border:1px solid #e8e8e4;margin-top:8px}
+.tgl{position:relative;display:inline-block;width:36px;height:20px}
+.tgl input{opacity:0;width:0;height:0}
+.tgl-s{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:10px;transition:.2s}
+.tgl-s:before{content:"";position:absolute;height:14px;width:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.tgl input:checked+.tgl-s{background:#059669}
+.tgl input:checked+.tgl-s:before{transform:translateX(16px)}
+.tab-btns{display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap}
+.tab-btn{padding:7px 14px;border-radius:8px;border:1px solid #e8e8e4;background:#fff;color:#555;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500}
+.tab-btn.active{background:#1a1a18;color:#fff;border-color:transparent}
+.timeline{border-left:2px solid #e8e8e4;margin-left:8px;padding-left:16px}
+.tl-item{position:relative;margin-bottom:12px;font-size:12px;color:#555;line-height:1.5}
+.tl-item:before{content:"";position:absolute;left:-21px;top:5px;width:8px;height:8px;border-radius:50%;background:#e0e0d8;border:2px solid #fff}
+.tl-item.done:before{background:#059669}
+.tl-item.active:before{background:#2563eb}
+.state-group{background:#fff;border-radius:12px;border:1px solid #e8e8e4;margin-bottom:12px;overflow:hidden}
+.state-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#f9f9f7;border-bottom:1px solid #e8e8e4;cursor:pointer;font-weight:700;font-size:14px}
+.state-body{padding:14px 16px}
+.loc-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;border:1px solid #f0f0ec;margin-bottom:8px;background:#fafaf8}
+.loc-row:last-child{margin-bottom:0}
+.amc-bar{height:6px;border-radius:3px;background:#e8e8e4;margin-top:8px;overflow:hidden}
+.amc-bar-fill{height:100%;border-radius:3px}
+.report-wrap{background:#fff;border-radius:12px;border:1px solid #e8e8e4;padding:24px}
+.rep-stat{text-align:center;padding:12px 8px}
+.rep-val{font-size:30px;font-weight:800;letter-spacing:-.5px}
+.rep-lbl{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-top:4px;font-weight:600}
+.progress-bar{height:8px;border-radius:4px;background:#e8e8e4;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:4px}
+.alert-banner{display:flex;align-items:center;gap:8px;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px;font-weight:500;cursor:pointer}
+@media print{.sidebar,.page-hdr .btn,.card-actions,.tab-btns,#overlay{display:none!important}.main{margin-left:0!important;padding:0!important}body{background:#fff}}
+@media(max-width:768px){.sidebar{width:100%;position:relative;height:auto}.main{margin-left:0}.two-col,.frow,.frow3{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-bar{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e8e8e4;border-radius:10px;padding:8px 14px;margin-bottom:1.25rem;font-size:12px}
+#toast{position:fixed;bottom:24px;right:24px;background:#1a1a18;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);opacity:0;transition:opacity .3s;max-width:320px;pointer-events:none}
+/* iOS safe area */
+.sidebar{padding-bottom:env(safe-area-inset-bottom)}
+.main{padding-bottom:calc(1.75rem + env(safe-area-inset-bottom))}
+/* Mobile improvements */
+@media(max-width:768px){
+  .sidebar{width:220px;z-index:100}
+  .main{margin-left:0;padding:1rem}
+  .nav-item{padding:11px 1rem}
+  .btn{padding:8px 12px}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+  .frow{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- LOGIN -->
+<div class="auth-wrap" id="auth-screen">
+  <div class="auth-card">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div style="font-size:13px;font-weight:700;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Benne</div>
+      <div class="auth-logo" style="font-size:26px;font-weight:800;letter-spacing:-.5px">MaintenanceOS</div>
+      <div style="width:40px;height:3px;background:#1a1a18;border-radius:2px;margin:12px auto 0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:5px">Email</label>
+      <input class="inp" type="text" id="login-email" placeholder="your@email.com" autocomplete="email" style="margin-bottom:0">
+    </div>
+    <div class="fg" style="margin-bottom:8px">
+      <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:5px">Password</label>
+      <input class="inp" type="password" id="login-pass" placeholder="Enter your password" autocomplete="current-password" style="margin-bottom:0">
+    </div>
+    <div style="text-align:right;margin-bottom:1.5rem">
+      <span onclick="showForgotPassword()" style="font-size:12px;color:#888;cursor:pointer;text-decoration:underline">Forgot password?</span>
+    </div>
+    <button class="btn-full" onclick="doLogin()">Sign in</button>
+    <div id="login-error" style="color:#dc2626;font-size:12px;text-align:center;margin-top:10px;display:none"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <div class="sidebar">
+    <div class="sidebar-logo">&#9883; MaintenanceOS</div>
+    <div class="sidebar-user">
+      <div class="sb-name" id="sb-name"></div>
+      <div class="sb-loc" id="sb-loc"></div>
+      <div id="sb-role"></div>
+    </div>
+    <div class="sidebar-nav" id="sidebar-nav"></div>
+    <div class="sidebar-footer">
+      <div id="sync-status" style="font-size:11px;margin-bottom:8px">&#9679; Connecting...</div>
+      <div class="logout-btn" onclick="doLogout()">&#8592; Sign out</div>
+    </div>
+  </div>
+  <div class="main" id="main-content"></div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeMO(event)">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="m-title"></span>
+      <button class="btn sm" onclick="closeModal()" style="font-size:16px;padding:3px 9px">&#215;</button>
+    </div>
+    <div id="m-body"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA & HELPERS
+// ============================================================
+let states = [
+  {id:'s1',name:'Maharashtra'},
+  {id:'s2',name:'Delhi'},
+];
+let locations = [
+  {id:'l1',stateId:'s1',name:'Bandra',type:'outlet'},
+  {id:'l2',stateId:'s1',name:'Juhu',type:'outlet'},
+  {id:'l3',stateId:'s1',name:'Chowpatty',type:'outlet'},
+  {id:'l4',stateId:'s1',name:'Mumbai CK',type:'central_kitchen'},
+  {id:'l5',stateId:'s2',name:'Connaught Place',type:'outlet'},
+  {id:'l6',stateId:'s2',name:'Delhi CK',type:'central_kitchen'},
+];
+const CATEGORIES = ['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Furniture','Cleaning','Kitchen Equipment','Other'];
+let users = [
+  {id:'u1',name:'Rahul Sharma',email:'admin@mtos.in',pass:'admin123',role:'admin',stateId:null,locationId:null,specialty:null,avatar:'RS'},
+  {id:'u2',name:'Priya Nair',email:'manager@mtos.in',pass:'manager123',role:'manager',stateId:null,locationId:null,specialty:null,avatar:'PN'},
+  {id:'u3',name:'Arjun Mehta',email:'tech1@mtos.in',pass:'tech123',role:'technician',stateId:'s1',locationId:null,specialty:'Electrical',avatar:'AM'},
+  {id:'u4',name:'Suresh Kumar',email:'tech2@mtos.in',pass:'tech123',role:'technician',stateId:'s1',locationId:null,specialty:'Plumbing & Gas',avatar:'SK'},
+  {id:'u5',name:'Vikram Singh',email:'tech3@mtos.in',pass:'tech123',role:'technician',stateId:'s2',locationId:null,specialty:'General',avatar:'VS'},
+  {id:'u6',name:'Bandra Outlet',email:'bandra@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l1',specialty:null,avatar:'BN'},
+  {id:'u7',name:'Juhu Outlet',email:'juhu@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l2',specialty:null,avatar:'JH'},
+  {id:'u8',name:'Chowpatty',email:'chow@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l3',specialty:null,avatar:'CP'},
+  {id:'u9',name:'Mumbai CK',email:'mumbaick@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l4',specialty:null,avatar:'MK'},
+  {id:'u10',name:'CP Delhi',email:'cp@mtos.in',pass:'outlet123',role:'outlet',stateId:'s2',locationId:'l5',specialty:null,avatar:'CD'},
+  {id:'u11',name:'Delhi CK',email:'delhick@mtos.in',pass:'outlet123',role:'outlet',stateId:'s2',locationId:'l6',specialty:null,avatar:'DK'},
+];
+let tickets = [
+  {id:'T001',locationId:'l1',stateId:'s1',category:'Electrical',title:'Wiring upgrade required',desc:'Outside 4mm to 25mm wiring still pending.',priority:'High',status:'In Progress',raisedBy:'u6',assignedTo:'u3',createdAt:'08/05/2026 09:00',updatedAt:'10/05/2026 14:00',dueDate:'11/05/2026',comments:[{user:'u6',text:'Kitchen area unsafe, urgent.',time:'08/05/2026 09:00'},{user:'u3',text:'Inside done, outside pending.',time:'10/05/2026 14:00'}]},
+  {id:'T002',locationId:'l1',stateId:'s1',category:'Gas & Appliances',title:'Gas regulator replacement',desc:'Old regulator leaking slightly.',priority:'High',status:'Open',raisedBy:'u6',assignedTo:null,createdAt:'08/05/2026 09:10',updatedAt:'08/05/2026 09:10',dueDate:'11/05/2026',comments:[]},
+  {id:'T003',locationId:'l1',stateId:'s1',category:'Kitchen Equipment',title:'Idli steamer rubber replacement',desc:'Rubber seal worn out.',priority:'High',status:'Open',raisedBy:'u6',assignedTo:null,createdAt:'08/05/2026 09:15',updatedAt:'08/05/2026 09:15',dueDate:'11/05/2026',comments:[]},
+  {id:'T004',locationId:'l2',stateId:'s1',category:'Electrical',title:'Switchboard sparking in kitchen',desc:'Sparking near tandoor area.',priority:'High',status:'Open',raisedBy:'u7',assignedTo:null,createdAt:'25/05/2026 10:00',updatedAt:'25/05/2026 10:00',dueDate:'27/05/2026',comments:[]},
+  {id:'T005',locationId:'l2',stateId:'s1',category:'Plumbing',title:'Staff toilet drain blocked',desc:'Completely blocked.',priority:'Medium',status:'In Progress',raisedBy:'u7',assignedTo:'u4',createdAt:'24/05/2026 08:30',updatedAt:'26/05/2026 12:00',dueDate:'28/05/2026',comments:[{user:'u4',text:'Partially cleared.',time:'26/05/2026 12:00'}]},
+  {id:'T006',locationId:'l4',stateId:'s1',category:'HVAC / AC',title:'Cold room temperature fluctuating',desc:'Swinging 2-3 degrees, produce at risk.',priority:'High',status:'Open',raisedBy:'u9',assignedTo:null,createdAt:'27/05/2026 07:00',updatedAt:'27/05/2026 07:00',dueDate:'28/05/2026',comments:[]},
+  {id:'T007',locationId:'l5',stateId:'s2',category:'Plumbing',title:'Water pressure low in kitchen',desc:'Insufficient for dishwasher.',priority:'Medium',status:'Open',raisedBy:'u10',assignedTo:null,createdAt:'26/05/2026 11:00',updatedAt:'26/05/2026 11:00',dueDate:'',comments:[]},
+  {id:'T008',locationId:'l6',stateId:'s2',category:'Kitchen Equipment',title:'Bulk mixer not starting',desc:'Motor noise but wont start.',priority:'High',status:'In Progress',raisedBy:'u11',assignedTo:'u5',createdAt:'25/05/2026 09:00',updatedAt:'27/05/2026 10:00',dueDate:'28/05/2026',comments:[{user:'u5',text:'Capacitor likely blown, ordering part.',time:'27/05/2026 10:00'}]},
+  {id:'T009',locationId:'l3',stateId:'s1',category:'HVAC / AC',title:'AC not cooling dining area',desc:'Main AC unit not cooling below 28°C.',priority:'Medium',status:'Resolved',raisedBy:'u8',assignedTo:'u3',createdAt:'01/05/2026 10:00',updatedAt:'05/05/2026 16:00',dueDate:'05/05/2026',comments:[{user:'u3',text:'Gas refilled and coil cleaned. Working now.',time:'05/05/2026 16:00'}]},
+  {id:'T010',locationId:'l4',stateId:'s1',category:'Kitchen Equipment',title:'Dishwasher leaking from bottom',desc:'Puddle forming under dishwasher.',priority:'Medium',status:'Resolved',raisedBy:'u9',assignedTo:'u4',createdAt:'03/05/2026 08:00',updatedAt:'04/05/2026 14:00',dueDate:'06/05/2026',comments:[{user:'u4',text:'Seal replaced. Fixed.',time:'04/05/2026 14:00'}]},
+];
+let expenses = [
+  {id:'e1',ticketId:'T001',addedBy:'u3',category:'Parts',description:'Copper wire 4mm 50m roll',amount:2800,date:'10/05/2026',approved:true},
+  {id:'e2',ticketId:'T001',addedBy:'u3',category:'Labour',description:'Electrician helper — 2 days',amount:1200,date:'10/05/2026',approved:true},
+  {id:'e3',ticketId:'T005',addedBy:'u4',category:'Parts',description:'Drain snake tool rental',amount:500,date:'26/05/2026',approved:false},
+  {id:'e4',ticketId:'T008',addedBy:'u5',category:'Parts',description:'Start capacitor 40uF',amount:350,date:'27/05/2026',approved:false},
+  {id:'e5',ticketId:'T009',addedBy:'u3',category:'Parts',description:'AC gas refill R32',amount:1800,date:'05/05/2026',approved:true},
+  {id:'e6',ticketId:'T009',addedBy:'u3',category:'Labour',description:'AC technician 1 day',amount:800,date:'05/05/2026',approved:true},
+  {id:'e7',ticketId:'T010',addedBy:'u4',category:'Parts',description:'Dishwasher door seal',amount:620,date:'04/05/2026',approved:true},
+];
+let amcRecords = [
+  {id:'a1',vendor:'Cool Air Services',equipment:'AC Units — All MH outlets',locationIds:['l1','l2','l3','l4'],category:'HVAC / AC',startDate:'01/06/2025',endDate:'31/05/2027',amount:85000,coverage:'Quarterly servicing + emergency callouts',contact:'+91 98200 00004',notes:'Covers all AC at MH locations',status:'active'},
+  {id:'a2',vendor:'AquaCare Solutions',equipment:'Water Purifiers — All locations',locationIds:['l1','l2','l3','l4','l5','l6'],category:'Water Systems',startDate:'01/01/2026',endDate:'31/12/2026',amount:42000,coverage:'Bi-annual filter change + emergency',contact:'+91 98200 00005',notes:''},
+  {id:'a3',vendor:'Gas Safe India',equipment:'Gas lines & regulators — MH',locationIds:['l1','l2','l3'],category:'Gas & Appliances',startDate:'01/03/2026',endDate:'28/02/2027',amount:36000,coverage:'Annual inspection + emergency response',contact:'+91 98200 00006',notes:'FSSAI compliance certificate included'},
+  {id:'a4',vendor:'Elec-Pro Services',equipment:'Electrical panels & wiring',locationIds:['l1','l2'],category:'Electrical',startDate:'15/04/2025',endDate:'14/04/2026',amount:28000,coverage:'Annual inspection + 2 callouts',contact:'+91 98200 00007',notes:'EXPIRED — renewal pending'},
+];
+let recurringSchedules = [
+  {id:'r1',title:'AC servicing',locationIds:['l1','l2','l3','l4'],freq:'6 months',category:'HVAC / AC',priority:'Medium',next:'01/11/2026',on:true},
+  {id:'r2',title:'Water filter servicing',locationIds:['l1','l2','l3','l4','l5','l6'],freq:'3 months',category:'Water Systems',priority:'Medium',next:'01/09/2026',on:true},
+  {id:'r3',title:'Gas burner servicing',locationIds:['l1','l2','l3'],freq:'6 months',category:'Gas & Appliances',priority:'High',next:'01/11/2026',on:true},
+];
+let auditLog = [
+  {t:'27/05/2026 10:00',a:'Expense added',d:'T008 — Capacitor ₹350 (Vikram Singh)',c:'w'},
+  {t:'27/05/2026 09:00',a:'Ticket raised',d:'T006 Cold room — Mumbai CK',c:'p'},
+  {t:'05/05/2026 16:00',a:'Ticket resolved',d:'T009 AC not cooling — Chowpatty',c:'g'},
+  {t:'04/05/2026 14:00',a:'Ticket resolved',d:'T010 Dishwasher leaking — Mumbai CK',c:'g'},
+  {t:'10/05/2026 14:00',a:'Ticket assigned',d:'T001 → Arjun Mehta',c:'b'},
+];
+
+const TODAY = new Date('2026-05-29');
+let session = null, currentPage = '', NID = 20;
+
+function getLoc(id){return locations.find(l=>l.id===id)||{name:'Unknown',type:'outlet',stateId:null};}
+function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
+function getUser(id){return users.find(u=>u.id===id);}
+function getTechs(stateId){return stateId?users.filter(u=>u.role==='technician'&&(!u.stateId||u.stateId===stateId)):users.filter(u=>u.role==='technician');}
+function locLabel(l){return l.name+(l.type==='central_kitchen'?' (CK)':'');}
+function roleClass(r){return{admin:'r-admin',manager:'r-manager',technician:'r-tech',outlet:'r-outlet'}[r]||'';}
+function roleLabel(r){return{admin:'Admin',manager:'Manager',technician:'Technician',outlet:'Outlet / CK'}[r]||r;}
+function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
+function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',technician:'#065f46',outlet:'#92400e'}[r]||'#888';}
+function fc(n){return'₹'+Number(n).toLocaleString('en-IN');}
+function isOD(t){if(['Resolved','Closed'].includes(t.status))return false;if(!t.dueDate)return false;const[d,m,y]=t.dueDate.split('/');return new Date(+y,+m-1,+d)<TODAY;}
+function dAgo(s){if(!s)return 0;const[d,m,y]=s.split('/');return Math.floor((TODAY-new Date(+y,+m-1,+d))/86400000);}
+function isESC(t){return isOD(t)&&t.priority==='High'&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
+function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'/'+String(n.getMonth()+1).padStart(2,'0')+'/'+n.getFullYear()+' '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
+function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
+function sbadge(t){if(isESC(t))return'<span class="badge b-esc">⚠ Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
+function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
+function visT(){if(['admin','manager'].includes(session.role))return tickets;if(session.role==='technician')return tickets.filter(t=>t.assignedTo===session.id);if(session.role==='outlet')return tickets.filter(t=>t.locationId===session.locationId);return[];}
+function ticketExp(id){return expenses.filter(e=>e.ticketId===id);}
+function ticketExpTotal(id){return ticketExp(id).reduce((s,e)=>s+Number(e.amount),0);}
+function amcDaysLeft(endDate){if(!endDate)return 9999;const[d,m,y]=endDate.split('/');return Math.floor((new Date(+y,+m-1,+d)-TODAY)/86400000);}
+function amcSt(a){const d=amcDaysLeft(a.endDate);if(d<0)return'expired';if(d<60)return'expiring';return'active';}
+function openModal(){document.getElementById('overlay').classList.add('open');}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function closeMO(e){if(e.target===document.getElementById('overlay'))closeModal();}
+function cpText(id){const el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).catch(()=>{});const btns=(el.closest('.card')||el.parentElement).querySelectorAll('button');btns.forEach(b=>{if(b.textContent.includes('Copy')){const o=b.innerHTML;b.innerHTML='✓ Copied!';setTimeout(()=>b.innerHTML=o,2000);}});}
+function refreshPage(){navTo(currentPage);}
+function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById(s).style.display='';document.getElementById(h).style.display='none';}
+
+</script>
+<script>
+// ============================================================
+// AUTH & NAV
+// ============================================================
+const ROLE_HINTS={
+  admin:'admin@mtos.in / admin123',
+  manager:'manager@mtos.in / manager123',
+  technician:'tech1@mtos.in / tech123  (Maharashtra)\ntech3@mtos.in / tech123  (Delhi)',
+  outlet:'bandra@mtos.in / outlet123\nmumbaick@mtos.in / outlet123\ncp@mtos.in / outlet123',
+};
+function pickRole(r){document.querySelectorAll('.role-btn').forEach(b=>b.classList.toggle('selected',b.dataset.role===r));document.getElementById('demo-hint').textContent=ROLE_HINTS[r]||'';}
+function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value.trim();
+  const u=users.find(x=>x.email===email&&x.pass===pass);
+  if(!u){alert('Invalid credentials. Use demo credentials shown below.');return;}
+  session=u;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('sb-name').textContent=u.name;
+  document.getElementById('sb-role').innerHTML=roleBadge(u.role);
+  let locStr='All locations';
+  if(u.locationId){const l=getLoc(u.locationId);locStr=getState(l.stateId).name+' › '+l.name;}
+  else if(u.stateId){locStr=getState(u.stateId).name+' region';}
+  document.getElementById('sb-loc').textContent=locStr;
+  buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
+}
+function doLogout(){session=null;document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
+
+const NAV={
+  admin:[
+    {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
+    {s:'Setup'},{id:'locations',i:'🏠',l:'Locations'},{id:'users',i:'👤',l:'Users & roles'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
+  ],
+  manager:[
+    {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
+  ],
+  technician:[{id:'my-tasks',i:'🔧',l:'My tasks'},{id:'tickets',i:'📋',l:'All tickets'},{id:'my-expenses',i:'💰',l:'My expenses'}],
+  outlet:[{id:'raise',i:'＋',l:'Raise issue'},{id:'my-tickets',i:'📋',l:'My tickets'}],
+};
+function buildNav(){
+  const items=NAV[session.role]||[];
+  document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
+    if(i.s)return`<div class="nav-section">${i.s}</div>`;
+    return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}')"><span class="ni">${i.i}</span>${i.l}</div>`;
+  }).join('');
+}
+function navTo(p){
+  currentPage=p;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
+  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports};
+  if(map[p])map[p]();
+}
+
+// ============================================================
+// TICKET CARD
+// ============================================================
+function ticketCard(t,compact=false){
+  const loc=getLoc(t.locationId),state=getState(t.stateId||loc.stateId);
+  const assignee=t.assignedTo?getUser(t.assignedTo):null;
+  const esc=isESC(t),od=isOD(t)&&!esc;
+  const expTotal=ticketExpTotal(t.id);
+  return`<div class="card${esc?' es':od?' ov':''}">
+    <div class="card-top">
+      <div style="flex:1"><span style="font-size:11px;color:#aaa;font-weight:600;margin-right:6px">${t.id}</span><span class="card-title">${t.title}</span></div>
+      <div class="badges">${sbadge(t)} ${pbadge(t.priority)}</div>
+    </div>
+    <div class="card-meta">
+      <span>📍 ${state.name} › ${loc.name}${loc.type==='central_kitchen'?' <span class="badge b-ck" style="font-size:10px;padding:1px 5px">CK</span>':''}</span>
+      <span>📁 ${t.category}</span>
+      ${assignee?`<span>🔧 ${assignee.name}</span>`:'<span style="color:#dc2626">No technician</span>'}
+      ${t.dueDate?`<span>📅 ${t.dueDate}${isOD(t)?' (+'+dAgo(t.dueDate)+'d)':''}</span>`:''}
+      ${expTotal>0?`<span style="color:#059669;font-weight:600">💰 ${fc(expTotal)}</span>`:''}
+    </div>
+    ${t.desc&&!compact?`<div class="card-note">${t.desc}</div>`:''}
+    <div class="card-actions">${ticketActions(t)}</div>
+  </div>`;
+}
+function ticketActions(t){
+  let a=`<button class="btn sm" onclick="openTicket('${t.id}')">👁 View</button>`;
+  if(['admin','manager'].includes(session.role)){
+    a+=`<button class="btn sm primary" onclick="openAssignModal('${t.id}')">👤 ${t.assignedTo?'Reassign':'Assign'}</button>`;
+    if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
+    a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expenses</button>`;
+  }
+  if(session.role==='technician'&&t.assignedTo===session.id){
+    if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
+    a+=`<button class="btn sm primary" onclick="openTicket('${t.id}')">💬 Update</button>`;
+    a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Add expense</button>`;
+  }
+  if(session.role==='outlet')a+=`<button class="btn sm" onclick="openTicket('${t.id}')">💬 View</button>`;
+  return a;
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard(){
+  const all=visT();
+  const esc=all.filter(isESC).length,od=all.filter(t=>isOD(t)&&!isESC(t)).length;
+  const op=all.filter(t=>t.status==='Open').length,ip=all.filter(t=>t.status==='In Progress').length;
+  const res=all.filter(t=>t.status==='Resolved').length;
+  const unass=all.filter(t=>t.status==='Open'&&!t.assignedTo).length;
+  const totalExp=expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const amcAlert=amcRecords.filter(a=>amcSt(a)!=='active').length;
+
+  let stateCards='';
+  if(['admin','manager'].includes(session.role)){
+    stateCards=`<div class="section-hdr"><span class="section-title">By state</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:1.5rem">
+    ${states.map(s=>{
+      const sl=locations.filter(l=>l.stateId===s.id);
+      const st=tickets.filter(t=>sl.some(l=>l.id===t.locationId));
+      const se=st.filter(isESC).length,so=st.filter(t=>isOD(t)&&!isESC(t)).length;
+      const sp=st.filter(t=>t.status==='Open').length,sr=st.filter(t=>t.status==='Resolved').length;
+      const sexp=expenses.filter(e=>st.some(t=>t.id===e.ticketId)).reduce((x,e)=>x+Number(e.amount),0);
+      return`<div class="card" style="cursor:pointer" onclick="navTo('tickets')">
+        <div style="font-weight:700;font-size:14px;margin-bottom:4px">📍 ${s.name}</div>
+        <div style="font-size:11px;color:#888;margin-bottom:8px">${sl.length} locations · ${sl.filter(l=>l.type==='outlet').length} outlets · ${sl.filter(l=>l.type==='central_kitchen').length} CK</div>
+        <div style="display:flex;gap:8px;font-size:12px;flex-wrap:wrap">
+          ${se?`<span style="color:#dc2626;font-weight:600">${se} escalated</span>`:''}
+          ${so?`<span style="color:#d97706;font-weight:600">${so} overdue</span>`:''}
+          <span style="color:#2563eb">${sp} open</span>
+          <span style="color:#059669">${sr} resolved</span>
+        </div>
+        ${sexp>0?`<div style="font-size:12px;color:#059669;margin-top:6px;font-weight:600">Expenses: ${fc(sexp)}</div>`:''}
+      </div>`;
+    }).join('')}</div>`;
+  }
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${session.name}</div></div>
+      ${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
+    </div>
+    ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention → View AMC</div>`:''}
+    <div class="metrics">
+      <div class="met"><div class="met-bar" style="background:#dc2626"></div><div class="ml">Escalated</div><div class="mv r">${esc}</div></div>
+      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Overdue</div><div class="mv w">${od}</div></div>
+      <div class="met"><div class="met-bar" style="background:#2563eb"></div><div class="ml">Open</div><div class="mv b">${op}</div></div>
+      <div class="met"><div class="met-bar" style="background:#7c3aed"></div><div class="ml">Unassigned</div><div class="mv p">${unass}</div></div>
+      <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Resolved</div><div class="mv g">${res}</div></div>
+      ${['admin','manager'].includes(session.role)?`<div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total expenses</div><div class="mv g" style="font-size:18px">${fc(totalExp)}</div></div>`:''}
+    </div>
+    ${stateCards}
+    <div class="two-col">
+      <div><div class="section-hdr"><span class="section-title">Needs attention</span></div>
+        ${all.filter(t=>isESC(t)||isOD(t)||(t.status==='Open'&&!t.assignedTo)).slice(0,4).map(t=>ticketCard(t,true)).join('')||'<div class="empty">✓ All good</div>'}
+      </div>
+      <div><div class="section-hdr"><span class="section-title">In progress</span></div>
+        ${all.filter(t=>t.status==='In Progress').slice(0,4).map(t=>ticketCard(t,true)).join('')||'<div class="empty">Nothing in progress</div>'}
+      </div>
+    </div>`;
+}
+
+// ============================================================
+// TICKETS
+// ============================================================
+function renderTickets(){
+  const vis=visT();
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">All tickets</div><div class="page-sub">${vis.length} tickets</div></div></div>
+    <div style="display:flex;gap:7px;margin-bottom:1rem;flex-wrap:wrap">
+      <select id="tf-st" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All states</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
+      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All locations</option>${locations.map(l=>`<option value="${l.id}">${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('')}</select>
+      <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select>
+      <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All statuses</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
+      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
+    </div>
+    <div id="tlist">${vis.map(t=>ticketCard(t)).join('')||'<div class="empty">No tickets</div>'}</div>`;
+}
+function applyTF(){
+  const g=id=>{const e=document.getElementById(id);return e?e.value:'';};
+  let f=visT();
+  const st=g('tf-st'),lo=g('tf-lo'),ty=g('tf-ty'),s=g('tf-s'),p=g('tf-p');
+  if(st)f=f.filter(t=>t.stateId===st||getLoc(t.locationId).stateId===st);
+  if(lo)f=f.filter(t=>t.locationId===lo);
+  if(ty)f=f.filter(t=>getLoc(t.locationId).type===ty);
+  if(s)f=f.filter(t=>t.status===s);
+  if(p)f=f.filter(t=>t.priority===p);
+  document.getElementById('tlist').innerHTML=f.length?f.map(t=>ticketCard(t)).join(''):'<div class="empty">No tickets match</div>';
+}
+function openTicket(id){
+  const t=tickets.find(x=>x.id===id);if(!t)return;
+  const loc=getLoc(t.locationId),state=getState(loc.stateId||t.stateId);
+  const assignee=t.assignedTo?getUser(t.assignedTo):null,raiser=getUser(t.raisedBy);
+  const expTotal=ticketExpTotal(id),expCount=ticketExp(id).length;
+  document.getElementById('m-title').textContent=`${t.id} — ${t.title}`;
+  document.getElementById('m-body').innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${sbadge(t)} ${pbadge(t.priority)} <span class="badge b-grey">${t.category}</span>${loc.type==='central_kitchen'?'<span class="badge b-ck">CK</span>':''}</div>
+    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:1rem">${t.desc||'No description.'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:1rem">
+      <div><span style="color:#aaa">Location:</span> <strong>${state.name} › ${loc.name}</strong></div>
+      <div><span style="color:#aaa">Raised by:</span> <strong>${raiser?raiser.name:'-'}</strong></div>
+      <div><span style="color:#aaa">Assigned to:</span> <strong>${assignee?assignee.name:'Unassigned'}</strong></div>
+      <div><span style="color:#aaa">Due date:</span> <strong>${t.dueDate||'Not set'}</strong></div>
+    </div>
+    ${expTotal>0?`<div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px;display:flex;align-items:center;justify-content:space-between"><span>💰 <strong>Expenses:</strong> ${fc(expTotal)} (${expCount} entries)</span><button class="btn sm" onclick="openExpModal('${id}')">View expenses</button></div>`:''}
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Activity</div>
+    <div class="timeline">
+      <div class="tl-item done"><strong>${raiser?raiser.name:'-'}</strong> raised this ticket <span style="color:#aaa">· ${t.createdAt}</span></div>
+      ${t.comments.map(c=>{const u=getUser(c.user);return`<div class="tl-item active"><strong>${u?u.name:c.user}:</strong> ${c.text} <span style="color:#aaa">· ${c.time}</span></div>`;}).join('')}
+      ${['Resolved','Closed'].includes(t.status)?'<div class="tl-item done" style="color:#059669;font-weight:600">✓ Ticket resolved</div>':''}
+    </div>
+    <div style="margin-top:1rem">
+      <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px">Add comment</label>
+      <textarea id="cmt-${id}" style="width:100%;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;min-height:60px" placeholder="Type your update..."></textarea>
+    </div>
+    <div style="display:flex;gap:7px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn" onclick="closeModal()">Close</button>
+      <button class="btn primary" onclick="addComment('${id}')">Post</button>
+      ${['admin','manager'].includes(session.role)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">✓ Resolve</button>`:''}
+      ${session.role==='technician'&&t.assignedTo===session.id&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">✓ Resolve</button>`:''}
+    </div>`;
+  openModal();
+}
+function addComment(id){
+  const txt=document.getElementById('cmt-'+id).value.trim();if(!txt)return;
+  const t=tickets.find(x=>x.id===id),ts=nowTs();
+  t.comments.push({user:session.id,text:txt,time:ts});t.updatedAt=ts;
+  if(t.status==='Open'&&session.role==='technician')t.status='In Progress';
+  LOG('Comment added',`${t.id} by ${session.name}`,'b');openTicket(id);
+}
+function resolveTicket(id){
+  const t=tickets.find(x=>x.id===id);if(!t)return;
+  t.status='Resolved';t.updatedAt=nowTs();
+  LOG('Ticket resolved',`${t.id} ${t.title} — ${getLoc(t.locationId).name}`,'g');refreshPage();
+}
+
+// ============================================================
+// ASSIGN
+// ============================================================
+function renderAssign(){
+  const unass=tickets.filter(t=>t.status==='Open'&&!t.assignedTo);
+  const active=tickets.filter(t=>t.assignedTo&&!['Resolved','Closed'].includes(t.status));
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div class="page-title">Assign tickets</div></div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showT2('au','aa',this)">Unassigned (${unass.length})</button>
+      <button class="tab-btn" onclick="showT2('aa','au',this)">Active assigned (${active.length})</button>
+    </div>
+    <div id="au">${unass.length?unass.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ All tickets assigned</div>'}</div>
+    <div id="aa" style="display:none">${active.length?active.map(t=>ticketCard(t)).join(''):'<div class="empty">None</div>'}</div>`;
+}
+function openAssignModal(id){
+  const t=tickets.find(x=>x.id===id);
+  const loc=getLoc(t.locationId),state=getState(loc.stateId||t.stateId);
+  const techs=getTechs(loc.stateId||t.stateId);
+  document.getElementById('m-title').textContent='Assign: '+t.title;
+  document.getElementById('m-body').innerHTML=`
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">${state.name} › ${loc.name} · ${t.category} · ${t.priority}</p>
+    <div class="fg"><label>Technician</label><select id="at-t"><option value="">Select</option>${techs.map(u=>`<option value="${u.id}"${t.assignedTo===u.id?' selected':''}>${u.name}${u.specialty?' ('+u.specialty+')':''} — ${u.stateId?getState(u.stateId).name:'All'}</option>`).join('')}</select></div>
+    <div class="fg"><label>Due date</label><input type="date" id="at-d" value="${t.dueDate?t.dueDate.split('/').reverse().join('-'):''}"></div>
+    <div class="fg"><label>Notes for technician</label><textarea id="at-n" placeholder="Any special instructions..."></textarea></div>
+    <div id="at-prev"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="prevAssign('${id}')">👁 Preview message</button>
+      <button class="btn primary" onclick="confirmAssign('${id}')">Assign</button>
+    </div>`;
+  openModal();
+}
+function prevAssign(id){
+  const t=tickets.find(x=>x.id===id),techId=document.getElementById('at-t').value,tech=getUser(techId);
+  if(!tech){alert('Select a technician');return;}
+  const loc=getLoc(t.locationId),state=getState(loc.stateId||t.stateId);
+  const raw=document.getElementById('at-d').value;let ds='';if(raw){const[y,m,d]=raw.split('-');ds=`${d}/${m}/${y}`;}
+  const notes=document.getElementById('at-n').value;
+  const msg=`Hi ${tech.name},\n\nYou have been assigned a maintenance ticket.\n\nTicket: ${t.id} — ${t.title}\nLocation: ${state.name} › ${loc.name}\nCategory: ${t.category}\nPriority: ${t.priority}\n${ds?'Due: '+ds+'\n':''}${notes?'Notes: '+notes+'\n':''}\nPlease confirm receipt.\n\n— MaintenanceOS`;
+  document.getElementById('at-prev').innerHTML=`<div class="notif-box" id="at-msg">${msg}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn sm" onclick="cpText('at-msg')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div>`;
+}
+function confirmAssign(id){
+  const techId=document.getElementById('at-t').value;if(!techId){alert('Select a technician');return;}
+  const raw=document.getElementById('at-d').value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=`${d}/${m}/${y}`;}
+  const notes=document.getElementById('at-n').value,t=tickets.find(x=>x.id===id),tech=getUser(techId);
+  t.assignedTo=techId;t.status='In Progress';if(dd)t.dueDate=dd;
+  if(notes)t.comments.push({user:session.id,text:'Assigned: '+notes,time:nowTs()});
+  LOG('Ticket assigned',`${t.id} → ${tech.name}`,'b');closeModal();refreshPage();
+}
+
+// ============================================================
+// EXPENSES
+// ============================================================
+function renderExpenses(){
+  const pend=expenses.filter(e=>!e.approved),appr=expenses.filter(e=>e.approved);
+  const total=expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const pendTotal=pend.reduce((s,e)=>s+Number(e.amount),0);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Expenses</div><div class="page-sub">All ticket costs</div></div></div>
+    <div class="metrics">
+      <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total logged</div><div class="mv g" style="font-size:20px">${fc(total)}</div></div>
+      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Pending approval</div><div class="mv w" style="font-size:20px">${fc(pendTotal)}</div></div>
+      <div class="met"><div class="met-bar" style="background:#2563eb"></div><div class="ml">Total entries</div><div class="mv b">${expenses.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Pending entries</div><div class="mv w">${pend.length}</div></div>
+    </div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showExpTab('ep','ea','ea2',this)">Pending (${pend.length})</button>
+      <button class="tab-btn" onclick="showExpTab('ea','ep','ea2',this)">Approved (${appr.length})</button>
+      <button class="tab-btn" onclick="showExpTab('ea2','ep','ea',this)">All expenses</button>
+    </div>
+    <div id="ep">${expTable(pend,true)}</div>
+    <div id="ea" style="display:none">${expTable(appr,false)}</div>
+    <div id="ea2" style="display:none">${expTable(expenses,true)}</div>`;
+}
+function showExpTab(show,h1,h2,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');[show,h1,h2].forEach((id,i)=>document.getElementById(id).style.display=i===0?'':'none');}
+function expTable(list,showApprove){
+  if(!list.length)return'<div class="empty">No expenses here</div>';
+  const grandTotal=list.reduce((s,e)=>s+Number(e.amount),0);
+  return`<div class="tbl-wrap"><table>
+    <thead><tr><th>Ticket</th><th>Location</th><th>Type</th><th>Description</th><th>Amount</th><th>Date</th><th>By</th><th>Status</th>${showApprove?'<th>Action</th>':''}</tr></thead>
+    <tbody>${list.map(e=>{
+      const t=tickets.find(x=>x.id===e.ticketId)||{id:e.ticketId,title:'',locationId:''};
+      const loc=getLoc(t.locationId),by=getUser(e.addedBy);
+      return`<tr>
+        <td><strong>${e.ticketId}</strong><div style="font-size:11px;color:#888">${t.title}</div></td>
+        <td style="font-size:12px">${loc.name||'—'}</td>
+        <td><span class="badge b-exp">${e.category}</span></td>
+        <td style="font-size:12px">${e.description}</td>
+        <td style="font-weight:700;color:#059669">${fc(e.amount)}</td>
+        <td style="font-size:12px;color:#888">${e.date}</td>
+        <td style="font-size:12px">${by?by.name:'—'}</td>
+        <td>${e.approved?'<span class="badge b-done">Approved</span>':'<span class="badge b-med">Pending</span>'}</td>
+        ${showApprove?`<td><div style="display:flex;gap:4px">${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}')">✓</button>`:''}<button class="btn sm danger" onclick="deleteExp('${e.id}')">🗑</button></div></td>`:''}
+      </tr>`;
+    }).join('')}
+    <tr class="tfoot-row"><td colspan="4">Total</td><td style="color:#059669">${fc(grandTotal)}</td><td colspan="${showApprove?4:3}"></td></tr>
+    </tbody></table></div>`;
+}
+function approveExp(id){const e=expenses.find(x=>x.id===id);if(e){e.approved=true;LOG('Expense approved',`${e.ticketId} — ${e.description} ${fc(e.amount)}`,'g');}renderExpenses();}
+function deleteExp(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!==id);renderExpenses();}
+function openExpModal(ticketId){
+  const t=tickets.find(x=>x.id===ticketId);
+  const te=ticketExp(ticketId),total=te.reduce((s,e)=>s+Number(e.amount),0);
+  document.getElementById('m-title').textContent='Expenses — '+ticketId;
+  document.getElementById('m-body').innerHTML=`
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · Total: <strong style="color:#059669">${fc(total)}</strong></p>
+    ${te.length?`<div style="margin-bottom:1rem">${te.map(e=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #f0f0ec;margin-bottom:6px;background:#fafaf8">
+        <div style="flex:1"><div style="font-weight:600">${e.description}</div><div style="font-size:11px;color:#888">${e.category} · ${e.date} · ${getUser(e.addedBy)?getUser(e.addedBy).name:'—'}</div></div>
+        <span class="${e.approved?'badge b-done':'badge b-med'}">${e.approved?'Approved':'Pending'}</span>
+        <span style="font-weight:700;color:#059669;min-width:70px;text-align:right">${fc(e.amount)}</span>
+        ${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}');openExpModal('${ticketId}')">✓</button>`:''}
+      </div>`).join('')}</div>`:'<p style="color:#aaa;font-size:13px;margin-bottom:1rem">No expenses yet.</p>'}
+    <div style="border-top:1px solid #e8e8e4;padding-top:1rem;font-weight:600;font-size:13px;margin-bottom:10px">Add new expense</div>
+    <div class="frow">
+      <div class="fg"><label>Type</label><select id="ec"><option>Parts</option><option>Labour</option><option>Transport</option><option>Tools</option><option>Other</option></select></div>
+      <div class="fg"><label>Amount (₹)</label><input type="number" id="ea" placeholder="0"></div>
+    </div>
+    <div class="fg"><label>Description</label><input type="text" id="ed" placeholder="e.g. Copper wire 10m, Plumber 1 day..."></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Close</button>
+      <button class="btn primary" onclick="addExp('${ticketId}')">Add expense</button>
+    </div>`;
+  openModal();
+}
+function addExp(ticketId){
+  const amt=parseFloat(document.getElementById('ea').value);
+  const desc=document.getElementById('ed').value.trim();
+  if(!amt||!desc){alert('Enter amount and description');return;}
+  expenses.push({id:'e'+Date.now(),ticketId,addedBy:session.id,category:document.getElementById('ec').value,description:desc,amount:amt,date:nowTs().split(' ')[0],approved:false});
+  LOG('Expense added',`${ticketId} — ${desc} ${fc(amt)} by ${session.name}`,'w');
+  openExpModal(ticketId);
+}
+function renderMyExpenses(){
+  const mine=expenses.filter(e=>e.addedBy===session.id);
+  const total=mine.reduce((s,e)=>s+Number(e.amount),0);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">My expenses</div><div class="page-sub">Total logged: ${fc(total)}</div></div></div>
+    ${expTable(mine,false)||'<div class="empty">No expenses logged yet.</div>'}`;
+}
+
+// ============================================================
+// AMC
+// ============================================================
+function renderAMC(){
+  const expired=amcRecords.filter(a=>amcSt(a)==='expired');
+  const expiring=amcRecords.filter(a=>amcSt(a)==='expiring');
+  const active=amcRecords.filter(a=>amcSt(a)==='active');
+  const totalVal=amcRecords.reduce((s,a)=>s+Number(a.amount),0);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">AMC Tracker</div><div class="page-sub">Annual Maintenance Contracts</div></div>
+      ${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddAMC()">＋ Add AMC</button>`:''}
+    </div>
+    <div class="metrics">
+      <div class="met"><div class="ml">Total contracts</div><div class="mv b">${amcRecords.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Active</div><div class="mv g">${active.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Expiring (60d)</div><div class="mv w">${expiring.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#dc2626"></div><div class="ml">Expired</div><div class="mv r">${expired.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#7c3aed"></div><div class="ml">Total value/yr</div><div class="mv p" style="font-size:18px">${fc(totalVal)}</div></div>
+    </div>
+    ${expired.length?`<div class="section-hdr" style="margin-top:.5rem"><span class="section-title" style="color:#dc2626">⚠ Expired</span></div>${expired.map(a=>amcCard(a)).join('')}`:''}
+    ${expiring.length?`<div class="section-hdr"><span class="section-title" style="color:#d97706">⏰ Expiring soon</span></div>${expiring.map(a=>amcCard(a)).join('')}`:''}
+    <div class="section-hdr"><span class="section-title">Active contracts</span></div>
+    ${active.length?active.map(a=>amcCard(a)).join(''):'<div class="empty">No active contracts</div>'}`;
+}
+function amcCard(a){
+  const st=amcSt(a),days=amcDaysLeft(a.endDate);
+  const locs=a.locationIds.map(id=>getLoc(id));
+  const barPct=Math.max(0,Math.min(100,days<=0?0:days>365?100:Math.floor(days/365*100)));
+  const barColor=st==='expired'?'#dc2626':st==='expiring'?'#d97706':'#059669';
+  const statusBadge=st==='expired'?'<span class="badge b-esc">Expired</span>':st==='expiring'?`<span class="badge b-med">Expires in ${days}d</span>`:'<span class="badge b-done">Active</span>';
+  return`<div class="card${st==='expired'?' es':st==='expiring'?' ov':''}" style="margin-bottom:10px">
+    <div class="card-top">
+      <div style="flex:1"><div class="card-title">${a.vendor}</div><div style="font-size:12px;color:#666;margin-top:2px">${a.equipment}</div></div>
+      <div class="badges">${statusBadge} <span class="badge b-grey">${a.category}</span></div>
+    </div>
+    <div class="card-meta">
+      <span>📅 ${a.startDate} → ${a.endDate}</span>
+      <span style="font-weight:600;color:#059669">💰 ${fc(a.amount)}/year</span>
+      <span>📞 ${a.contact}</span>
+    </div>
+    <div style="font-size:12px;color:#666;margin-top:6px;margin-bottom:4px">${a.coverage}</div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:8px">Covers: ${locs.map(l=>l.name).join(', ')}</div>
+    ${a.notes?`<div style="font-size:12px;color:#888;font-style:italic;margin-bottom:8px">${a.notes}</div>`:''}
+    <div class="amc-bar"><div class="amc-bar-fill" style="width:${barPct}%;background:${barColor}"></div></div>
+    ${['admin','manager'].includes(session.role)?`<div class="card-actions">
+      <button class="btn sm" onclick="openEditAMC('${a.id}')">✏ Edit</button>
+      <button class="btn sm wa" onclick="sendAMCReminder('${a.id}')">📲 Send reminder</button>
+      <button class="btn sm danger" onclick="deleteAMC('${a.id}')">🗑</button>
+    </div>`:''}
+  </div>`;
+}
+function amcFormHTML(a){
+  const locChecks=states.map(s=>`
+    <div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px;margin:6px 0 3px">${s.name}</div>
+    ${locations.filter(l=>l.stateId===s.id).map(l=>`
+      <label style="display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0;cursor:pointer">
+        <input type="checkbox" value="${l.id}" ${a.locationIds&&a.locationIds.includes(l.id)?'checked':''}> ${locLabel(l)}
+      </label>`).join('')}`).join('');
+  return`<div class="frow">
+    <div class="fg"><label>Vendor name</label><input type="text" id="av" value="${a.vendor||''}"></div>
+    <div class="fg"><label>Category</label><select id="ac">${CATEGORIES.map(c=>`<option${a.category===c?' selected':''}>${c}</option>`).join('')}</select></div>
+  </div>
+  <div class="fg"><label>Equipment / scope</label><input type="text" id="ae" value="${a.equipment||''}" placeholder="e.g. AC Units — All outlets"></div>
+  <div class="fg"><label>Coverage details</label><input type="text" id="acov" value="${a.coverage||''}" placeholder="e.g. Quarterly servicing + emergency callouts"></div>
+  <div class="frow3">
+    <div class="fg"><label>Start date</label><input type="date" id="as" value="${a.startDate?a.startDate.split('/').reverse().join('-'):''}"></div>
+    <div class="fg"><label>End date</label><input type="date" id="aed" value="${a.endDate?a.endDate.split('/').reverse().join('-'):''}"></div>
+    <div class="fg"><label>Annual value (₹)</label><input type="number" id="aam" value="${a.amount||''}"></div>
+  </div>
+  <div class="fg"><label>Contact number</label><input type="text" id="acon" value="${a.contact||''}"></div>
+  <div class="fg"><label>Locations covered</label>
+    <div style="max-height:160px;overflow-y:auto;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px">${locChecks}</div>
+  </div>
+  <div class="fg"><label>Notes</label><textarea id="an">${a.notes||''}</textarea></div>`;
+}
+function getAmcData(){
+  const fmt=v=>{if(!v)return'';const[y,m,d]=v.split('-');return`${d}/${m}/${y}`;};
+  return{vendor:document.getElementById('av').value.trim(),category:document.getElementById('ac').value,equipment:document.getElementById('ae').value.trim(),coverage:document.getElementById('acov').value.trim(),startDate:fmt(document.getElementById('as').value),endDate:fmt(document.getElementById('aed').value),amount:parseFloat(document.getElementById('aam').value)||0,contact:document.getElementById('acon').value.trim(),locationIds:[...document.querySelectorAll('#m-body input[type=checkbox]:checked')].map(c=>c.value),notes:document.getElementById('an').value.trim()};
+}
+function openAddAMC(){document.getElementById('m-title').textContent='Add AMC contract';document.getElementById('m-body').innerHTML=amcFormHTML({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewAMC()">Add contract</button></div>`;openModal();}
+function openEditAMC(id){const a=amcRecords.find(x=>x.id===id);document.getElementById('m-title').textContent='Edit AMC';document.getElementById('m-body').innerHTML=amcFormHTML(a)+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveAMC('${id}')">Save</button></div>`;openModal();}
+function saveNewAMC(){const d=getAmcData();if(!d.vendor||!d.endDate){alert('Vendor and end date required');return;}amcRecords.push({...d,id:'a'+Date.now()});LOG('AMC added',d.vendor,'p');closeModal();renderAMC();}
+function saveAMC(id){const i=amcRecords.findIndex(x=>x.id===id);amcRecords[i]={...amcRecords[i],...getAmcData()};LOG('AMC updated',amcRecords[i].vendor,'b');closeModal();renderAMC();}
+function deleteAMC(id){if(!confirm('Delete?'))return;amcRecords=amcRecords.filter(x=>x.id!==id);renderAMC();}
+function sendAMCReminder(id){
+  const a=amcRecords.find(x=>x.id===id);const days=amcDaysLeft(a.endDate);
+  const msg=`AMC Renewal Reminder\n\nVendor: ${a.vendor}\nEquipment: ${a.equipment}\nContract end: ${a.endDate}\n${days<0?'Status: EXPIRED — please renew immediately':'Days remaining: '+days+' days'}\nAnnual value: ${fc(a.amount)}\n\nPlease arrange renewal at your earliest.\n\n— MaintenanceOS`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+// ============================================================
+// REPORTS
+// ============================================================
+function renderReports(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Reports</div><div class="page-sub">Monthly summaries and custom reports</div></div></div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showRepTab('rm','rc','re',this)">Monthly report</button>
+      <button class="tab-btn" onclick="showRepTab('rc','rm','re',this)">Custom report</button>
+      <button class="tab-btn" onclick="showRepTab('re','rm','rc',this)">Expense report</button>
+    </div>
+    <div id="rm">${monthlyReport()}</div>
+    <div id="rc" style="display:none">${customReportForm()}</div>
+    <div id="re" style="display:none">${expenseReport()}</div>`;
+}
+function showRepTab(s,h1,h2,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');[s,h1,h2].forEach((id,i)=>document.getElementById(id).style.display=i===0?'':'none');}
+
+function monthlyReport(){
+  const month='May 2026';
+  const raised=tickets.length,res=tickets.filter(t=>t.status==='Resolved').length;
+  const op=tickets.filter(t=>['Open','In Progress'].includes(t.status)).length;
+  const od=tickets.filter(isOD).length,esc=tickets.filter(isESC).length;
+  const totalExp=expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const appExp=expenses.filter(e=>e.approved).reduce((s,e)=>s+Number(e.amount),0);
+  const pendExp=totalExp-appExp;
+  const resRate=raised>0?Math.round(res/raised*100):0;
+  const byState=states.map(s=>{
+    const sl=locations.filter(l=>l.stateId===s.id),st=tickets.filter(t=>sl.some(l=>l.id===t.locationId));
+    const sexp=expenses.filter(e=>st.some(t=>t.id===e.ticketId)).reduce((x,e)=>x+Number(e.amount),0);
+    return{n:s.name,t:st.length,r:st.filter(t=>t.status==='Resolved').length,o:st.filter(t=>['Open','In Progress'].includes(t.status)).length,e:sexp};
+  });
+  const byTech=getTechs(null).map(u=>{
+    const ut=tickets.filter(t=>t.assignedTo===u.id);
+    const ue=expenses.filter(e=>e.addedBy===u.id).reduce((s,e)=>s+Number(e.amount),0);
+    return ut.length?{n:u.name,a:ut.length,r:ut.filter(t=>t.status==='Resolved').length,e:ue}:null;
+  }).filter(Boolean);
+  const byCat=CATEGORIES.map(c=>{const ct=tickets.filter(t=>t.category===c);return ct.length?{c,n:ct.length}:null;}).filter(Boolean).sort((a,b)=>b.n-a.n).slice(0,6);
+  const amcExp=amcRecords.filter(a=>amcSt(a)==='expired').length;
+  const amcWarn=amcRecords.filter(a=>amcSt(a)==='expiring').length;
+  const amcOk=amcRecords.filter(a=>amcSt(a)==='active').length;
+
+  return`<div class="report-wrap" id="monthly-report">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:2px solid #f0f0ec">
+      <div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.5px">⊞ MaintenanceOS — Monthly Report</div>
+        <div style="font-size:13px;color:#888;margin-top:3px">${month} · Generated ${nowTs()}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="window.print()">🖨 Print / Save PDF</button>
+        <button class="btn primary" onclick="openSendReport()">✉ Send report</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:1.5rem">
+      <div class="rep-stat"><div class="rep-val">${raised}</div><div class="rep-lbl">Total tickets</div></div>
+      <div class="rep-stat"><div class="rep-val" style="color:#059669">${res}</div><div class="rep-lbl">Resolved</div></div>
+      <div class="rep-stat"><div class="rep-val" style="color:#2563eb">${op}</div><div class="rep-lbl">Open/Active</div></div>
+      <div class="rep-stat"><div class="rep-val" style="color:#dc2626">${esc}</div><div class="rep-lbl">Escalated</div></div>
+      <div class="rep-stat"><div class="rep-val" style="color:#d97706">${od}</div><div class="rep-lbl">Overdue</div></div>
+      <div class="rep-stat"><div class="rep-val" style="color:#059669;font-size:20px">${fc(totalExp)}</div><div class="rep-lbl">Total expenses</div></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;padding:12px 16px;background:#f9f9f7;border-radius:10px">
+      <div style="font-size:13px;font-weight:600;min-width:120px">Resolution rate</div>
+      <div style="flex:1"><div class="progress-bar"><div class="progress-fill" style="width:${resRate}%;background:${resRate>=80?'#059669':resRate>=50?'#d97706':'#dc2626'}"></div></div></div>
+      <span style="font-weight:800;font-size:18px;min-width:50px;text-align:right">${resRate}%</span>
+    </div>
+
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f0ec">By state</div>
+    <div class="tbl-wrap" style="margin-bottom:1.5rem"><table>
+      <thead><tr><th>State</th><th>Tickets</th><th>Resolved</th><th>Open/Active</th><th>Expenses</th></tr></thead>
+      <tbody>${byState.map(s=>`<tr><td><strong>${s.n}</strong></td><td>${s.t}</td><td style="color:#059669;font-weight:600">${s.r}</td><td style="color:#2563eb">${s.o}</td><td style="color:#059669;font-weight:600">${fc(s.e)}</td></tr>`).join('')}</tbody>
+    </table></div>
+
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f0ec">Expense breakdown</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">
+      <div style="background:#f0fdf4;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:#059669">${fc(appExp)}</div><div style="font-size:11px;color:#888;margin-top:3px">APPROVED</div></div>
+      <div style="background:#fefce8;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:#d97706">${fc(pendExp)}</div><div style="font-size:11px;color:#888;margin-top:3px">PENDING</div></div>
+      <div style="background:#f9f9f7;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800">${fc(totalExp)}</div><div style="font-size:11px;color:#888;margin-top:3px">TOTAL</div></div>
+    </div>
+
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0f0ec">Technician performance</div>
+    <div class="tbl-wrap" style="margin-bottom:1.5rem"><table>
+      <thead><tr><th>Technician</th><th>Assigned</th><th>Resolved</th><th>Rate</th><th>Expenses logged</th></tr></thead>
+      <tbody>${byTech.length?byTech.map(u=>`<tr><td><strong>${u.n}</strong></td><td>${u.a}</td><td style="color:#059669;font-weight:600">${u.r}</td><td>${u.a>0?Math.round(u.r/u.a*100):0}%</td><td style="color:#059669">${fc(u.e)}</td></tr>`).join(''):'<tr><td colspan="5" style="color:#aaa;text-align:center;padding:1.5rem">No data</td></tr>'}</tbody>
+    </table></div>
+
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f0f0ec">Top issue categories</div>
+    <div style="margin-bottom:1.5rem">${byCat.map(c=>`
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:13px">
+        <span style="min-width:160px">${c.c}</span>
+        <div style="flex:1"><div class="progress-bar"><div class="progress-fill" style="width:${Math.round(c.n/raised*100)}%;background:#2563eb"></div></div></div>
+        <span style="font-weight:600;min-width:30px;text-align:right">${c.n}</span>
+      </div>`).join('')}</div>
+
+    <div style="font-weight:700;font-size:14px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f0f0ec">AMC summary</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:1.5rem">
+      <span style="color:#059669">✓ ${amcOk} active contracts</span>
+      <span style="color:#d97706">⚠ ${amcWarn} expiring within 60 days</span>
+      <span style="color:#dc2626">✗ ${amcExp} expired</span>
+      <span style="font-weight:600">Total AMC value: ${fc(amcRecords.reduce((s,a)=>s+Number(a.amount),0))}/year</span>
+    </div>
+
+    <div style="font-size:11px;color:#aaa;text-align:center;padding-top:1rem;border-top:1px solid #f0f0ec">Generated by MaintenanceOS · ${nowTs()}</div>
+  </div>`;
+}
+
+function customReportForm(){
+  return`<div class="card">
+    <div style="font-weight:700;font-size:15px;margin-bottom:1rem">Custom report builder</div>
+    <div class="frow">
+      <div class="fg"><label>From date</label><input type="date" id="cr-f"></div>
+      <div class="fg"><label>To date</label><input type="date" id="cr-t"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>State</label><select id="cr-s"><option value="">All states</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+      <div class="fg"><label>Location type</label><select id="cr-ty"><option value="">All types</option><option value="outlet">Outlets only</option><option value="central_kitchen">Central Kitchens only</option></select></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Category</label><select id="cr-c"><option value="">All categories</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="fg"><label>Priority</label><select id="cr-p"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+    </div>
+    <button class="btn primary" onclick="runCustomReport()">▶ Generate</button>
+    <div id="cr-out" style="margin-top:1.5rem"></div>
+  </div>`;
+}
+function runCustomReport(){
+  let f=tickets;
+  const st=document.getElementById('cr-s').value,ty=document.getElementById('cr-ty').value,ca=document.getElementById('cr-c').value,pr=document.getElementById('cr-p').value;
+  if(st)f=f.filter(t=>t.stateId===st||getLoc(t.locationId).stateId===st);
+  if(ty)f=f.filter(t=>getLoc(t.locationId).type===ty);
+  if(ca)f=f.filter(t=>t.category===ca);
+  if(pr)f=f.filter(t=>t.priority===pr);
+  const exp=expenses.filter(e=>f.some(t=>t.id===e.ticketId)).reduce((s,e)=>s+Number(e.amount),0);
+  const res=f.filter(t=>t.status==='Resolved').length,op=f.filter(t=>['Open','In Progress'].includes(t.status)).length;
+  document.getElementById('cr-out').innerHTML=`
+    <div class="metrics">
+      <div class="met"><div class="ml">Total</div><div class="mv b">${f.length}</div></div>
+      <div class="met"><div class="ml">Resolved</div><div class="mv g">${res}</div></div>
+      <div class="met"><div class="ml">Open/Active</div><div class="mv w">${op}</div></div>
+      <div class="met"><div class="ml">Expenses</div><div class="mv g" style="font-size:18px">${fc(exp)}</div></div>
+    </div>
+    ${f.length?f.slice(0,20).map(t=>ticketCard(t,true)).join(''):' <div class="empty">No tickets match</div>'}
+    ${f.length?`<div style="display:flex;gap:8px;margin-top:1rem"><button class="btn" onclick="window.print()">🖨 Print</button><button class="btn primary" onclick="openSendReport()">✉ Send</button></div>`:''}`;
+}
+
+function expenseReport(){
+  const byLoc=locations.map(l=>{
+    const lt=tickets.filter(t=>t.locationId===l.id);
+    const le=expenses.filter(e=>lt.some(t=>t.id===e.ticketId));
+    const tot=le.reduce((s,e)=>s+Number(e.amount),0);
+    if(!tot)return null;
+    return{loc:locLabel(l),state:getState(l.stateId).name,tot,appr:le.filter(e=>e.approved).reduce((s,e)=>s+Number(e.amount),0),pend:le.filter(e=>!e.approved).reduce((s,e)=>s+Number(e.amount),0),n:le.length};
+  }).filter(Boolean).sort((a,b)=>b.tot-a.tot);
+  const grand=expenses.reduce((s,e)=>s+Number(e.amount),0);
+  return`<div class="report-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #f0f0ec">
+      <div><div style="font-size:18px;font-weight:800">Expense Report — May 2026</div><div style="font-size:13px;color:#888">Total: ${fc(grand)}</div></div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="window.print()">🖨 Print</button><button class="btn primary" onclick="openSendReport()">✉ Send</button></div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Location</th><th>State</th><th>Entries</th><th>Approved</th><th>Pending</th><th>Total</th></tr></thead>
+      <tbody>
+        ${byLoc.map(l=>`<tr><td><strong>${l.loc}</strong></td><td style="color:#888">${l.state}</td><td>${l.n}</td><td style="color:#059669">${fc(l.appr)}</td><td style="color:#d97706">${fc(l.pend)}</td><td style="font-weight:700">${fc(l.tot)}</td></tr>`).join('')}
+        <tr class="tfoot-row"><td colspan="5">Grand total</td><td style="color:#059669">${fc(grand)}</td></tr>
+      </tbody>
+    </table></div>
+  </div>`;
+}
+
+function openSendReport(){
+  const summary=`MaintenanceOS — Monthly Report (May 2026)\n\nSummary:\n• ${tickets.length} total tickets\n• ${tickets.filter(t=>t.status==='Resolved').length} resolved (${tickets.length>0?Math.round(tickets.filter(t=>t.status==='Resolved').length/tickets.length*100):0}% resolution rate)\n• ${tickets.filter(t=>['Open','In Progress'].includes(t.status)).length} open/active\n• ${tickets.filter(isESC).length} escalated, ${tickets.filter(isOD).length} overdue\n• Total expenses: ${fc(expenses.reduce((s,e)=>s+Number(e.amount),0))}\n• AMC: ${amcRecords.filter(a=>amcSt(a)==='expired').length} expired, ${amcRecords.filter(a=>amcSt(a)==='expiring').length} expiring soon\n\nGenerated by MaintenanceOS · ${nowTs()}`;
+  document.getElementById('m-title').textContent='Send report';
+  document.getElementById('m-body').innerHTML=`
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">Share this summary via WhatsApp or email. To send a PDF, use the Print button to save as PDF first.</p>
+    <div class="notif-box" id="rep-msg">${summary}</div>
+    <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">
+      <button class="btn sm" onclick="cpText('rep-msg')">📋 Copy</button>
+      <a href="https://wa.me/?text=${encodeURIComponent(summary)}" class="btn sm wa" target="_blank">WhatsApp</a>
+      <a href="mailto:?subject=MaintenanceOS Report May 2026&body=${encodeURIComponent(summary)}" class="btn sm primary">✉ Email</a>
+    </div>
+    <hr style="margin:1.25rem 0;border:none;border-top:1px solid #e8e8e4">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px">Send to a specific contact</div>
+    <div class="frow">
+      <div class="fg"><label>WhatsApp number</label><input type="text" id="sw" placeholder="+91 98200 00000"></div>
+      <div class="fg"><label>Email address</label><input type="text" id="se" placeholder="manager@company.com"></div>
+    </div>
+    <div style="display:flex;gap:7px">
+      <button class="btn wa" onclick="sendRepWA()">📲 WhatsApp</button>
+      <button class="btn primary" onclick="sendRepEmail()">✉ Email</button>
+    </div>`;
+  openModal();
+}
+function sendRepWA(){const n=document.getElementById('sw').value.replace(/\D/g,'');if(!n){alert('Enter a number');return;}const msg=`MaintenanceOS Report May 2026\n• ${tickets.length} tickets · ${tickets.filter(t=>t.status==='Resolved').length} resolved · Expenses: ${fc(expenses.reduce((s,e)=>s+Number(e.amount),0))}`;window.open('https://wa.me/'+n+'?text='+encodeURIComponent(msg),'_blank');}
+function sendRepEmail(){const em=document.getElementById('se').value;if(!em){alert('Enter email');return;}const msg=`MaintenanceOS Report May 2026\n\n${tickets.length} tickets · ${tickets.filter(t=>t.status==='Resolved').length} resolved\nTotal expenses: ${fc(expenses.reduce((s,e)=>s+Number(e.amount),0))}`;window.location.href='mailto:'+em+'?subject=MaintenanceOS Report May 2026&body='+encodeURIComponent(msg);}
+
+// ============================================================
+// LOCATIONS
+// ============================================================
+function renderLocations(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">Locations</div><div class="page-sub">States · Outlets · Central Kitchens</div></div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="openAddState()">＋ Add state</button><button class="btn primary" onclick="openAddLocation()">＋ Add location</button></div>
+    </div>
+    <div id="loc-list">${locListHTML()}</div>`;
+}
+function locListHTML(){
+  return states.map(s=>{
+    const locs=locations.filter(l=>l.stateId===s.id);
+    const tc=tickets.filter(t=>locs.some(l=>l.id===t.locationId)&&!['Resolved','Closed'].includes(t.status)).length;
+    return`<div class="state-group">
+      <div class="state-hdr" onclick="toggleSG('sg-${s.id}')">
+        <div style="display:flex;align-items:center;gap:10px">📍 ${s.name} <span style="font-size:12px;font-weight:400;color:#888">${locs.length} locations · ${tc} open tickets</span></div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn sm" onclick="event.stopPropagation();openAddLocation('${s.id}')">＋ Add</button>
+          <button class="btn sm danger" onclick="event.stopPropagation();deleteState('${s.id}')">🗑</button>
+        </div>
+      </div>
+      <div class="state-body" id="sg-${s.id}">
+        ${locs.length?locs.map(l=>{
+          const lt=tickets.filter(t=>t.locationId===l.id&&!['Resolved','Closed'].includes(t.status)).length;
+          const lu=users.find(u=>u.locationId===l.id);
+          return`<div class="loc-row">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font-size:20px">${l.type==='central_kitchen'?'🍳':'🏪'}</span>
+              <div><div style="font-weight:600;font-size:13px">${l.name}</div>
+              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':'Outlet'} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
+            </div>
+            <div style="display:flex;gap:5px">
+              <button class="btn sm" onclick="openEditLocation('${l.id}')">✏</button>
+              <button class="btn sm danger" onclick="deleteLocation('${l.id}')">🗑</button>
+            </div>
+          </div>`;
+        }).join(''):'<div style="color:#aaa;font-size:13px;padding:8px 0">No locations yet.</div>'}
+      </div>
+    </div>`;
+  }).join('')||'<div class="empty">No states added yet.</div>';
+}
+function toggleSG(id){const el=document.getElementById(id);if(el)el.style.display=el.style.display==='none'?'':'none';}
+function openAddState(){document.getElementById('m-title').textContent='Add state';document.getElementById('m-body').innerHTML=`<div class="fg"><label>State name</label><input type="text" id="st-n" placeholder="e.g. Karnataka"></div><div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveState()">Add</button></div>`;openModal();}
+function saveState(){const n=document.getElementById('st-n').value.trim();if(!n)return;states.push({id:'s'+Date.now(),name:n});LOG('State added',n,'p');closeModal();renderLocations();}
+function deleteState(id){if(locations.filter(l=>l.stateId===id).length){alert('Remove all locations in this state first.');return;}if(!confirm('Delete state?'))return;states=states.filter(s=>s.id!==id);renderLocations();}
+function openAddLocation(pre){
+  document.getElementById('m-title').textContent='Add location';
+  document.getElementById('m-body').innerHTML=`
+    <div class="frow"><div class="fg"><label>State</label><select id="ls">${states.map(s=>`<option value="${s.id}"${s.id===pre?' selected':''}>${s.name}</option>`).join('')}</select></div><div class="fg"><label>Type</label><select id="lt"><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select></div></div>
+    <div class="fg"><label>Name</label><input type="text" id="ln" placeholder="e.g. Andheri, Lajpat Nagar CK..."></div>
+    <div style="background:#f4f3ef;border-radius:8px;padding:10px;font-size:12px;color:#666;margin-bottom:12px">💡 After adding, go to <strong>Users & Roles</strong> to create a login for this location.</div>
+    <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveLocation()">Add location</button></div>`;
+  openModal();
+}
+function saveLocation(){const n=document.getElementById('ln').value.trim();if(!n)return;const sid=document.getElementById('ls').value,type=document.getElementById('lt').value;locations.push({id:'l'+Date.now(),stateId:sid,name:n,type});LOG('Location added',n+' ('+type+') — '+getState(sid).name,'p');closeModal();renderLocations();}
+function openEditLocation(id){
+  const l=locations.find(x=>x.id===id);
+  document.getElementById('m-title').textContent='Edit location';
+  document.getElementById('m-body').innerHTML=`
+    <div class="frow"><div class="fg"><label>State</label><select id="ls">${states.map(s=>`<option value="${s.id}"${s.id===l.stateId?' selected':''}>${s.name}</option>`).join('')}</select></div><div class="fg"><label>Type</label><select id="lt"><option value="outlet"${l.type==='outlet'?' selected':''}>Outlet</option><option value="central_kitchen"${l.type==='central_kitchen'?' selected':''}>Central Kitchen</option></select></div></div>
+    <div class="fg"><label>Name</label><input type="text" id="ln" value="${l.name}"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="updateLoc('${id}')">Save</button></div>`;
+  openModal();
+}
+function updateLoc(id){const i=locations.findIndex(l=>l.id===id);locations[i]={...locations[i],name:document.getElementById('ln').value.trim(),type:document.getElementById('lt').value,stateId:document.getElementById('ls').value};closeModal();renderLocations();}
+function deleteLocation(id){const open=tickets.filter(t=>t.locationId===id&&!['Resolved','Closed'].includes(t.status)).length;if(open){alert(`${open} open tickets. Resolve them first.`);return;}if(!confirm('Delete?'))return;locations=locations.filter(l=>l.id!==id);users=users.map(u=>u.locationId===id?{...u,locationId:null}:u);renderLocations();}
+
+// ============================================================
+// USERS
+// ============================================================
+function renderUsers(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${users.length} users</div></div><button class="btn primary" onclick="openAddUser()">＋ Add user</button></div>
+    <div class="tab-btns">${['All','Admin','Manager','Technician','Outlet / CK'].map((r,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="filterUsers('${r}',this)">${r}</button>`).join('')}</div>
+    <div id="utbl">${userTable(users)}</div>`;
+}
+function filterUsers(role,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const f=role==='All'?users:users.filter(u=>roleLabel(u.role).toLowerCase()===role.toLowerCase()||u.role===role.toLowerCase());document.getElementById('utbl').innerHTML=userTable(f);}
+function userTable(list){
+  if(!list.length)return'<div class="empty">No users</div>';
+  return`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead><tbody>${list.map(u=>{
+    const s=u.stateId?getState(u.stateId):{name:'—'},l=u.locationId?getLoc(u.locationId):{name:'—',type:null};
+    return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div>${u.name}</div></td><td style="color:#555">${u.email}</td><td>${roleBadge(u.role)}</td><td style="color:#555">${s.name}</td><td style="color:#555">${l.name!=='—'?locLabel(l):'—'}</td><td><div style="display:flex;gap:5px"><button class="btn sm" onclick="openEditUser('${u.id}')">✏ Edit</button>${u.id!==session.id?`<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑</button>`:'<span style="font-size:11px;color:#aaa">(you)</span>'}</div></td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+function userFormHTML(u){
+  const sOpts=`<option value="">— None —</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
+  const lOpts=`<option value="">— None —</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
+  return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
+  <div class="fg"><label>Email</label><input type="text" id="ue" value="${u.email||''}"></div>
+  <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep"></div>
+  <div class="fg"><label>State</label><select id="us" onchange="refreshLocDrop()">${sOpts}</select></div>
+  <div class="fg" id="ulf" style="${u.role==='outlet'?'':'display:none'}"><label>Location</label><select id="ul">${lOpts}</select></div>
+  <div class="fg" id="usf" style="${u.role==='technician'?'':'display:none'}"><label>Specialty</label><input type="text" id="usp" value="${u.specialty||''}" placeholder="e.g. Electrical"></div>`;
+}
+function toggleUF(){const r=document.getElementById('ur').value;document.getElementById('ulf').style.display=r==='outlet'?'':'none';document.getElementById('usf').style.display=r==='technician'?'':'none';}
+function refreshLocDrop(){const sid=document.getElementById('us').value;const locs=sid?locations.filter(l=>l.stateId===sid):locations;document.getElementById('ul').innerHTML=`<option value="">— None —</option>`+locs.map(l=>`<option value="${l.id}">${locLabel(l)}</option>`).join('');}
+function openAddUser(){document.getElementById('m-title').textContent='Add user';document.getElementById('m-body').innerHTML=userFormHTML({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewUser()">Create</button></div>`;openModal();}
+function openEditUser(id){const u=getUser(id);document.getElementById('m-title').textContent='Edit: '+u.name;document.getElementById('m-body').innerHTML=userFormHTML(u)+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveUser('${id}')">Save</button></div>`;openModal();}
+function saveNewUser(){const n=document.getElementById('un').value.trim(),e=document.getElementById('ue').value.trim().toLowerCase();if(!n||!e){alert('Name and email required');return;}const r=document.getElementById('ur').value;users.push({id:'u'+Date.now(),name:n,email:e,pass:document.getElementById('up').value||'pass123',role:r,stateId:document.getElementById('us').value||null,locationId:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,avatar:n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()});LOG('User created',n+' ('+roleLabel(r)+')','p');closeModal();renderUsers();}
+function saveUser(id){const i=users.findIndex(u=>u.id===id),r=document.getElementById('ur').value,p=document.getElementById('up').value;users[i]={...users[i],name:document.getElementById('un').value,email:document.getElementById('ue').value.toLowerCase(),pass:p||users[i].pass,role:r,stateId:document.getElementById('us').value||null,locationId:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null};LOG('User updated',users[i].name,'b');closeModal();renderUsers();}
+function deleteUser(id){if(!confirm('Delete?'))return;users=users.filter(u=>u.id!==id);renderUsers();}
+
+// ============================================================
+// RECURRING, NOTIFICATIONS, MY-TASKS, RAISE, MY-TICKETS, LOG
+// ============================================================
+function renderRecurring(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
+    <div>${recurringSchedules.map(r=>{
+      const locs=r.locationIds.map(id=>getLoc(id));
+      const byS={};locs.forEach(l=>{const s=getState(l.stateId).name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
+      return`<div class="card" style="margin-bottom:10px">
+        <div class="card-top"><span class="card-title">↺ ${r.title}</span>${['admin','manager'].includes(session.role)?`<label class="tgl"><input type="checkbox" ${r.on?'checked':''} onchange="toggleR('${r.id}',this.checked)"><span class="tgl-s"></span></label>`:''}</div>
+        <div class="card-meta"><span>Every ${r.freq}</span><span class="badge ${r.priority==='High'?'b-high':r.priority==='Low'?'b-low':'b-med'}">${r.priority}</span><span>${r.category}</span><span>📅 Next: ${r.next}</span></div>
+        <div style="font-size:12px;color:#888;margin-top:6px">${Object.entries(byS).map(([s,ls])=>`${s}: ${ls.join(', ')}`).join(' · ')}</div>
+        ${['admin','manager'].includes(session.role)?`<div class="card-actions"><button class="btn sm" onclick="genNow('${r.id}')">▶ Generate now</button><button class="btn sm danger" onclick="delR('${r.id}')">🗑</button></div>`:''}
+      </div>`;
+    }).join('')||'<div class="empty">No recurring schedules</div>'}</div>`;
+}
+function toggleR(id,v){const r=recurringSchedules.find(x=>x.id===id);if(r)r.on=v;}
+function genNow(id){const r=recurringSchedules.find(x=>x.id===id);if(!r)return;const ts=nowTs();r.locationIds.forEach(lid=>{const loc=getLoc(lid);tickets.unshift({id:'T'+String(tickets.length+1).padStart(3,'0'),locationId:lid,stateId:loc.stateId,category:r.category,title:r.title,desc:'Auto-generated.',priority:r.priority,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:r.next,comments:[]});});LOG('Recurring generated',r.title+' — '+r.locationIds.length+' tickets','b');alert('Created '+r.locationIds.length+' tickets for: '+r.title);renderRecurring();}
+function delR(id){if(confirm('Remove?')){recurringSchedules=recurringSchedules.filter(x=>x.id!==id);renderRecurring();}}
+function openAddRecurring(){
+  document.getElementById('m-title').textContent='New recurring schedule';
+  document.getElementById('m-body').innerHTML=`
+    <div class="fg"><label>Task name</label><input type="text" id="rt" placeholder="e.g. AC servicing"></div>
+    <div class="frow"><div class="fg"><label>Category</label><select id="rc">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Frequency</label><select id="rf"><option>1 month</option><option>3 months</option><option selected>6 months</option><option>1 year</option></select></div></div>
+    <div class="fg"><label>Priority</label><select id="rp"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <div class="fg"><label>Locations</label><div style="max-height:150px;overflow-y:auto;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px">${states.map(s=>`<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;margin:5px 0 3px">${s.name}</div>${locations.filter(l=>l.stateId===s.id).map(l=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0"><input type="checkbox" value="${l.id}" checked> ${locLabel(l)}</label>`).join('')}`).join('')}</div></div>
+    <div class="fg"><label>Next due date</label><input type="date" id="rd"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveR()">Save</button></div>`;
+  openModal();
+}
+function saveR(){const t=document.getElementById('rt').value.trim();if(!t)return;const lids=[...document.querySelectorAll('#m-body input[type=checkbox]:checked')].map(c=>c.value);const raw=document.getElementById('rd').value;let nd='TBD';if(raw){const[y,m,d]=raw.split('-');nd=`${d}/${m}/${y}`;}recurringSchedules.push({id:'r'+Date.now(),title:t,locationIds:lids,freq:document.getElementById('rf').value,category:document.getElementById('rc').value,priority:document.getElementById('rp').value,next:nd,on:true});closeModal();renderRecurring();}
+
+function renderNotifications(){
+  const esc=tickets.filter(isESC),od=tickets.filter(t=>isOD(t)&&!isESC(t)),unass=tickets.filter(t=>t.status==='Open'&&!t.assignedTo);
+  const amcAlerts=amcRecords.filter(a=>amcSt(a)!=='active');
+  let h='';
+  if(esc.length){h+=`<p style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠ Escalated</p>`;esc.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`*ESCALATED TICKET*\n\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority} · Due: ${t.dueDate} (${dAgo(t.dueDate)}d overdue)\n${tech?'Assigned: '+tech.name:'No technician assigned'}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-esc','Escalated');});}
+  if(od.length){h+=`<p style="font-size:13px;font-weight:700;color:#d97706;margin:1rem 0 8px">⏰ Overdue</p>`;od.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`Hi${tech?' '+tech.name:''},\n\nFollow-up: ${t.id} — *${t.title}*\n${state.name} › ${loc.name}\nDue: ${t.dueDate} (${dAgo(t.dueDate)} days overdue)\n\nPlease update.\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-ov','Overdue');});}
+  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','Unassigned');});}
+  if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n— MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
+  if(!h)h='<div class="empty">✓ All clear — no notifications needed</div>';
+  document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications</div></div></div>${h}`;
+}
+function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
+
+function renderMyTasks(){
+  const mine=tickets.filter(t=>t.assignedTo===session.id);
+  const open=mine.filter(t=>!['Resolved','Closed'].includes(t.status));
+  const done=mine.filter(t=>['Resolved','Closed'].includes(t.status));
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">My tasks</div><div class="page-sub">${open.length} active · ${done.length} resolved</div></div></div>
+    <div class="tab-btns"><button class="tab-btn active" onclick="showT2('mto','mtd',this)">Active (${open.length})</button><button class="tab-btn" onclick="showT2('mtd','mto',this)">Resolved (${done.length})</button></div>
+    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ No active tasks</div>'}</div>
+    <div id="mtd" style="display:none">${done.length?done.map(t=>ticketCard(t)).join(''):'<div class="empty">None resolved yet</div>'}</div>`;
+}
+function renderRaise(){
+  const loc=getLoc(session.locationId),state=getState(loc.stateId);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Raise an issue</div><div class="page-sub">${state.name} › ${loc.name} · ${loc.type==='central_kitchen'?'Central Kitchen':'Outlet'}</div></div></div>
+    <div style="max-width:560px"><div class="card">
+      <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
+      <div class="frow"><div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Priority</label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div></div>
+      <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
+      <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
+      <button class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="submitTicket()">＋ Submit issue</button>
+    </div><div style="font-size:12px;color:#aaa;text-align:center;margin-top:8px">Submitted tickets are reviewed by the maintenance manager.</div></div>`;
+}
+function submitTicket(){
+  const title=document.getElementById('ri-t').value.trim();if(!title){alert('Enter a title');return;}
+  const raw=document.getElementById('ri-dd').value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=`${d}/${m}/${y}`;}
+  const ts=nowTs(),id='T'+String(tickets.length+1).padStart(3,'0'),loc=getLoc(session.locationId);
+  tickets.unshift({id,locationId:session.locationId,stateId:loc.stateId,category:document.getElementById('ri-c').value,title,desc:document.getElementById('ri-d').value,priority:document.getElementById('ri-p').value,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:dd,comments:[]});
+  LOG('Ticket raised',id+' '+title+' — '+loc.name,'p');alert('Issue '+id+' submitted!');navTo('my-tickets');
+}
+function renderMyTickets(){
+  const mine=tickets.filter(t=>t.raisedBy===session.id);
+  const loc=getLoc(session.locationId),state=getState(loc.stateId);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">My tickets</div><div class="page-sub">${state.name} › ${loc.name} · ${mine.length} tickets</div></div><button class="btn primary" onclick="navTo('raise')">＋ Raise new</button></div>
+    ${mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty">No issues raised yet.<br><br><button class="btn primary" onclick="navTo(\'raise\')">＋ Raise your first issue</button></div>'}`;
+}
+function renderLog(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div class="page-title">Audit log</div><button class="btn danger" onclick="auditLog=[];renderLog()">🗑 Clear</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>Details</th></tr></thead><tbody>
+      ${auditLog.map(e=>`<tr><td style="color:#aaa;font-size:12px;white-space:nowrap">${e.t}</td><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{g:'#059669',r:'#dc2626',w:'#d97706',p:'#7c3aed',b:'#2563eb'}[e.c]||'#aaa'};margin-right:7px;vertical-align:middle"></span>${e.a}</td><td style="color:#555">${e.d}</td></tr>`).join('')}
+      ${!auditLog.length?'<tr><td colspan="3" style="text-align:center;color:#aaa;padding:2rem">No activity yet</td></tr>':''}
+    </tbody></table></div>`;
+}
+
+</script>
+<script>
+// ============================================================
+// SUPABASE LIVE CONNECTION
+// ============================================================
+const SUPA_URL = 'https://ymlgezkahrsfpngzyacr.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltbGdlemthaHJzZnBuZ3p5YWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTI2NjQsImV4cCI6MjA5NjU2ODY2NH0.0VjqNH0XKCAkeDBqmAgQj3AqgK1Pq3nBTDWhy591OxQ';
+let supaClient = null;
+let isLive = false;
+
+async function initSupabase() {
+  try {
+    supaClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+    const { data, error } = await supaClient.from('states').select('id').limit(1);
+    if (error) throw error;
+    isLive = true;
+    console.log('✓ Supabase connected — LIVE MODE');
+    updateSyncBar(true);
+    startRealtime();
+  } catch(e) {
+    console.warn('Supabase offline, local mode:', e.message);
+    isLive = false;
+    updateSyncBar(false);
+  }
+}
+
+function updateSyncBar(live) {
+  const bar = document.getElementById('sync-status');
+  if (!bar) return;
+  bar.innerHTML = live
+    ? '<span style="width:8px;height:8px;border-radius:50%;background:#059669;display:inline-block;animation:pulse 2s infinite"></span> <span style="color:#059669;font-weight:600">Live</span> <span style="color:#555;font-size:10px">Real-time sync active</span>'
+    : '<span style="width:8px;height:8px;border-radius:50%;background:#d97706;display:inline-block"></span> <span style="color:#d97706;font-weight:600">Local mode</span>';
+}
+
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.opacity = '0', 4000);
+}
+
+function startRealtime() {
+  if (!supaClient) return;
+  supaClient.channel('realtime-all')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, payload => {
+      showToast('🔔 New ticket raised: ' + payload.new.title);
+      if (['admin','manager'].includes(session?.role)) {
+        notifyNewTicket(payload.new, payload.new.location_id);
+      }
+      setTimeout(() => refreshPage(), 500);
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tickets' }, payload => {
+      const t = payload.new;
+      // Notify technician if assigned
+      if (t.assigned_to === session?.id && payload.old.assigned_to !== t.assigned_to) {
+        notifyAssigned(t, t.location_id);
+        showToast('👷 You have been assigned: ' + t.title);
+      }
+      // Notify if resolved
+      if (t.status === 'Resolved' && payload.old.status !== 'Resolved') {
+        showToast('✅ Resolved: ' + t.title);
+        if (t.raised_by === session?.id) notifyResolved(t, t.location_id);
+      }
+      setTimeout(() => refreshPage(), 300);
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'expenses' }, payload => {
+      if (['admin','manager'].includes(session?.role)) {
+        showToast('💰 New expense needs approval: ₹' + payload.new.amount);
+        notifyExpenseApproval(payload.new);
+      }
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ticket_comments' }, payload => {
+      showToast('💬 New comment on ticket ' + payload.new.ticket_id);
+      setTimeout(() => refreshPage(), 300);
+    })
+    .subscribe();
+}
+
+async function dbInsert(table, row) {
+  if (!isLive) return null;
+  const { data, error } = await supaClient.from(table).insert(row).select().single();
+  if (error) { console.error('insert', table, error); return null; }
+  return data;
+}
+async function dbUpdate(table, id, updates) {
+  if (!isLive) return null;
+  const { data, error } = await supaClient.from(table).update(updates).eq('id', id).select().single();
+  if (error) { console.error('update', table, error); return null; }
+  return data;
+}
+async function dbDelete(table, id) {
+  if (!isLive) return null;
+  const { error } = await supaClient.from(table).delete().eq('id', id);
+  return !error;
+}
+
+async function loadLiveData() {
+  if (!isLive) return;
+  showToast('⏳ Loading live data...');
+  try {
+    const [st,lo,us,ti,ex,am,re,al,cm] = await Promise.all([
+      supaClient.from('states').select('*').order('name'),
+      supaClient.from('locations').select('*').order('name'),
+      supaClient.from('users').select('*').order('name'),
+      supaClient.from('tickets').select('*').order('created_at',{ascending:false}),
+      supaClient.from('expenses').select('*').order('created_at',{ascending:false}),
+      supaClient.from('amc_records').select('*').order('end_date'),
+      supaClient.from('recurring_schedules').select('*'),
+      supaClient.from('audit_log').select('*').order('created_at',{ascending:false}).limit(100),
+      supaClient.from('ticket_comments').select('*').order('created_at'),
+    ]);
+    if (st.data) states = st.data;
+    if (lo.data) locations = lo.data.map(l=>({...l,stateId:l.state_id}));
+    if (us.data) users = us.data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id}));
+    if (ti.data) tickets = ti.data.map(t=>({...t,locationId:t.location_id,stateId:t.state_id,raisedBy:t.raised_by,assignedTo:t.assigned_to,dueDate:t.due_date,desc:t.description,comments:[]}));
+    if (cm.data) cm.data.forEach(c=>{ const t=tickets.find(x=>x.id===c.ticket_id); if(t) t.comments.push({user:c.user_id,text:c.text,time:c.created_at?.slice(0,16).replace('T',' ')}); });
+    if (ex.data) expenses = ex.data.map(e=>({...e,ticketId:e.ticket_id,addedBy:e.added_by}));
+    if (am.data) amcRecords = am.data.map(a=>({...a,locationIds:a.location_ids||[],startDate:a.start_date,endDate:a.end_date}));
+    if (re.data) recurringSchedules = re.data.map(r=>({...r,locationIds:r.location_ids||[],next:r.next_due,on:r.active}));
+    if (al.data) auditLog = al.data.map(e=>({t:e.created_at?.slice(0,16).replace('T',' '),a:e.action,d:e.detail||'',c:e.color||'b'}));
+    showToast('✓ Live data loaded');
+  } catch(e) {
+    console.error('loadLiveData error',e);
+    showToast('⚠ Using demo data');
+  }
+}
+
+// Override login to use Supabase
+const _origLogin = doLogin;
+window.doLogin = async function() {
+  const email = document.getElementById('login-email')?.value?.trim()?.toLowerCase();
+  const pass = document.getElementById('login-pass')?.value?.trim();
+  if (isLive) {
+    const { data, error } = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
+    if (error||!data) { 
+      const errEl = document.getElementById('login-error');
+      if (errEl) { errEl.textContent = 'Invalid email or password. Please try again.'; errEl.style.display = 'block'; }
+      return; 
+    }
+    session = {...data,stateId:data.state_id,locationId:data.location_id};
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.getElementById('sb-name').textContent=session.name;
+    document.getElementById('sb-role').innerHTML=roleBadge(session.role);
+    let locStr='All locations';
+    if(session.locationId){const l=getLoc(session.locationId);locStr=getState(l.stateId||l.state_id).name+' › '+l.name;}
+    else if(session.stateId){locStr=getState(session.stateId).name+' region';}
+    document.getElementById('sb-loc').textContent=locStr;
+    await loadLiveData();
+    buildNav();
+    navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[session.role]);
+    // Ask for notification permission after login
+    setTimeout(askNotificationPermission, 2000);
+    setTimeout(showInstallBanner, 5000);
+    startLocalChecks();
+  } else {
+    _origLogin();
+    setTimeout(askNotificationPermission, 2000);
+    startLocalChecks();
+  }
+};
+
+// Override save operations to write to Supabase
+window.submitTicket = async function() {
+  const title=document.getElementById('ri-t')?.value?.trim();
+  if(!title){alert('Enter a title');return;}
+  const raw=document.getElementById('ri-dd')?.value;
+  let dd='';if(raw){const[y,m,d]=raw.split('-');dd=d+'/'+m+'/'+y;}
+  const id='T'+Date.now().toString().slice(-6);
+  const loc=getLoc(session.locationId);
+  const row={id,location_id:session.locationId,state_id:loc.stateId,category:document.getElementById('ri-c')?.value,title,description:document.getElementById('ri-d')?.value,priority:document.getElementById('ri-p')?.value,status:'Open',raised_by:session.id,due_date:dd};
+  if(isLive){
+    await dbInsert('tickets',row);
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title,user_id:session.id,color:'p'});
+    await loadLiveData();
+    showToast('✓ Ticket '+id+' submitted!');
+  }else{
+    tickets.unshift({...row,locationId:session.locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:dd,desc:row.description,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
+    LOG('Ticket raised',id+' '+title,'p');
+    alert('Issue '+id+' submitted!');
+  }
+  navTo('my-tickets');
+};
+
+window.addComment = async function(id) {
+  const txt=document.getElementById('cmt-'+id)?.value?.trim();if(!txt)return;
+  const t=tickets.find(x=>x.id===id);
+  if(isLive){
+    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:txt});
+    await dbUpdate('tickets',id,{updated_at:new Date().toISOString(),status:t?.status==='Open'&&session.role==='technician'?'In Progress':t?.status});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Comment added',detail:id+' by '+session.name,user_id:session.id,color:'b'});
+    await loadLiveData();
+  }else{
+    t.comments.push({user:session.id,text:txt,time:nowTs()});
+    t.updatedAt=nowTs();
+    if(t.status==='Open'&&session.role==='technician')t.status='In Progress';
+    LOG('Comment added',id+' by '+session.name,'b');
+  }
+  openTicket(id);
+};
+
+window.resolveTicket = async function(id) {
+  if(isLive){
+    await dbUpdate('tickets',id,{status:'Resolved',updated_at:new Date().toISOString()});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket resolved',detail:id,user_id:session.id,color:'g'});
+    await loadLiveData();
+    showToast('✓ Ticket resolved');
+  }else{
+    const t=tickets.find(x=>x.id===id);
+    if(t){t.status='Resolved';t.updatedAt=nowTs();}
+    LOG('Ticket resolved',id,'g');
+  }
+  refreshPage();
+};
+
+window.confirmAssign = async function(id) {
+  const techId=document.getElementById('at-t')?.value;if(!techId){alert('Select a technician');return;}
+  const raw=document.getElementById('at-d')?.value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=d+'/'+m+'/'+y;}
+  const notes=document.getElementById('at-n')?.value;
+  const tech=getUser(techId);
+  if(isLive){
+    const upd={assigned_to:techId,status:'In Progress',updated_at:new Date().toISOString()};
+    if(dd)upd.due_date=dd;
+    await dbUpdate('tickets',id,upd);
+    if(notes)await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:'Assigned: '+notes});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket assigned',detail:id+' → '+tech?.name,user_id:session.id,color:'b'});
+    await loadLiveData();
+    showToast('✓ Assigned to '+tech?.name);
+  }else{
+    const t=tickets.find(x=>x.id===id);
+    t.assignedTo=techId;t.status='In Progress';
+    if(dd)t.dueDate=dd;
+    if(notes)t.comments.push({user:session.id,text:'Assigned: '+notes,time:nowTs()});
+    LOG('Ticket assigned',id+' → '+tech?.name,'b');
+  }
+  closeModal();refreshPage();
+};
+
+window.addExp = async function(ticketId) {
+  const amt=parseFloat(document.getElementById('ea')?.value);
+  const desc=document.getElementById('ed')?.value?.trim();
+  if(!amt||!desc){alert('Enter amount and description');return;}
+  const row={id:'e'+Date.now(),ticket_id:ticketId,added_by:session.id,category:document.getElementById('ec')?.value,description:desc,amount:amt,date:nowTs().split(' ')[0],approved:false};
+  if(isLive){
+    await dbInsert('expenses',row);
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense added',detail:ticketId+' ₹'+amt,user_id:session.id,color:'w'});
+    await loadLiveData();
+    showToast('✓ Expense saved');
+  }else{
+    expenses.push({...row,ticketId,addedBy:session.id});
+    LOG('Expense added',ticketId+' ₹'+amt,'w');
+  }
+  openExpModal(ticketId);
+};
+
+window.approveExp = async function(id) {
+  if(isLive){
+    await dbUpdate('expenses',id,{approved:true,approved_by:session.id});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense approved',detail:'₹'+expenses.find(e=>e.id===id)?.amount,user_id:session.id,color:'g'});
+    await loadLiveData();
+    showToast('✓ Expense approved');
+  }else{
+    const e=expenses.find(x=>x.id===id);if(e)e.approved=true;
+  }
+  refreshPage();
+};
+
+window.saveNewUser = async function() {
+  const name=document.getElementById('un')?.value?.trim();
+  const email=document.getElementById('ue')?.value?.trim()?.toLowerCase();
+  if(!name||!email){alert('Name and email required');return;}
+  const role=document.getElementById('ur')?.value;
+  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
+  if(isLive){
+    await dbInsert('users',row);
+    await loadLiveData();
+    showToast('✓ User created');
+  }else{
+    users.push({...row,stateId:row.state_id,locationId:row.location_id});
+  }
+  closeModal();renderUsers();
+};
+
+window.saveLocation = async function() {
+  const name=document.getElementById('ln')?.value?.trim();if(!name)return;
+  const sid=document.getElementById('ls')?.value,type=document.getElementById('lt')?.value;
+  const row={id:'l'+Date.now(),state_id:sid,name,type};
+  if(isLive){
+    await dbInsert('locations',row);
+    await loadLiveData();
+    showToast('✓ Location saved');
+  }else{
+    locations.push({...row,stateId:sid});
+  }
+  closeModal();renderLocations();
+};
+
+window.saveState = async function() {
+  const name=document.getElementById('st-n')?.value?.trim();if(!name)return;
+  const row={id:'s'+Date.now(),name};
+  if(isLive){
+    await dbInsert('states',row);
+    await loadLiveData();
+    showToast('✓ State added');
+  }else{
+    states.push(row);
+  }
+  closeModal();renderLocations();
+};
+
+window.saveNewAMC = async function() {
+  const d=getAmcData();if(!d.vendor||!d.endDate){alert('Vendor and end date required');return;}
+  const row={id:'a'+Date.now(),vendor:d.vendor,equipment:d.equipment,location_ids:d.locationIds,category:d.category,start_date:d.startDate,end_date:d.endDate,amount:d.amount,coverage:d.coverage,contact:d.contact,notes:d.notes};
+  if(isLive){
+    await dbInsert('amc_records',row);
+    await loadLiveData();
+    showToast('✓ AMC contract saved');
+  }else{
+    amcRecords.push({...row,locationIds:row.location_ids,startDate:row.start_date,endDate:row.end_date});
+  }
+  closeModal();renderAMC();
+};
+
+
+function showForgotPassword() {
+  document.getElementById('m-title').textContent = 'Forgot password';
+  document.getElementById('m-body').innerHTML = `
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">Enter your email address and your manager or admin will reset your password.</p>
+    <div class="fg"><label>Email address</label><input type="text" id="fp-email" placeholder="your@email.com"></div>
+    <div id="fp-msg" style="display:none;background:#d1fae5;border-radius:8px;padding:10px 12px;font-size:13px;color:#065f46;margin-bottom:12px"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="submitForgotPassword()">Send request</button>
+    </div>`;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function submitForgotPassword() {
+  const email = document.getElementById('fp-email')?.value?.trim();
+  if (!email) { alert('Enter your email'); return; }
+  const msg = document.getElementById('fp-msg');
+  if (msg) {
+    msg.style.display = 'block';
+    msg.textContent = '✓ Password reset request sent. Please contact your manager or admin to reset your password.';
+  }
+  setTimeout(() => closeModal(), 3000);
+}
+
+window.addEventListener('load', async () => {
+  await initSupabase();
+  await initPWA();
+});
+</script>
+<script>
+
+// ============================================================
+// PWA — Service Worker + Push Notifications
+// ============================================================
+
+const VAPID_PUBLIC_KEY = ''; // Add your VAPID key here for push (optional)
+let swRegistration = null;
+let pushSubscription = null;
+let notifPermission = 'default';
+
+async function initPWA() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swRegistration = await navigator.serviceWorker.register('/sw.js');
+    console.log('✓ Service Worker registered');
+    
+    // Check notification permission
+    notifPermission = Notification.permission;
+    
+    // Listen for messages from SW
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data?.type === 'NOTIFICATION_CLICK') {
+        navTo('dashboard');
+      }
+    });
+    
+  } catch(e) {
+    console.warn('SW registration failed:', e.message);
+  }
+}
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+  
+  const permission = await Notification.requestPermission();
+  notifPermission = permission;
+  return permission === 'granted';
+}
+
+// Show a local push notification (works without VAPID/server)
+async function pushNotify(title, body, options = {}) {
+  if (Notification.permission !== 'granted') {
+    const granted = await requestNotificationPermission();
+    if (!granted) return;
+  }
+  
+  const opts = {
+    body,
+    icon: '/icon-192.svg',
+    badge: '/icon-192.svg',
+    vibrate: [200, 100, 200],
+    tag: 'mtos-' + Date.now(),
+    ...options
+  };
+  
+  if (swRegistration) {
+    swRegistration.showNotification(title, opts);
+  } else {
+    new Notification(title, opts);
+  }
+}
+
+// Notification triggers — called throughout the app
+function notifyNewTicket(ticket, location) {
+  if (['admin','manager'].includes(session?.role)) return; // They raised it or are logged in
+  pushNotify(
+    '🔔 New Ticket Raised',
+    `${ticket.title} — ${location}`,
+    { tag: 'ticket-new-' + ticket.id, requireInteraction: ticket.priority === 'High' }
+  );
+}
+
+function notifyAssigned(ticket, location) {
+  pushNotify(
+    '👷 Task Assigned to You',
+    `${ticket.title} — ${location}`,
+    { tag: 'ticket-assigned-' + ticket.id, requireInteraction: true }
+  );
+}
+
+function notifyResolved(ticket, location) {
+  pushNotify(
+    '✅ Ticket Resolved',
+    `${ticket.title} — ${location}`,
+    { tag: 'ticket-resolved-' + ticket.id }
+  );
+}
+
+function notifyExpenseApproval(expense) {
+  pushNotify(
+    '💰 Expense Needs Approval',
+    `${expense.description} — ₹${Number(expense.amount).toLocaleString('en-IN')}`,
+    { tag: 'expense-' + expense.id }
+  );
+}
+
+function notifyOverdue(ticket, location, daysOverdue) {
+  pushNotify(
+    `⏰ Overdue Ticket (${daysOverdue}d)`,
+    `${ticket.title} — ${location}`,
+    { tag: 'overdue-' + ticket.id, requireInteraction: true }
+  );
+}
+
+function notifyEscalated(ticket, location) {
+  pushNotify(
+    '🚨 ESCALATED — Action Required',
+    `${ticket.title} — ${location}`,
+    { tag: 'esc-' + ticket.id, requireInteraction: true, vibrate: [500, 200, 500, 200, 500] }
+  );
+}
+
+function notifyAMCExpiring(vendor, daysLeft) {
+  pushNotify(
+    daysLeft < 0 ? '🔴 AMC Expired' : `🟡 AMC Expiring in ${daysLeft} days`,
+    `${vendor} — Please arrange renewal`,
+    { tag: 'amc-' + vendor, requireInteraction: true }
+  );
+}
+
+// Check overdue/escalated on load and every 30 mins
+function startLocalChecks() {
+  checkOverdueAndEscalated();
+  setInterval(checkOverdueAndEscalated, 30 * 60 * 1000); // every 30 min
+  checkAMCAlerts();
+}
+
+function checkOverdueAndEscalated() {
+  if (!session || !['admin','manager'].includes(session.role)) return;
+  tickets.forEach(t => {
+    if (['Resolved','Closed'].includes(t.status)) return;
+    if (isESC(t)) {
+      const loc = getLoc(t.locationId), state = getState(loc.stateId);
+      notifyEscalated(t, state.name + ' › ' + loc.name);
+    } else if (isOD(t)) {
+      const loc = getLoc(t.locationId), state = getState(loc.stateId);
+      notifyOverdue(t, state.name + ' › ' + loc.name, dAgo(t.dueDate));
+    }
+  });
+}
+
+function checkAMCAlerts() {
+  if (!session || !['admin','manager'].includes(session.role)) return;
+  amcRecords.forEach(a => {
+    const days = amcDaysLeft(a.endDate);
+    if (days < 0 || days === 30 || days === 7 || days === 1) {
+      notifyAMCExpiring(a.vendor, days);
+    }
+  });
+}
+
+// ============================================================
+// INSTALL PROMPT — Add to Home Screen
+// ============================================================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Show install banner after login
+  setTimeout(showInstallBanner, 3000);
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.remove();
+  showToast('✓ App installed on your home screen!');
+});
+
+function showInstallBanner() {
+  if (!deferredInstallPrompt || !session) return;
+  if (document.getElementById('install-banner')) return;
+  
+  const banner = document.createElement('div');
+  banner.id = 'install-banner';
+  banner.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a18;color:#fff;padding:14px 20px;border-radius:14px;font-size:13px;z-index:9998;box-shadow:0 4px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:12px;max-width:340px;width:90%';
+  banner.innerHTML = `
+    <span style="font-size:22px">📱</span>
+    <div style="flex:1">
+      <div style="font-weight:700;margin-bottom:2px">Add to Home Screen</div>
+      <div style="font-size:11px;color:#888">Open MaintenanceOS like a native app</div>
+    </div>
+    <button onclick="installApp()" style="background:#fff;color:#1a1a18;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Install</button>
+    <button onclick="document.getElementById('install-banner').remove()" style="background:transparent;border:none;color:#555;cursor:pointer;font-size:18px;padding:0 4px">×</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function installApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.remove();
+}
+
+// Show notification permission request after login
+async function askNotificationPermission() {
+  if (Notification.permission === 'granted' || Notification.permission === 'denied') return;
+  if (!session) return;
+  
+  // Show a friendly prompt
+  const banner = document.createElement('div');
+  banner.id = 'notif-banner';
+  banner.style.cssText = 'position:fixed;top:16px;right:16px;background:#1a1a18;color:#fff;padding:14px 18px;border-radius:14px;font-size:13px;z-index:9998;box-shadow:0 4px 24px rgba(0,0,0,.4);max-width:320px';
+  banner.innerHTML = `
+    <div style="font-weight:700;margin-bottom:4px">🔔 Enable notifications?</div>
+    <div style="font-size:12px;color:#aaa;margin-bottom:12px">Get instant alerts for new tickets, assignments, and escalations</div>
+    <div style="display:flex;gap:8px">
+      <button onclick="enableNotifs()" style="flex:1;background:#fff;color:#1a1a18;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer">Enable</button>
+      <button onclick="document.getElementById('notif-banner').remove()" style="flex:1;background:#2a2a28;color:#aaa;border:none;border-radius:8px;padding:8px;font-size:12px;cursor:pointer">Not now</button>
+    </div>
+  `;
+  document.body.appendChild(banner);
+}
+
+async function enableNotifs() {
+  const banner = document.getElementById('notif-banner');
+  if (banner) banner.remove();
+  const granted = await requestNotificationPermission();
+  if (granted) {
+    showToast('✓ Notifications enabled!');
+    pushNotify('✓ MaintenanceOS', 'Notifications are now enabled. You will be alerted for new tickets, assignments and escalations.');
+  } else {
+    showToast('Notifications blocked. Enable in browser settings.');
+  }
+}
+
+</script>
+</body>
+</html>
