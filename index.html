@@ -287,7 +287,7 @@ let auditLog = [
   {t:'27/05/2026 09:00',a:'Ticket raised',d:'T006 Cold room — Mumbai CK',c:'p'},
   {t:'05/05/2026 16:00',a:'Ticket resolved',d:'T009 AC not cooling — Chowpatty',c:'g'},
   {t:'04/05/2026 14:00',a:'Ticket resolved',d:'T010 Dishwasher leaking — Mumbai CK',c:'g'},
-  {t:'10/05/2026 14:00',a:'Ticket assigned',d:'T001 → Arjun Mehta',c:'b'},
+  {t:'10/05/2026 14:00',a:'Ticket assigned',d:'T001 to Arjun Mehta',c:'b'},
 ];
 
 const TODAY = new Date('2026-05-29');
@@ -310,7 +310,15 @@ function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'
 function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
 function sbadge(t){if(isESC(t))return'<span class="badge b-esc">⚠ Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
 function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
-function visT(){if(['admin','manager'].includes(session.role))return tickets;if(session.role==='technician')return tickets.filter(t=>t.assignedTo===session.id);if(session.role==='outlet')return tickets.filter(t=>t.locationId===session.locationId);return[];}
+function visT(){
+  if(['admin','manager'].includes(session.role)) return tickets;
+  if(session.role==='technician') return tickets.filter(t=>
+    t.assignedTo===session.id || // assigned to me
+    (!t.assignedTo && !['Resolved','Closed'].includes(t.status)) // unassigned & open
+  );
+  if(session.role==='outlet') return tickets.filter(t=>t.locationId===session.locationId);
+  return[];
+}
 function ticketExp(id){return expenses.filter(e=>e.ticketId===id);}
 function ticketExpTotal(id){return ticketExp(id).reduce((s,e)=>s+Number(e.amount),0);}
 function amcDaysLeft(endDate){if(!endDate)return 9999;const[d,m,y]=endDate.split('/');return Math.floor((new Date(+y,+m-1,+d)-TODAY)/86400000);}
@@ -356,15 +364,20 @@ const NAV={
   admin:[
     {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'🏠',l:'Locations'},{id:'users',i:'👤',l:'Users & roles'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
   ],
-  technician:[{id:'my-tasks',i:'🔧',l:'My tasks'},{id:'tickets',i:'📋',l:'All tickets'},{id:'my-expenses',i:'💰',l:'My expenses'}],
+  technician:[
+    {id:'my-tasks',i:'🔧',l:'My tasks'},
+    {id:'raise',i:'＋',l:'Raise ticket'},
+    {id:'tickets',i:'📋',l:'All tickets'},
+    {id:'my-expenses',i:'💰',l:'My expenses'},
+  ],
   outlet:[{id:'raise',i:'＋',l:'Raise issue'},{id:'my-tickets',i:'📋',l:'My tickets'}],
 };
 function buildNav(){
@@ -413,10 +426,16 @@ function ticketActions(t){
     if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
     a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expenses</button>`;
   }
-  if(session.role==='technician'&&t.assignedTo===session.id){
-    if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
-    a+=`<button class="btn sm primary" onclick="openTicket('${t.id}')">💬 Update</button>`;
-    a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Add expense</button>`;
+  if(session.role==='technician'){
+    if(!t.assignedTo && !['Resolved','Closed'].includes(t.status)){
+      // Unassigned — technician can grab it
+      a+=`<button class="btn sm primary" onclick="assignToSelf('${t.id}')">✋ Assign to me</button>`;
+    }
+    if(t.assignedTo===session.id){
+      if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
+      a+=`<button class="btn sm primary" onclick="openTicket('${t.id}')">💬 Update</button>`;
+      a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expense</button>`;
+    }
   }
   if(session.role==='outlet')a+=`<button class="btn sm" onclick="openTicket('${t.id}')">💬 View</button>`;
   return a;
@@ -462,7 +481,7 @@ function renderDashboard(){
       <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${session.name}</div></div>
       ${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
     </div>
-    ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention → View AMC</div>`:''}
+    ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention to View AMC</div>`:''}
     <div class="metrics">
       <div class="met"><div class="met-bar" style="background:#dc2626"></div><div class="ml">Escalated</div><div class="mv r">${esc}</div></div>
       <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Overdue</div><div class="mv w">${od}</div></div>
@@ -603,7 +622,7 @@ function confirmAssign(id){
   const notes=document.getElementById('at-n').value,t=tickets.find(x=>x.id===id),tech=getUser(techId);
   t.assignedTo=techId;t.status='In Progress';if(dd)t.dueDate=dd;
   if(notes)t.comments.push({user:session.id,text:'Assigned: '+notes,time:nowTs()});
-  LOG('Ticket assigned',`${t.id} → ${tech.name}`,'b');closeModal();refreshPage();
+  LOG('Ticket assigned',`${t.id} to ${tech.name}`,'b');closeModal();refreshPage();
 }
 
 // ============================================================
@@ -734,7 +753,7 @@ function amcCard(a){
       <div class="badges">${statusBadge} <span class="badge b-grey">${a.category}</span></div>
     </div>
     <div class="card-meta">
-      <span>📅 ${a.startDate} → ${a.endDate}</span>
+      <span>📅 ${a.startDate} to ${a.endDate}</span>
       <span style="font-weight:600;color:#059669">💰 ${fc(a.amount)}/year</span>
       <span>📞 ${a.contact}</span>
     </div>
@@ -1075,7 +1094,8 @@ function userFormHTML(u){
   const lOpts=`<option value="">— None —</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
   return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Email</label><input type="text" id="ue" value="${u.email||''}"></div>
-  <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep"></div>
+  <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
+  <div class="fg"><label>WhatsApp number <span style="color:#888;font-weight:400">(with country code, e.g. +919876543210)</span></label><input type="text" id="uwa" value="${u.whatsapp||''}" placeholder="+91XXXXXXXXXX"></div>
   <div class="fg"><label>State</label><select id="us" onchange="refreshLocDrop()">${sOpts}</select></div>
   <div class="fg" id="ulf" style="${u.role==='outlet'?'':'display:none'}"><label>Location</label><select id="ul">${lOpts}</select></div>
   <div class="fg" id="usf" style="${u.role==='technician'?'':'display:none'}"><label>Specialty</label><input type="text" id="usp" value="${u.specialty||''}" placeholder="e.g. Electrical"></div>`;
@@ -1083,9 +1103,34 @@ function userFormHTML(u){
 function toggleUF(){const r=document.getElementById('ur').value;document.getElementById('ulf').style.display=r==='outlet'?'':'none';document.getElementById('usf').style.display=r==='technician'?'':'none';}
 function refreshLocDrop(){const sid=document.getElementById('us').value;const locs=sid?locations.filter(l=>l.stateId===sid):locations;document.getElementById('ul').innerHTML=`<option value="">— None —</option>`+locs.map(l=>`<option value="${l.id}">${locLabel(l)}</option>`).join('');}
 function openAddUser(){document.getElementById('m-title').textContent='Add user';document.getElementById('m-body').innerHTML=userFormHTML({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewUser()">Create</button></div>`;openModal();}
-function openEditUser(id){const u=getUser(id);document.getElementById('m-title').textContent='Edit: '+u.name;document.getElementById('m-body').innerHTML=userFormHTML(u)+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveUser('${id}')">Save</button></div>`;openModal();}
+function openEditUser(id){
+  const u=getUser(id);
+  if(!u){alert('User not found');return;}
+  document.getElementById('m-title').textContent='Edit: '+u.name;
+  document.getElementById('m-body').innerHTML=userFormHTML(u)+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveUser('${id}')">Save changes</button></div>`;
+  openModal();
+}
 function saveNewUser(){const n=document.getElementById('un').value.trim(),e=document.getElementById('ue').value.trim().toLowerCase();if(!n||!e){alert('Name and email required');return;}const r=document.getElementById('ur').value;users.push({id:'u'+Date.now(),name:n,email:e,pass:document.getElementById('up').value||'pass123',role:r,stateId:document.getElementById('us').value||null,locationId:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,avatar:n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()});LOG('User created',n+' ('+roleLabel(r)+')','p');closeModal();renderUsers();}
-function saveUser(id){const i=users.findIndex(u=>u.id===id),r=document.getElementById('ur').value,p=document.getElementById('up').value;users[i]={...users[i],name:document.getElementById('un').value,email:document.getElementById('ue').value.toLowerCase(),pass:p||users[i].pass,role:r,stateId:document.getElementById('us').value||null,locationId:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null};LOG('User updated',users[i].name,'b');closeModal();renderUsers();}
+async function saveUser(id){
+  const r=document.getElementById('ur').value;
+  const p=document.getElementById('up').value;
+  const name=document.getElementById('un').value.trim();
+  const email=document.getElementById('ue').value.trim().toLowerCase();
+  const wa=document.getElementById('uwa')?.value?.trim()||null;
+  const updates={name,email,role:r,state_id:document.getElementById('us').value||null,location_id:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,whatsapp:wa};
+  if(p) updates.pass=p;
+  if(isLive){
+    const saved=await dbUpdate('users',id,updates);
+    if(!saved){alert('Error saving. Please try again.');return;}
+    await loadLiveData();
+    showToast('✓ User updated — they can now log in with the new email/password');
+  }else{
+    const i=users.findIndex(u=>u.id===id);
+    users[i]={...users[i],...updates,stateId:updates.state_id,locationId:updates.location_id};
+  }
+  LOG('User updated',name,'b');
+  closeModal();renderUsers();
+}
 function deleteUser(id){if(!confirm('Delete?'))return;users=users.filter(u=>u.id!==id);renderUsers();}
 
 // ============================================================
@@ -1138,23 +1183,61 @@ function renderMyTasks(){
   const mine=tickets.filter(t=>t.assignedTo===session.id);
   const open=mine.filter(t=>!['Resolved','Closed'].includes(t.status));
   const done=mine.filter(t=>['Resolved','Closed'].includes(t.status));
+  const unassigned=tickets.filter(t=>!t.assignedTo&&!['Resolved','Closed'].includes(t.status));
+
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">My tasks</div><div class="page-sub">${open.length} active · ${done.length} resolved</div></div></div>
-    <div class="tab-btns"><button class="tab-btn active" onclick="showT2('mto','mtd',this)">Active (${open.length})</button><button class="tab-btn" onclick="showT2('mtd','mto',this)">Resolved (${done.length})</button></div>
-    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ No active tasks</div>'}</div>
+    <div class="page-hdr"><div><div class="page-title">My tasks</div><div class="page-sub">${open.length} active · ${unassigned.length} available to pick up</div></div></div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showMTTab('mto','mtu','mtd',this)">My active (${open.length})</button>
+      <button class="tab-btn" id="avail-tab-btn" onclick="showMTTab('mtu','mto','mtd',this)">Available to take (${unassigned.length})</button>
+      <button class="tab-btn" onclick="showMTTab('mtd','mto','mtu',this)">Resolved (${done.length})</button>
+    </div>
+    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ No active tasks assigned to you</div>'}</div>
+    <div id="mtu" style="display:none">
+      ${unassigned.length?`
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px">
+          💡 These tickets have no technician assigned. Tap <strong>"Assign to me"</strong> to take ownership.
+        </div>
+        ${unassigned.map(t=>ticketCard(t)).join('')}
+      `:'<div class="empty">✓ No unassigned tickets right now</div>'}
+    </div>
     <div id="mtd" style="display:none">${done.length?done.map(t=>ticketCard(t)).join(''):'<div class="empty">None resolved yet</div>'}</div>`;
 }
+
+function showMTTab(show,h1,h2,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  [show,h1,h2].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=i===0?'':'none';
+  });
+}
 function renderRaise(){
-  const loc=getLoc(session.locationId),state=getState(loc.stateId);
+  // For outlet: fixed to their location
+  // For manager/admin/technician: can pick any location
+  const canPickLocation = ['admin','manager','technician'].includes(session.role);
+  const locOptions = canPickLocation
+    ? locations.map(l=>`<option value="${l.id}">${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('')
+    : '';
+  const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
+  const fixedState = fixedLoc ? getState(fixedLoc.stateId) : null;
+  const subTitle = fixedLoc
+    ? `${fixedState.name} › ${fixedLoc.name} · ${fixedLoc.type==='central_kitchen'?'Central Kitchen':'Outlet'}`
+    : 'Select a location below';
+
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Raise an issue</div><div class="page-sub">${state.name} › ${loc.name} · ${loc.type==='central_kitchen'?'Central Kitchen':'Outlet'}</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">Raise a ticket</div><div class="page-sub">${subTitle}</div></div></div>
     <div style="max-width:560px"><div class="card">
+      ${canPickLocation ? `<div class="fg"><label>Location</label><select id="ri-loc"><option value="">Select location...</option>${locOptions}</select></div>` : ''}
       <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
-      <div class="frow"><div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Priority</label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div></div>
+      <div class="frow">
+        <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label>Priority</label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+      </div>
       <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
       <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
-      <button class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="submitTicket()">＋ Submit issue</button>
-    </div><div style="font-size:12px;color:#aaa;text-align:center;margin-top:8px">Submitted tickets are reviewed by the maintenance manager.</div></div>`;
+      <button class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="submitTicket()">＋ Submit ticket</button>
+    </div></div>`;
 }
 function submitTicket(){
   const title=document.getElementById('ri-t').value.trim();if(!title){alert('Enter a title');return;}
@@ -1188,6 +1271,43 @@ const SUPA_URL = 'https://ymlgezkahrsfpngzyacr.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltbGdlemthaHJzZnBuZ3p5YWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTI2NjQsImV4cCI6MjA5NjU2ODY2NH0.0VjqNH0XKCAkeDBqmAgQj3AqgK1Pq3nBTDWhy591OxQ';
 let supaClient = null;
 let isLive = false;
+
+
+// Technician assigns ticket to themselves
+async function assignToSelf(id) {
+  const t = tickets.find(x=>x.id===id);
+  if (!t) return;
+  if (!confirm(`Assign "${t.title}" to yourself?`)) return;
+
+  if (isLive) {
+    await dbUpdate('tickets', id, {
+      assigned_to: session.id,
+      status: 'In Progress',
+      updated_at: new Date().toISOString()
+    });
+    await dbInsert('ticket_comments', {
+      id: 'c'+Date.now(),
+      ticket_id: id,
+      user_id: session.id,
+      text: session.name + ' has taken ownership of this ticket.'
+    });
+    await dbInsert('audit_log', {
+      id: 'al'+Date.now(),
+      action: 'Self-assigned',
+      detail: id + ' assigned to ' + session.name,
+      user_id: session.id,
+      color: 'b'
+    });
+    await loadLiveData();
+    showToast('✓ Ticket assigned to you — it now appears in My Tasks');
+  } else {
+    t.assignedTo = session.id;
+    t.status = 'In Progress';
+    t.comments.push({user: session.id, text: session.name + ' has taken ownership of this ticket.', time: nowTs()});
+    LOG('Self-assigned', id + ' to ' + session.name, 'b');
+  }
+  refreshPage();
+}
 
 async function initSupabase() {
   try {
@@ -1347,22 +1467,34 @@ window.doLogin = async function() {
 window.submitTicket = async function() {
   const title=document.getElementById('ri-t')?.value?.trim();
   if(!title){alert('Enter a title');return;}
+
+  // Determine location
+  let locationId = session.locationId; // outlet uses their own
+  if(['admin','manager','technician'].includes(session.role)){
+    const locEl = document.getElementById('ri-loc');
+    locationId = locEl ? locEl.value : null;
+    if(!locationId){alert('Please select a location');return;}
+  }
+
+  const loc=getLoc(locationId);
   const raw=document.getElementById('ri-dd')?.value;
   let dd='';if(raw){const[y,m,d]=raw.split('-');dd=d+'/'+m+'/'+y;}
   const id='T'+Date.now().toString().slice(-6);
-  const loc=getLoc(session.locationId);
-  const row={id,location_id:session.locationId,state_id:loc.stateId,category:document.getElementById('ri-c')?.value,title,description:document.getElementById('ri-d')?.value,priority:document.getElementById('ri-p')?.value,status:'Open',raised_by:session.id,due_date:dd};
+  const row={id,location_id:locationId,state_id:loc.stateId||loc.state_id,category:document.getElementById('ri-c')?.value,title,description:document.getElementById('ri-d')?.value,priority:document.getElementById('ri-p')?.value,status:'Open',raised_by:session.id,due_date:dd};
+
   if(isLive){
     await dbInsert('tickets',row);
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title,user_id:session.id,color:'p'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' — '+loc.name,user_id:session.id,color:'p'});
     await loadLiveData();
     showToast('✓ Ticket '+id+' submitted!');
   }else{
-    tickets.unshift({...row,locationId:session.locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:dd,desc:row.description,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
+    tickets.unshift({...row,locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:dd,desc:row.description,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
     LOG('Ticket raised',id+' '+title,'p');
-    alert('Issue '+id+' submitted!');
+    alert('Ticket '+id+' submitted!');
   }
-  navTo('my-tickets');
+  // Redirect based on role
+  if(['admin','manager'].includes(session.role)) navTo('tickets');
+  else navTo('my-tasks');
 };
 
 window.addComment = async function(id) {
@@ -1406,7 +1538,7 @@ window.confirmAssign = async function(id) {
     if(dd)upd.due_date=dd;
     await dbUpdate('tickets',id,upd);
     if(notes)await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:'Assigned: '+notes});
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket assigned',detail:id+' → '+tech?.name,user_id:session.id,color:'b'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket assigned',detail:id+' to '+tech?.name,user_id:session.id,color:'b'});
     await loadLiveData();
     showToast('✓ Assigned to '+tech?.name);
   }else{
@@ -1414,7 +1546,7 @@ window.confirmAssign = async function(id) {
     t.assignedTo=techId;t.status='In Progress';
     if(dd)t.dueDate=dd;
     if(notes)t.comments.push({user:session.id,text:'Assigned: '+notes,time:nowTs()});
-    LOG('Ticket assigned',id+' → '+tech?.name,'b');
+    LOG('Ticket assigned',id+' to '+tech?.name,'b');
   }
   closeModal();refreshPage();
 };
@@ -1453,7 +1585,7 @@ window.saveNewUser = async function() {
   const email=document.getElementById('ue')?.value?.trim()?.toLowerCase();
   if(!name||!email){alert('Name and email required');return;}
   const role=document.getElementById('ur')?.value;
-  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
+  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
   if(isLive){
     await dbInsert('users',row);
     await loadLiveData();
