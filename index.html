@@ -1096,6 +1096,7 @@ function userFormHTML(u){
   <div class="fg"><label>Email</label><input type="text" id="ue" value="${u.email||''}"></div>
   <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
   <div class="fg"><label>WhatsApp number <span style="color:#888;font-weight:400">(with country code, e.g. +919876543210)</span></label><input type="text" id="uwa" value="${u.whatsapp||''}" placeholder="+91XXXXXXXXXX"></div>
+  <div class="fg"><label>Telegram Chat ID <span style="color:#888;font-weight:400">(<a href="https://t.me/BennemaintenanceOSBot" target="_blank" style="color:#2563eb">open bot</a>, send /start, paste the ID shown)</span></label><input type="text" id="utg" value="${u.telegram_id||''}" placeholder="e.g. 123456789"></div>
   <div class="fg"><label>State</label><select id="us" onchange="refreshLocDrop()">${sOpts}</select></div>
   <div class="fg" id="ulf" style="${u.role==='outlet'?'':'display:none'}"><label>Location</label><select id="ul">${lOpts}</select></div>
   <div class="fg" id="usf" style="${u.role==='technician'?'':'display:none'}"><label>Specialty</label><input type="text" id="usp" value="${u.specialty||''}" placeholder="e.g. Electrical"></div>`;
@@ -1117,7 +1118,8 @@ async function saveUser(id){
   const name=document.getElementById('un').value.trim();
   const email=document.getElementById('ue').value.trim().toLowerCase();
   const wa=document.getElementById('uwa')?.value?.trim()||null;
-  const updates={name,email,role:r,state_id:document.getElementById('us').value||null,location_id:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,whatsapp:wa};
+  const tg=document.getElementById('utg')?.value?.trim()||null;
+  const updates={name,email,role:r,state_id:document.getElementById('us').value||null,location_id:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,whatsapp:wa,telegram_id:tg};
   if(p) updates.pass=p;
   if(isLive){
     const saved=await dbUpdate('users',id,updates);
@@ -1300,6 +1302,9 @@ async function assignToSelf(id) {
     });
     await loadLiveData();
     showToast('✓ Ticket assigned to you — it now appears in My Tasks');
+    const _st=tickets.find(x=>x.id===id)||{};
+    const _sloc=getLoc(_st.location_id||_st.locationId), _sstate=getState(_sloc.stateId||_sloc.state_id);
+    tgOnSelfAssigned(_st, session.name, _sloc.name, _sstate.name);
   } else {
     t.assignedTo = session.id;
     t.status = 'In Progress';
@@ -1487,6 +1492,9 @@ window.submitTicket = async function() {
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' — '+loc.name,user_id:session.id,color:'p'});
     await loadLiveData();
     showToast('✓ Ticket '+id+' submitted!');
+    // Telegram notification
+    const _loc=getLoc(locationId), _state=getState(_loc.stateId||_loc.state_id);
+    tgOnTicketRaised({id,title,category:row.category,priority:row.priority,raised_by:session.id}, _loc.name, _state.name, session.name);
   }else{
     tickets.unshift({...row,locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:dd,desc:row.description,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
     LOG('Ticket raised',id+' '+title,'p');
@@ -1505,6 +1513,10 @@ window.addComment = async function(id) {
     await dbUpdate('tickets',id,{updated_at:new Date().toISOString(),status:t?.status==='Open'&&session.role==='technician'?'In Progress':t?.status});
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Comment added',detail:id+' by '+session.name,user_id:session.id,color:'b'});
     await loadLiveData();
+    // Telegram notification
+    const _ct=tickets.find(x=>x.id===id)||{};
+    const _cloc=getLoc(_ct.location_id||_ct.locationId), _cstate=getState(_cloc.stateId||_cloc.state_id);
+    tgOnCommentAdded(_ct, session.name, txt, _cloc.name, _cstate.name);
   }else{
     t.comments.push({user:session.id,text:txt,time:nowTs()});
     t.updatedAt=nowTs();
@@ -1520,6 +1532,10 @@ window.resolveTicket = async function(id) {
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket resolved',detail:id,user_id:session.id,color:'g'});
     await loadLiveData();
     showToast('✓ Ticket resolved');
+    // Telegram notification
+    const _rt=tickets.find(x=>x.id===id)||{};
+    const _rloc=getLoc(_rt.location_id||_rt.locationId), _rstate=getState(_rloc.stateId||_rloc.state_id);
+    tgOnTicketResolved(_rt, _rloc.name, _rstate.name, session.name);
   }else{
     const t=tickets.find(x=>x.id===id);
     if(t){t.status='Resolved';t.updatedAt=nowTs();}
@@ -1541,6 +1557,10 @@ window.confirmAssign = async function(id) {
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket assigned',detail:id+' to '+tech?.name,user_id:session.id,color:'b'});
     await loadLiveData();
     showToast('✓ Assigned to '+tech?.name);
+    // Telegram notification
+    const _at=tickets.find(x=>x.id===id)||{};
+    const _aloc=getLoc(_at.location_id||_at.locationId), _astate=getState(_aloc.stateId||_aloc.state_id);
+    tgOnTicketAssigned({..._at,due_date:dd||_at.due_date}, techId, _aloc.name, _astate.name);
   }else{
     const t=tickets.find(x=>x.id===id);
     t.assignedTo=techId;t.status='In Progress';
@@ -1561,6 +1581,7 @@ window.addExp = async function(ticketId) {
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense added',detail:ticketId+' ₹'+amt,user_id:session.id,color:'w'});
     await loadLiveData();
     showToast('✓ Expense saved');
+    tgOnExpenseAdded(ticketId, desc, amt, session.name);
   }else{
     expenses.push({...row,ticketId,addedBy:session.id});
     LOG('Expense added',ticketId+' ₹'+amt,'w');
@@ -1574,6 +1595,8 @@ window.approveExp = async function(id) {
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense approved',detail:'₹'+expenses.find(e=>e.id===id)?.amount,user_id:session.id,color:'g'});
     await loadLiveData();
     showToast('✓ Expense approved');
+    const _expApproved = expenses.find(e=>e.id===id);
+    if(_expApproved) tgOnExpenseApproved(_expApproved, session.name);
   }else{
     const e=expenses.find(x=>x.id===id);if(e)e.approved=true;
   }
@@ -1585,7 +1608,7 @@ window.saveNewUser = async function() {
   const email=document.getElementById('ue')?.value?.trim()?.toLowerCase();
   if(!name||!email){alert('Name and email required');return;}
   const role=document.getElementById('ur')?.value;
-  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
+  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,telegram_id:document.getElementById('utg')?.value?.trim()||null,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
   if(isLive){
     await dbInsert('users',row);
     await loadLiveData();
@@ -1897,6 +1920,112 @@ async function enableNotifs() {
   } else {
     showToast('Notifications blocked. Enable in browser settings.');
   }
+}
+
+
+// ============================================================
+// TELEGRAM BOT NOTIFICATIONS — Free & Automatic
+// ============================================================
+const TG_TOKEN = '8844109324:AAGG3_D1ujUVVKm1TSF5hdVCc9HpmkpB9N4';
+const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
+
+async function tgSend(chatId, message) {
+  if (!chatId) return;
+  try {
+    const res = await fetch(TG_API + '/sendMessage', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true
+      })
+    });
+    const data = await res.json();
+    if (!data.ok) console.warn('Telegram send failed:', data.description);
+    return data.ok;
+  } catch(e) {
+    console.warn('Telegram error:', e.message);
+  }
+}
+
+// Send to all users with a specific role
+async function tgNotifyRole(role, message, excludeId = null) {
+  const targets = users.filter(u => u.role === role && u.telegram_id && u.id !== excludeId);
+  for (const u of targets) {
+    await tgSend(u.telegram_id, message);
+  }
+}
+
+// Send to a specific user
+async function tgNotifyUser(userId, message) {
+  const u = getUser(userId);
+  if (u && u.telegram_id) await tgSend(u.telegram_id, message);
+}
+
+// ---- NOTIFICATION TRIGGERS ----
+
+async function tgOnTicketRaised(ticket, loc, state, raiser) {
+  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} — ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg, ticket.raised_by || ticket.raisedBy);
+  await tgNotifyRole('admin', msg, ticket.raised_by || ticket.raisedBy);
+}
+
+async function tgOnTicketAssigned(ticket, techId, loc, state) {
+  const tech = getUser(techId);
+  if (!tech) return;
+  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} — ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
+  await tgNotifyUser(techId, msg);
+  // Also notify managers
+  const mgrMsg = `✅ <b>Ticket Assigned</b>\n${ticket.id} assigned to ${tech.name}\n${state} › ${loc}`;
+  await tgNotifyRole('manager', mgrMsg);
+}
+
+async function tgOnTicketResolved(ticket, loc, state, resolvedBy) {
+  const raiser = getUser(ticket.raised_by || ticket.raisedBy);
+  const msg = `✅ <b>Ticket Resolved</b>\n\n<b>${ticket.id} — ${ticket.title}</b>\nLocation: ${state} › ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  if (raiser) await tgNotifyUser(raiser.id, msg);
+  await tgNotifyRole('manager', msg);
+}
+
+async function tgOnCommentAdded(ticket, commenterName, commentText, loc, state) {
+  const msg = `💬 <b>Update on Ticket ${ticket.id}</b>\n\n${ticket.title}\n${state} › ${loc}\n\n<b>${commenterName}:</b> ${commentText}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  // Notify manager
+  await tgNotifyRole('manager', msg, session.id);
+  // Notify technician if manager commented
+  if (['manager','admin'].includes(session.role) && (ticket.assigned_to || ticket.assignedTo)) {
+    await tgNotifyUser(ticket.assigned_to || ticket.assignedTo, msg);
+  }
+  // Notify outlet if tech/manager commented
+  if (['technician','manager','admin'].includes(session.role) && (ticket.raised_by || ticket.raisedBy)) {
+    await tgNotifyUser(ticket.raised_by || ticket.raisedBy, msg);
+  }
+}
+
+async function tgOnExpenseAdded(ticketId, description, amount, techName) {
+  const msg = `💰 <b>Expense Needs Approval</b>\n\nTicket: ${ticketId}\n${description}\nAmount: ₹${Number(amount).toLocaleString('en-IN')}\nAdded by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">Approve in MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg);
+  await tgNotifyRole('admin', msg);
+}
+
+async function tgOnExpenseApproved(expense, approverName) {
+  const u = getUser(expense.added_by || expense.addedBy);
+  if (!u) return;
+  const msg = `✅ <b>Expense Approved</b>\n\n${expense.description}\nAmount: ₹${Number(expense.amount).toLocaleString('en-IN')}\nApproved by: ${approverName}`;
+  await tgNotifyUser(u.id, msg);
+}
+
+async function tgOnSelfAssigned(ticket, techName, loc, state) {
+  const msg = `✋ <b>Ticket Self-Assigned</b>\n\n${ticket.id} — ${ticket.title}\n${state} › ${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg);
+}
+
+async function tgOnAMCAlert(vendor, equipment, endDate, daysLeft) {
+  const status = daysLeft < 0 ? '🔴 EXPIRED' : `🟡 Expiring in ${daysLeft} days`;
+  const msg = `${status}\n\n<b>AMC Alert</b>\nVendor: ${vendor}\nEquipment: ${equipment}\nEnd date: ${endDate}\n\nPlease arrange renewal.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg);
+  await tgNotifyRole('admin', msg);
 }
 
 </script>
