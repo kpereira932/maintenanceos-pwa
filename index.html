@@ -249,6 +249,7 @@ let users = [
   {id:'u9',name:'Mumbai CK',email:'mumbaick@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l4',specialty:null,avatar:'MK'},
   {id:'u10',name:'CP Delhi',email:'cp@mtos.in',pass:'outlet123',role:'outlet',stateId:'s2',locationId:'l5',specialty:null,avatar:'CD'},
   {id:'u11',name:'Delhi CK',email:'delhick@mtos.in',pass:'outlet123',role:'outlet',stateId:'s2',locationId:'l6',specialty:null,avatar:'DK'},
+  {id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'},
 ];
 let tickets = [
   {id:'T001',locationId:'l1',stateId:'s1',category:'Electrical',title:'Wiring upgrade required',desc:'Outside 4mm to 25mm wiring still pending.',priority:'High',status:'In Progress',raisedBy:'u6',assignedTo:'u3',createdAt:'08/05/2026 09:00',updatedAt:'10/05/2026 14:00',dueDate:'11/05/2026',comments:[{user:'u6',text:'Kitchen area unsafe, urgent.',time:'08/05/2026 09:00'},{user:'u3',text:'Inside done, outside pending.',time:'10/05/2026 14:00'}]},
@@ -271,6 +272,27 @@ let expenses = [
   {id:'e6',ticketId:'T009',addedBy:'u3',category:'Labour',description:'AC technician 1 day',amount:800,date:'05/05/2026',approved:true},
   {id:'e7',ticketId:'T010',addedBy:'u4',category:'Parts',description:'Dishwasher door seal',amount:620,date:'04/05/2026',approved:true},
 ];
+// VENDORS
+let vendors = [
+  {id:'v1',name:'Electricals Co.',phone:'+91 98200 00001',email:'',specialty:'Electrical',address:'Mumbai',gstin:'',notes:'',active:true},
+  {id:'v2',name:'Plumbing Co.',phone:'+91 98200 00002',email:'',specialty:'Plumbing',address:'Mumbai',gstin:'',notes:'',active:true},
+  {id:'v3',name:'Gas Services Ltd.',phone:'+91 98200 00003',email:'',specialty:'Gas & Appliances',address:'Mumbai',gstin:'',notes:'',active:true},
+  {id:'v4',name:'Cool Air Services',phone:'+91 98200 00004',email:'',specialty:'HVAC / AC',address:'Mumbai',gstin:'',notes:'',active:true},
+  {id:'v5',name:'AquaCare Solutions',phone:'+91 98200 00005',email:'',specialty:'Water Systems',address:'Mumbai',gstin:'',notes:'',active:true},
+];
+
+// MATERIALS per ticket
+let materials = [
+  {id:'m1',ticketId:'T001',addedBy:'u3',name:'Copper wire 4mm',quantity:50,unit:'metres',unitCost:45,totalCost:2250,vendorId:'v1',notes:'',createdAt:'10/05/2026'},
+  {id:'m2',ticketId:'T001',addedBy:'u3',name:'Wire connectors',quantity:20,unit:'nos',unitCost:5,totalCost:100,vendorId:'v1',notes:'',createdAt:'10/05/2026'},
+];
+
+// TICKET ATTACHMENTS
+let attachments = [];
+
+// TECH CHECK-INS
+let checkins = [];
+
 let amcRecords = [
   {id:'a1',vendor:'Cool Air Services',equipment:'AC Units — All MH outlets',locationIds:['l1','l2','l3','l4'],category:'HVAC / AC',startDate:'01/06/2025',endDate:'31/05/2027',amount:85000,coverage:'Quarterly servicing + emergency callouts',contact:'+91 98200 00004',notes:'Covers all AC at MH locations',status:'active'},
   {id:'a2',vendor:'AquaCare Solutions',equipment:'Water Purifiers — All locations',locationIds:['l1','l2','l3','l4','l5','l6'],category:'Water Systems',startDate:'01/01/2026',endDate:'31/12/2026',amount:42000,coverage:'Bi-annual filter change + emergency',contact:'+91 98200 00005',notes:''},
@@ -298,8 +320,8 @@ function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
 function getUser(id){return users.find(u=>u.id===id);}
 function getTechs(stateId){return stateId?users.filter(u=>u.role==='technician'&&(!u.stateId||u.stateId===stateId)):users.filter(u=>u.role==='technician');}
 function locLabel(l){return l.name+(l.type==='central_kitchen'?' (CK)':'');}
-function roleClass(r){return{admin:'r-admin',manager:'r-manager',technician:'r-tech',outlet:'r-outlet'}[r]||'';}
-function roleLabel(r){return{admin:'Admin',manager:'Manager',technician:'Technician',outlet:'Outlet / CK'}[r]||r;}
+function roleClass(r){return{admin:'r-admin',manager:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin'}[r]||'';}
+function roleLabel(r){return{admin:'Admin',manager:'Manager',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin'}[r]||r;}
 function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
 function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',technician:'#065f46',outlet:'#92400e'}[r]||'#888';}
 function fc(n){return'₹'+Number(n).toLocaleString('en-IN');}
@@ -311,16 +333,19 @@ function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
 function sbadge(t){if(isESC(t))return'<span class="badge b-esc">⚠ Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
 function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
 function visT(){
-  if(['admin','manager'].includes(session.role)) return tickets;
+  if(['admin','manager','superadmin'].includes(session.role)) return tickets;
   if(session.role==='technician') return tickets.filter(t=>
-    t.assignedTo===session.id || // assigned to me
-    (!t.assignedTo && !['Resolved','Closed'].includes(t.status)) // unassigned & open
+    t.assignedTo===session.id ||
+    (!t.assignedTo && !['Resolved','Closed'].includes(t.status))
   );
   if(session.role==='outlet') return tickets.filter(t=>t.locationId===session.locationId);
   return[];
 }
 function ticketExp(id){return expenses.filter(e=>e.ticketId===id);}
 function ticketExpTotal(id){return ticketExp(id).reduce((s,e)=>s+Number(e.amount),0);}
+function ticketMaterials(id){return materials.filter(m=>m.ticketId===id);}
+function ticketMaterialTotal(id){return materials.filter(m=>m.ticketId===id).reduce((s,m)=>s+Number(m.totalCost||m.quantity*m.unitCost),0);}
+function ticketTotalCost(id){return ticketExpTotal(id)+ticketMaterialTotal(id);}
 function amcDaysLeft(endDate){if(!endDate)return 9999;const[d,m,y]=endDate.split('/');return Math.floor((new Date(+y,+m-1,+d)-TODAY)/86400000);}
 function amcSt(a){const d=amcDaysLeft(a.endDate);if(d<0)return'expired';if(d<60)return'expiring';return'active';}
 function openModal(){document.getElementById('overlay').classList.add('open');}
@@ -364,13 +389,13 @@ const NAV={
   admin:[
     {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'🏠',l:'Locations'},{id:'users',i:'👤',l:'Users & roles'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
   ],
@@ -384,7 +409,7 @@ const NAV={
   outlet:[{id:'raise',i:'＋',l:'Raise issue'},{id:'my-tickets',i:'📋',l:'My tickets'},{id:'profile',i:'👤',l:'My profile'}],
 };
 function buildNav(){
-  const items=NAV[session.role]||[];
+  const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||[]);
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
     if(i.s)return`<div class="nav-section">${i.s}</div>`;
     return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}')"><span class="ni">${i.i}</span>${i.l}</div>`;
@@ -394,7 +419,7 @@ function navTo(p){
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
-  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile};
+  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin};
   if(map[p])map[p]();
 }
 
@@ -428,6 +453,8 @@ function ticketActions(t){
     a+=`<button class="btn sm primary" onclick="openAssignModal('${t.id}')">👤 ${t.assignedTo?'Reassign':'Assign'}</button>`;
     if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
     a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expenses</button>`;
+    a+=`<button class="btn sm" onclick="openMaterialsModal('${t.id}')">🔩 Materials</button>`;
+    a+=`<button class="btn sm" onclick="openAttachmentsModal('${t.id}')">📷 Photos</button>`;
   }
   if(session.role==='technician'){
     if(!t.assignedTo && !['Resolved','Closed'].includes(t.status)){
@@ -438,6 +465,10 @@ function ticketActions(t){
       if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
       a+=`<button class="btn sm primary" onclick="openTicket('${t.id}')">💬 Update</button>`;
       a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expense</button>`;
+      a+=`<button class="btn sm" onclick="openMaterialsModal('${t.id}')">🔩 Materials</button>`;
+      a+=`<button class="btn sm" onclick="openAttachmentsModal('${t.id}')">📷 Photos</button>`;
+      if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm warning" onclick="techCheckIn('${t.id}','on_way')">🚗 On my way</button>`;
+      if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm warning" onclick="techCheckIn('${t.id}','arrived')">📍 Arrived</button>`;
     }
   }
   if(session.role==='outlet')a+=`<button class="btn sm" onclick="openTicket('${t.id}')">💬 View</button>`;
@@ -1282,6 +1313,362 @@ async function checkTelegramAuto() {
 }
 
 
+
+// ============================================================
+// VENDORS
+// ============================================================
+function renderVendors(){
+  const active=vendors.filter(v=>v.active);
+  const inactive=vendors.filter(v=>!v.active);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">Vendors</div><div class="page-sub">${vendors.length} vendors · ${active.length} active</div></div>
+      <button class="btn primary" onclick="openAddVendor()">＋ Add vendor</button>
+    </div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showT2('v-active','v-inactive',this)">Active (${active.length})</button>
+      <button class="tab-btn" onclick="showT2('v-inactive','v-active',this)">Inactive (${inactive.length})</button>
+    </div>
+    <div id="v-active">${active.length?active.map(v=>vendorCard(v)).join(''):'<div class="empty">No vendors yet</div>'}</div>
+    <div id="v-inactive" style="display:none">${inactive.length?inactive.map(v=>vendorCard(v)).join(''):'<div class="empty">No inactive vendors</div>'}</div>`;
+}
+function vendorCard(v){
+  const vTickets=tickets.filter(t=>t.vendor_id===v.id&&!['Resolved','Closed'].includes(t.status));
+  return`<div class="card" style="margin-bottom:10px">
+    <div class="card-top">
+      <div style="flex:1">
+        <div class="card-title">${v.name}</div>
+        <div style="font-size:12px;color:#666;margin-top:2px">${v.specialty||'General'}</div>
+      </div>
+      <span class="badge ${v.active?'b-done':'b-grey'}">${v.active?'Active':'Inactive'}</span>
+    </div>
+    <div class="card-meta">
+      ${v.phone?`<span>📞 ${v.phone}</span>`:''}
+      ${v.email?`<span>✉ ${v.email}</span>`:''}
+      ${v.address?`<span>📍 ${v.address}</span>`:''}
+      <span>🎫 ${vTickets.length} open tickets</span>
+    </div>
+    ${v.gstin?`<div style="font-size:11px;color:#aaa;margin-top:4px">GSTIN: ${v.gstin}</div>`:''}
+    ${v.notes?`<div class="card-note">${v.notes}</div>`:''}
+    <div class="card-actions">
+      <button class="btn sm" onclick="openEditVendor('${v.id}')">✏ Edit</button>
+      <a href="tel:${v.phone}" class="btn sm success">📞 Call</a>
+      <a href="https://wa.me/${(v.phone||'').replace(/\D/g,'')}" class="btn sm wa" target="_blank">WhatsApp</a>
+      <button class="btn sm ${v.active?'danger':''}" onclick="toggleVendor('${v.id}')">${v.active?'Deactivate':'Activate'}</button>
+    </div>
+  </div>`;
+}
+function vendorForm(v){
+  return`<div class="frow">
+    <div class="fg"><label>Vendor name</label><input type="text" id="vn" value="${v.name||''}" placeholder="e.g. Sharma Electricals"></div>
+    <div class="fg"><label>Specialty</label><select id="vs">${['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Kitchen Equipment','Cleaning','General'].map(s=>`<option${v.specialty===s?' selected':''}>${s}</option>`).join('')}</select></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label>Phone number</label><input type="text" id="vp" value="${v.phone||''}" placeholder="+91XXXXXXXXXX"></div>
+    <div class="fg"><label>Email</label><input type="text" id="ve" value="${v.email||''}" placeholder="vendor@email.com"></div>
+  </div>
+  <div class="fg"><label>Address</label><input type="text" id="va" value="${v.address||''}" placeholder="City / area"></div>
+  <div class="fg"><label>GSTIN <span style="color:#888;font-weight:400">(optional)</span></label><input type="text" id="vg" value="${v.gstin||''}" placeholder="GST number"></div>
+  <div class="fg"><label>Notes</label><textarea id="vno">${v.notes||''}</textarea></div>`;
+}
+function openAddVendor(){
+  document.getElementById('m-title').textContent='Add vendor';
+  document.getElementById('m-body').innerHTML=vendorForm({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewVendor()">Add vendor</button></div>`;
+  openModal();
+}
+function openEditVendor(id){
+  const v=vendors.find(x=>x.id===id);
+  document.getElementById('m-title').textContent='Edit vendor';
+  document.getElementById('m-body').innerHTML=vendorForm(v)+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveVendor('${id}')">Save</button></div>`;
+  openModal();
+}
+function getVendorFormData(){return{name:document.getElementById('vn').value.trim(),specialty:document.getElementById('vs').value,phone:document.getElementById('vp').value.trim(),email:document.getElementById('ve').value.trim(),address:document.getElementById('va').value.trim(),gstin:document.getElementById('vg').value.trim(),notes:document.getElementById('vno').value.trim()};}
+async function saveNewVendor(){
+  const d=getVendorFormData();if(!d.name){alert('Enter vendor name');return;}
+  const row={id:'v'+Date.now(),...d,active:true};
+  if(isLive){await dbInsert('vendors',row);await loadLiveData();showToast('✓ Vendor added');}
+  else vendors.push(row);
+  closeModal();renderVendors();
+}
+async function saveVendor(id){
+  const d=getVendorFormData();
+  if(isLive){await dbUpdate('vendors',id,d);await loadLiveData();showToast('✓ Vendor updated');}
+  else{const i=vendors.findIndex(v=>v.id===id);vendors[i]={...vendors[i],...d};}
+  closeModal();renderVendors();
+}
+async function toggleVendor(id){
+  const v=vendors.find(x=>x.id===id);if(!v)return;
+  const newActive=!v.active;
+  if(isLive){await dbUpdate('vendors',id,{active:newActive});await loadLiveData();}
+  else v.active=newActive;
+  renderVendors();
+}
+
+// ============================================================
+// MATERIALS — per ticket
+// ============================================================
+function openMaterialsModal(ticketId){
+  const t=tickets.find(x=>x.id===ticketId);
+  const mats=ticketMaterials(ticketId);
+  const total=ticketMaterialTotal(ticketId);
+  document.getElementById('m-title').textContent='Materials — '+ticketId;
+  document.getElementById('m-body').innerHTML=`
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · Materials total: <strong style="color:#059669">${fc(total)}</strong></p>
+    ${mats.length?`<div style="margin-bottom:1rem">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:#f9f9f7"><th style="padding:8px;text-align:left;border-bottom:1px solid #e8e8e4">Material</th><th style="padding:8px;text-align:center;border-bottom:1px solid #e8e8e4">Qty</th><th style="padding:8px;text-align:right;border-bottom:1px solid #e8e8e4">Unit cost</th><th style="padding:8px;text-align:right;border-bottom:1px solid #e8e8e4">Total</th><th style="padding:8px;border-bottom:1px solid #e8e8e4"></th></tr></thead>
+        <tbody>${mats.map(m=>`<tr>
+          <td style="padding:8px"><div style="font-weight:500">${m.name}</div>${m.notes?`<div style="font-size:11px;color:#888">${m.notes}</div>`:''}</td>
+          <td style="padding:8px;text-align:center">${m.quantity} ${m.unit}</td>
+          <td style="padding:8px;text-align:right">${fc(m.unitCost)}</td>
+          <td style="padding:8px;text-align:right;font-weight:600;color:#059669">${fc(m.totalCost||m.quantity*m.unitCost)}</td>
+          <td style="padding:8px"><button class="btn sm danger" onclick="deleteMaterial('${m.id}','${ticketId}')">🗑</button></td>
+        </tr>`).join('')}</tbody>
+        <tfoot><tr style="background:#f9f9f7"><td colspan="3" style="padding:8px;font-weight:700">Total</td><td style="padding:8px;text-align:right;font-weight:700;color:#059669">${fc(total)}</td><td></td></tr></tfoot>
+      </table>
+    </div>`:'<p style="color:#aaa;font-size:13px;margin-bottom:1rem">No materials logged yet.</p>'}
+    <div style="border-top:1px solid #e8e8e4;padding-top:1rem;font-weight:600;font-size:13px;margin-bottom:10px">Add material</div>
+    <div class="frow">
+      <div class="fg"><label>Material name</label><input type="text" id="mn" placeholder="e.g. Copper wire, PVC pipe..."></div>
+      <div class="fg"><label>Vendor <span style="color:#888;font-weight:400">(optional)</span></label><select id="mv"><option value="">None</option>${vendors.filter(v=>v.active).map(v=>`<option value="${v.id}">${v.name}</option>`).join('')}</select></div>
+    </div>
+    <div class="frow3">
+      <div class="fg"><label>Quantity</label><input type="number" id="mq" value="1" min="0.1" step="0.1"></div>
+      <div class="fg"><label>Unit</label><select id="mu"><option>nos</option><option>metres</option><option>kg</option><option>litres</option><option>boxes</option><option>rolls</option><option>feet</option><option>sets</option></select></div>
+      <div class="fg"><label>Unit cost (₹)</label><input type="number" id="mc" placeholder="0"></div>
+    </div>
+    <div class="fg"><label>Notes</label><input type="text" id="mno" placeholder="Optional notes"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Close</button>
+      <button class="btn primary" onclick="addMaterial('${ticketId}')">Add material</button>
+    </div>`;
+  openModal();
+}
+async function addMaterial(ticketId){
+  const name=document.getElementById('mn').value.trim();
+  const qty=parseFloat(document.getElementById('mq').value)||1;
+  const cost=parseFloat(document.getElementById('mc').value)||0;
+  if(!name){alert('Enter material name');return;}
+  const row={id:'m'+Date.now(),ticketId,ticket_id:ticketId,addedBy:session.id,added_by:session.id,name,quantity:qty,unit:document.getElementById('mu').value,unitCost:cost,unit_cost:cost,totalCost:qty*cost,total_cost:qty*cost,vendorId:document.getElementById('mv').value||null,vendor_id:document.getElementById('mv').value||null,notes:document.getElementById('mno').value,createdAt:nowTs()};
+  if(isLive){await dbInsert('materials',{id:row.id,ticket_id:ticketId,added_by:session.id,name,quantity:qty,unit:row.unit,unit_cost:cost,vendor_id:row.vendor_id,notes:row.notes});await loadLiveData();showToast('✓ Material added');}
+  else materials.push(row);
+  LOG('Material added',ticketId+' — '+name+' x'+qty,'w');
+  openMaterialsModal(ticketId);
+}
+async function deleteMaterial(id,ticketId){
+  if(!confirm('Remove this material?'))return;
+  if(isLive){await dbDelete('materials',id);await loadLiveData();}
+  else materials=materials.filter(m=>m.id!==id);
+  openMaterialsModal(ticketId);
+}
+
+// ============================================================
+// PHOTO / VIDEO UPLOADS
+// ============================================================
+function openAttachmentsModal(ticketId){
+  const t=tickets.find(x=>x.id===ticketId);
+  const atts=attachments.filter(a=>a.ticketId===ticketId);
+  document.getElementById('m-title').textContent='Photos & videos — '+ticketId;
+  document.getElementById('m-body').innerHTML=`
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · ${atts.length} attachment${atts.length!==1?'s':''}</p>
+    ${atts.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:1rem">
+      ${atts.map(a=>`<div style="position:relative;border-radius:8px;overflow:hidden;border:1px solid #e8e8e4">
+        ${a.fileType&&a.fileType.startsWith('image')?`<img src="${a.fileUrl}" style="width:100%;height:100px;object-fit:cover;display:block">`:
+        `<div style="height:100px;background:#f4f3ef;display:flex;align-items:center;justify-content:center;font-size:30px">🎥</div>`}
+        <div style="padding:4px 6px;font-size:10px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.caption||a.fileName}</div>
+        <button onclick="deleteAttachment('${a.id}','${ticketId}')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center">×</button>
+      </div>`).join('')}
+    </div>`:'<p style="color:#aaa;font-size:13px;margin-bottom:1rem">No photos or videos yet.</p>'}
+    <div style="border-top:1px solid #e8e8e4;padding-top:1rem">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px">Add photo / video</div>
+      <div class="fg"><label>Select file</label><input type="file" id="att-file" accept="image/*,video/*" style="border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;width:100%"></div>
+      <div class="fg"><label>Caption <span style="color:#888;font-weight:400">(optional)</span></label><input type="text" id="att-cap" placeholder="Describe what this shows..."></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end">
+        <button class="btn" onclick="closeModal()">Close</button>
+        <button class="btn primary" onclick="uploadAttachment('${ticketId}')">📎 Upload</button>
+      </div>
+      <div id="att-progress" style="display:none;margin-top:8px;font-size:13px;color:#2563eb">⏳ Uploading...</div>
+    </div>`;
+  openModal();
+}
+
+async function uploadAttachment(ticketId){
+  const fileInput=document.getElementById('att-file');
+  const caption=document.getElementById('att-cap').value;
+  const file=fileInput?.files?.[0];
+  if(!file){alert('Select a file');return;}
+  const progress=document.getElementById('att-progress');
+  if(progress)progress.style.display='block';
+
+  const id='att'+Date.now();
+  const fileName=id+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+
+  if(isLive && supaClient){
+    try{
+      // Upload to Supabase Storage
+      const{data,error}=await supaClient.storage.from('ticket-attachments').upload(fileName,file,{cacheControl:'3600',upsert:false});
+      if(error)throw error;
+      const{data:urlData}=supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
+      const fileUrl=urlData.publicUrl;
+      await dbInsert('ticket_attachments',{id,ticket_id:ticketId,uploaded_by:session.id,file_name:file.name,file_url:fileUrl,file_type:file.type,file_size:file.size,caption});
+      await loadLiveData();
+      showToast('✓ File uploaded');
+    }catch(e){
+      // Fallback: store as base64 locally
+      const reader=new FileReader();
+      reader.onload=function(ev){
+        attachments.push({id,ticketId,uploadedBy:session.id,fileName:file.name,fileUrl:ev.target.result,fileType:file.type,caption,createdAt:nowTs()});
+        showToast('✓ Saved locally (Supabase storage not configured)');
+        if(progress)progress.style.display='none';
+        openAttachmentsModal(ticketId);
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+  } else {
+    // Local mode — store as base64
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      attachments.push({id,ticketId,uploadedBy:session.id,fileName:file.name,fileUrl:ev.target.result,fileType:file.type,caption,createdAt:nowTs()});
+      showToast('✓ Photo saved');
+      if(progress)progress.style.display='none';
+      openAttachmentsModal(ticketId);
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+  if(progress)progress.style.display='none';
+  openAttachmentsModal(ticketId);
+}
+
+async function deleteAttachment(id,ticketId){
+  if(!confirm('Delete this attachment?'))return;
+  if(isLive){await dbDelete('ticket_attachments',id);await loadLiveData();}
+  else attachments=attachments.filter(a=>a.id!==id);
+  openAttachmentsModal(ticketId);
+}
+
+// ============================================================
+// TECHNICIAN CHECK-IN (location)
+// ============================================================
+async function techCheckIn(ticketId, status){
+  if(!navigator.geolocation){alert('Location not available on this device');return;}
+  showToast('📍 Getting your location...');
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const{latitude,longitude}=pos.coords;
+    const row={id:'ci'+Date.now(),ticket_id:ticketId,tech_id:session.id,status,latitude,longitude,address_approx:'Location captured'};
+    if(isLive){
+      await dbInsert('tech_checkins',row);
+      await dbUpdate('tickets',ticketId,{updated_at:new Date().toISOString()});
+    } else {
+      checkins.push({...row,ticketId,techId:session.id,createdAt:nowTs()});
+    }
+    const msgs={on_way:'🚗 On the way to job',arrived:'📍 Arrived at location',completed:'✅ Job completed'};
+    LOG(msgs[status]||status,ticketId+' by '+session.name,'b');
+    showToast('✓ '+( msgs[status]||status));
+    // Notify manager
+    const t=tickets.find(x=>x.id===ticketId);
+    const loc=t?getLoc(t.locationId||t.location_id):{name:''};
+    const tgMsg=`${msgs[status]}
+
+Ticket: ${ticketId}
+Location: ${loc.name}
+Technician: ${session.name}
+Coords: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}
+
+https://maps.google.com/?q=${latitude},${longitude}`;
+    await tgNotifyRole('manager',`<b>${msgs[status]}</b>
+
+Ticket: ${ticketId} — ${t?t.title:''}
+Location: ${loc.name}
+Tech: ${session.name}
+
+<a href="https://maps.google.com/?q=${latitude},${longitude}">📍 View on map</a>`);
+    refreshPage();
+  },err=>{
+    showToast('Could not get location. Please enable location access.');
+  });
+}
+
+// ============================================================
+// SUPER ADMIN
+// ============================================================
+const SUPER_NAV=[
+  {s:'Super Admin — Hidden'},{id:'superadmin',i:'🔐',l:'Control panel'},
+  {s:'Everything'},{id:'dashboard',i:'⊞',l:'Dashboard'},{id:'tickets',i:'📋',l:'All tickets'},{id:'users',i:'👤',l:'All users'},{id:'expenses',i:'💰',l:'All expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC'},{id:'log',i:'🕐',l:'Audit log'},{id:'reports',i:'📊',l:'Reports'},{id:'locations',i:'🏠',l:'Locations'},
+];
+
+function renderSuperAdmin(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title" style="color:#dc2626">🔐 Super Admin Panel</div><div class="page-sub">Full system access — visible only to you</div></div></div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem">
+      <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="ml">Total tickets</div><div class="mv b">${tickets.length}</div></div>
+      <div class="met" style="cursor:pointer" onclick="navTo('users')"><div class="ml">Total users</div><div class="mv p">${users.filter(u=>u.role!=='superadmin').length}</div></div>
+      <div class="met" style="cursor:pointer" onclick="navTo('expenses')"><div class="ml">Total expenses</div><div class="mv g" style="font-size:18px">${fc(expenses.reduce((s,e)=>s+Number(e.amount),0))}</div></div>
+      <div class="met"><div class="ml">Materials cost</div><div class="mv g" style="font-size:18px">${fc(materials.reduce((s,m)=>s+Number(m.totalCost||m.quantity*m.unitCost||0),0))}</div></div>
+      <div class="met"><div class="ml">Locations</div><div class="mv b">${locations.length}</div></div>
+      <div class="met"><div class="ml">Vendors</div><div class="mv b">${vendors.length}</div></div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-hdr"><span class="section-title">All users & last activity</span></div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Name</th><th>Role</th><th>Telegram</th><th>WhatsApp</th></tr></thead>
+          <tbody>${users.filter(u=>u.role!=='superadmin').map(u=>`<tr>
+            <td><strong>${u.name}</strong><div style="font-size:11px;color:#aaa">${u.email}</div></td>
+            <td>${roleBadge(u.role)}</td>
+            <td>${u.telegram_id?'<span class="badge b-done">Connected</span>':'<span class="badge b-grey">Not set</span>'}</td>
+            <td>${u.whatsapp?'<span class="badge b-done">Set</span>':'<span class="badge b-grey">Not set</span>'}</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="section-hdr"><span class="section-title">Tech check-ins</span></div>
+        ${checkins.length?checkins.slice(0,10).map(c=>{
+          const tech=getUser(c.tech_id||c.techId);
+          const t=tickets.find(x=>x.id===(c.ticket_id||c.ticketId));
+          return`<div class="card" style="margin-bottom:8px;padding:10px 12px">
+            <div style="font-size:13px;font-weight:600">${tech?tech.name:'Unknown'}</div>
+            <div style="font-size:12px;color:#666">${c.status} · ${t?t.title:c.ticket_id||c.ticketId}</div>
+            ${c.latitude?`<a href="https://maps.google.com/?q=${c.latitude},${c.longitude}" target="_blank" class="btn sm" style="margin-top:6px;font-size:11px">📍 View on map</a>`:''}
+            <div style="font-size:11px;color:#aaa;margin-top:4px">${c.createdAt||c.created_at||''}</div>
+          </div>`;
+        }).join(''):'<div class="empty">No check-ins yet</div>'}
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;padding:1.25rem;background:#fff8f7;border:1px solid #fca5a5;border-radius:12px">
+      <div style="font-weight:700;font-size:14px;color:#dc2626;margin-bottom:1rem">⚠ Danger zone</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn danger" onclick="resetTickets()">🗑 Clear all tickets</button>
+        <button class="btn danger" onclick="resetExpenses()">🗑 Clear all expenses</button>
+        <button class="btn danger" onclick="resetAll()">🗑 Full reset (keep users)</button>
+        <button class="btn" onclick="exportAllData()">📤 Export all data</button>
+      </div>
+    </div>`;
+}
+
+function resetTickets(){if(!confirm('Delete ALL tickets? This cannot be undone.'))return;tickets=[];materials=[];attachments=[];checkins=[];LOG('SUPER: All tickets cleared','by '+session.name,'r');refreshPage();}
+function resetExpenses(){if(!confirm('Delete ALL expenses?'))return;expenses=[];LOG('SUPER: All expenses cleared','by '+session.name,'r');refreshPage();}
+function resetAll(){
+  if(!confirm('FULL RESET — delete all tickets, expenses, materials and attachments? Users and locations kept.'))return;
+  if(!confirm('Are you absolutely sure? This cannot be undone.'))return;
+  tickets=[];expenses=[];materials=[];attachments=[];checkins=[];auditLog=[];
+  LOG('SUPER: Full reset performed','by '+session.name,'r');
+  alert('Reset complete.');refreshPage();
+}
+function exportAllData(){
+  const data={tickets,expenses,materials,vendors,locations,states,users:users.filter(u=>u.role!=='superadmin'),auditLog,exported:nowTs()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='maintenanceos_export_'+Date.now()+'.json';a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Data exported');
+}
+
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -1382,6 +1769,9 @@ function renderRaise(){
       </div>
       <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
       <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
+      <div class="fg"><label>Attach photo / video <span style="color:#888;font-weight:400">(optional)</span></label>
+        <input type="file" id="raise-file" accept="image/*,video/*" style="border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;width:100%">
+      </div>
       <button class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="submitTicket()">＋ Submit ticket</button>
     </div></div>`;
 }
@@ -1550,7 +1940,7 @@ async function loadLiveData() {
   if (!isLive) return;
   showToast('⏳ Loading live data...');
   try {
-    const [st,lo,us,ti,ex,am,re,al,cm] = await Promise.all([
+    const [st,lo,us,ti,ex,am,re,al,cm,vn,mt,att,ci] = await Promise.all([
       supaClient.from('states').select('*').order('name'),
       supaClient.from('locations').select('*').order('name'),
       supaClient.from('users').select('*').order('name'),
@@ -1560,6 +1950,10 @@ async function loadLiveData() {
       supaClient.from('recurring_schedules').select('*'),
       supaClient.from('audit_log').select('*').order('created_at',{ascending:false}).limit(100),
       supaClient.from('ticket_comments').select('*').order('created_at'),
+      supaClient.from('vendors').select('*').order('name'),
+      supaClient.from('materials').select('*').order('created_at',{ascending:false}),
+      supaClient.from('ticket_attachments').select('*').order('created_at',{ascending:false}),
+      supaClient.from('tech_checkins').select('*').order('created_at',{ascending:false}),
     ]);
     if (st.data) states = st.data;
     if (lo.data) locations = lo.data.map(l=>({...l,stateId:l.state_id}));
@@ -1570,6 +1964,10 @@ async function loadLiveData() {
     if (am.data) amcRecords = am.data.map(a=>({...a,locationIds:a.location_ids||[],startDate:a.start_date,endDate:a.end_date}));
     if (re.data) recurringSchedules = re.data.map(r=>({...r,locationIds:r.location_ids||[],next:r.next_due,on:r.active}));
     if (al.data) auditLog = al.data.map(e=>({t:e.created_at?.slice(0,16).replace('T',' '),a:e.action,d:e.detail||'',c:e.color||'b'}));
+    if (vn.data) vendors = vn.data;
+    if (mt.data) materials = mt.data.map(m=>({...m,ticketId:m.ticket_id,addedBy:m.added_by,unitCost:m.unit_cost,totalCost:m.total_cost,vendorId:m.vendor_id}));
+    if (att.data) attachments = att.data.map(a=>({...a,ticketId:a.ticket_id,uploadedBy:a.uploaded_by,fileName:a.file_name,fileUrl:a.file_url,fileType:a.file_type}));
+    if (ci.data) checkins = ci.data.map(c=>({...c,ticketId:c.ticket_id,techId:c.tech_id}));
     showToast('✓ Live data loaded');
   } catch(e) {
     console.error('loadLiveData error',e);
@@ -1600,7 +1998,7 @@ window.doLogin = async function() {
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
     buildNav();
-    navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[session.role]);
+    navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin'}[session.role]||'dashboard');
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
     setTimeout(showInstallBanner, 5000);
