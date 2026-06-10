@@ -261,13 +261,13 @@ function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-m
 function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin'}[r]||r;}
 function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
 function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',technician:'#065f46',outlet:'#92400e'}[r]||'#888';}
-function fc(n){return'₹'+Number(n).toLocaleString('en-IN');}
+function fc(n){return''+Number(n).toLocaleString('en-IN');}
 function isOD(t){if(['Resolved','Closed'].includes(t.status))return false;if(!t.dueDate)return false;const[d,m,y]=t.dueDate.split('/');return new Date(+y,+m-1,+d)<TODAY;}
 function dAgo(s){if(!s)return 0;const[d,m,y]=s.split('/');return Math.floor((TODAY-new Date(+y,+m-1,+d))/86400000);}
 function isESC(t){return isOD(t)&&t.priority==='High'&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
 function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'/'+String(n.getMonth()+1).padStart(2,'0')+'/'+n.getFullYear()+' '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
-function sbadge(t){if(isESC(t))return'<span class="badge b-esc">⚠ Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done','On Hold':'b-med'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
+function sbadge(t){if(isESC(t))return'<span class="badge b-esc"> Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done','On Hold':'b-med'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
 function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
 function visT(){
   if(['admin','manager','supervisor','superadmin'].includes(session.role)) return tickets;
@@ -288,7 +288,7 @@ function amcSt(a){const d=amcDaysLeft(a.endDate);if(d<0)return'expired';if(d<60)
 function openModal(){document.getElementById('overlay').classList.add('open');}
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
 function closeMO(e){if(e.target===document.getElementById('overlay'))closeModal();}
-function cpText(id){const el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).catch(()=>{});const btns=(el.closest('.card')||el.parentElement).querySelectorAll('button');btns.forEach(b=>{if(b.textContent.includes('Copy')){const o=b.innerHTML;b.innerHTML='✓ Copied!';setTimeout(()=>b.innerHTML=o,2000);}});}
+function cpText(id){const el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).catch(()=>{});const btns=(el.closest('.card')||el.parentElement).querySelectorAll('button');btns.forEach(b=>{if(b.textContent.includes('Copy')){const o=b.innerHTML;b.innerHTML='Copied!';setTimeout(()=>b.innerHTML=o,2000);}});}
 function refreshPage(){navTo(currentPage);}
 function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById(s).style.display='';document.getElementById(h).style.display='none';}
 
@@ -297,7 +297,7 @@ function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.clas
 // ============================================================
 // AUTH & NAV
 // ============================================================
-function pickRole(r){}  // role selection removed — clean login
+function pickRole(r){}  // role selection removed - clean login
 function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const pass=document.getElementById('login-pass').value.trim();
@@ -309,7 +309,7 @@ function doLogin(){
   document.getElementById('sb-name').textContent=u.name;
   document.getElementById('sb-role').innerHTML=roleBadge(u.role);
   let locStr='Locations';
-  if(u.locationId){const l=getLoc(u.locationId);locStr=getState(l.stateId).name+' › '+l.name;}
+  if(u.locationId){const l=getLoc(u.locationId);locStr=getState(l.stateId).name+'  '+l.name;}
   else if(u.stateId){locStr=getState(u.stateId).name+' region';}
   document.getElementById('sb-loc').textContent=locStr;
   buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
@@ -318,31 +318,31 @@ function doLogout(){session=null;document.getElementById('login-email').value=''
 
 const NAV={
   admin:[
-    {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
-    {s:'Setup'},{id:'locations',i:'🏠',l:'Locations'},{id:'users',i:'👤',l:'Users & roles'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
-    {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
+    {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
+    {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
+    {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   manager:[
-    {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
-    {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
+    {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
+    {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   technician:[
-    {id:'my-tasks',i:'🔧',l:'My tasks'},
-    {id:'raise',i:'＋',l:'Raise ticket'},
-    {id:'tickets',i:'📋',l:'Tickets'},
-    {id:'my-expenses',i:'💰',l:'My expenses'},
-    {id:'profile',i:'👤',l:'My profile'},
+    {id:'my-tasks',i:'',l:'My tasks'},
+    {id:'raise',i:'',l:'Raise ticket'},
+    {id:'tickets',i:'',l:'Tickets'},
+    {id:'my-expenses',i:'',l:'My expenses'},
+    {id:'profile',i:'',l:'My profile'},
   ],
   supervisor:[
-    {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'notifications',i:'✉',l:'Notifications'},
-    {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
+    {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'notifications',i:'',l:'Notifications'},
+    {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
-  outlet:[{id:'raise',i:'＋',l:'Raise issue'},{id:'my-tickets',i:'📋',l:'My tickets'},{id:'profile',i:'👤',l:'My profile'}],
+  outlet:[{id:'raise',i:'',l:'Raise issue'},{id:'my-tickets',i:'',l:'My tickets'},{id:'profile',i:'',l:'My profile'}],
 };
 function buildNav(){
   const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||[]);
@@ -387,18 +387,18 @@ function ticketActions(t){
   let a=`<button class="btn sm" onclick="openTicket('${t.id}')">👁 View</button>`;
   if(['admin','manager','supervisor'].includes(session.role)){
     a+=`<button class="btn sm primary" onclick="openAssignModal('${t.id}')">👤 ${t.assignedTo?'Reassign':'Assign'}</button>`;
-    if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
+    if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">Resolve</button>`;
     a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expenses</button>`;
     a+=`<button class="btn sm" onclick="openMaterialsModal('${t.id}')">🔩 Materials</button>`;
     a+=`<button class="btn sm" onclick="openAttachmentsModal('${t.id}')">📷 Photos</button>`;
   }
   if(session.role==='technician'){
     if(!t.assignedTo && !['Resolved','Closed'].includes(t.status)){
-      // Unassigned — technician can grab it
+      // Unassigned - technician can grab it
       a+=`<button class="btn sm primary" onclick="assignToSelf('${t.id}')">✋ Assign to me</button>`;
     }
     if(t.assignedTo===session.id){
-      if(!['Resolved','Closed','On Hold'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
+      if(!['Resolved','Closed','On Hold'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">Resolve</button>`;
       a+=`<button class="btn sm primary" onclick="openTicket('${t.id}')">💬 Update</button>`;
       a+=`<button class="btn sm" onclick="openEstimateModal('${t.id}')">📝 Estimate</button>`;
       a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expense</button>`;
@@ -466,7 +466,7 @@ function renderDashboard(){
     ${stateCards}
     <div class="two-col">
       <div><div class="section-hdr"><span class="section-title">Needs attention</span></div>
-        ${all.filter(t=>isESC(t)||isOD(t)||(t.status==='Open'&&!t.assignedTo)).slice(0,4).map(t=>ticketCard(t,true)).join('')||'<div class="empty">✓ All good</div>'}
+        ${all.filter(t=>isESC(t)||isOD(t)||(t.status==='Open'&&!t.assignedTo)).slice(0,4).map(t=>ticketCard(t,true)).join('')||'<div class="empty">OK All good</div>'}
       </div>
       <div><div class="section-hdr"><span class="section-title">In progress</span></div>
         ${all.filter(t=>t.status==='In Progress').slice(0,4).map(t=>ticketCard(t,true)).join('')||'<div class="empty">Nothing in progress</div>'}
@@ -506,7 +506,7 @@ function openTicket(id){
   const loc=getLoc(t.locationId),state=getState(loc.stateId||t.stateId);
   const assignee=t.assignedTo?getUser(t.assignedTo):null,raiser=getUser(t.raisedBy);
   const expTotal=ticketExpTotal(id),expCount=ticketExp(id).length;
-  document.getElementById('m-title').textContent=`${t.id} — ${t.title}`;
+  document.getElementById('m-title').textContent=`${t.id} - ${t.title}`;
   document.getElementById('m-body').innerHTML=`
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${sbadge(t)} ${pbadge(t.priority)} <span class="badge b-grey">${t.category}</span>${loc.type==='central_kitchen'?'<span class="badge b-ck">CK</span>':''}</div>
     <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:1rem">${t.desc||'No description.'}</div>
@@ -521,7 +521,7 @@ function openTicket(id){
     <div class="timeline">
       <div class="tl-item done"><strong>${raiser?raiser.name:'-'}</strong> raised this ticket <span style="color:#aaa">· ${t.createdAt}</span></div>
       ${t.comments.map(c=>{const u=getUser(c.user);return`<div class="tl-item active"><strong>${u?u.name:c.user}:</strong> ${c.text} <span style="color:#aaa">· ${c.time}</span></div>`;}).join('')}
-      ${['Resolved','Closed'].includes(t.status)?'<div class="tl-item done" style="color:#059669;font-weight:600">✓ Ticket resolved</div>':''}
+      ${['Resolved','Closed'].includes(t.status)?'<div class="tl-item done" style="color:#059669;font-weight:600">Ticket resolved</div>':''}
     </div>
     <div style="margin-top:1rem">
       <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px">Add comment</label>
@@ -530,8 +530,8 @@ function openTicket(id){
     <div style="display:flex;gap:7px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn" onclick="closeModal()">Close</button>
       <button class="btn primary" onclick="addComment('${id}')">Post</button>
-      ${['admin','manager'].includes(session.role)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">✓ Resolve</button>`:''}
-      ${session.role==='technician'&&t.assignedTo===session.id&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">✓ Resolve</button>`:''}
+      ${['admin','manager'].includes(session.role)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+      ${session.role==='technician'&&t.assignedTo===session.id&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
     </div>`;
   openModal();
 }
@@ -545,7 +545,7 @@ function addComment(id){
 function resolveTicket(id){
   const t=tickets.find(x=>x.id===id);if(!t)return;
   t.status='Resolved';t.updatedAt=nowTs();
-  LOG('Ticket resolved',`${t.id} ${t.title} — ${getLoc(t.locationId).name}`,'g');refreshPage();
+  LOG('Ticket resolved',`${t.id} ${t.title} - ${getLoc(t.locationId).name}`,'g');refreshPage();
 }
 
 // ============================================================
@@ -560,7 +560,7 @@ function renderAssign(){
       <button class="tab-btn active" onclick="showT2('au','aa',this)">To be assigned (${unass.length})</button>
       <button class="tab-btn" onclick="showT2('aa','au',this)">Active assigned (${active.length})</button>
     </div>
-    <div id="au">${unass.length?unass.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ Tickets assigned</div>'}</div>
+    <div id="au">${unass.length?unass.map(t=>ticketCard(t)).join(''):'<div class="empty">OK Tickets assigned</div>'}</div>
     <div id="aa" style="display:none">${active.length?active.map(t=>ticketCard(t)).join(''):'<div class="empty">None</div>'}</div>`;
 }
 function openAssignModal(id){
@@ -570,7 +570,7 @@ function openAssignModal(id){
   document.getElementById('m-title').textContent='Assign: '+t.title;
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${state.name} › ${loc.name} · ${t.category} · ${t.priority}</p>
-    <div class="fg"><label>Technician</label><select id="at-t"><option value="">Select</option>${techs.map(u=>`<option value="${u.id}"${t.assignedTo===u.id?' selected':''}>${u.name}${u.specialty?' ('+u.specialty+')':''} — ${u.stateId?getState(u.stateId).name:'All'}</option>`).join('')}</select></div>
+    <div class="fg"><label>Technician</label><select id="at-t"><option value="">Select</option>${techs.map(u=>`<option value="${u.id}"${t.assignedTo===u.id?' selected':''}>${u.name}${u.specialty?' ('+u.specialty+')':''} - ${u.stateId?getState(u.stateId).name:'All'}</option>`).join('')}</select></div>
     <div class="fg"><label>Due date</label><input type="date" id="at-d" value="${t.dueDate?t.dueDate.split('/').reverse().join('-'):''}"></div>
     <div class="fg"><label>Notes for technician</label><textarea id="at-n" placeholder="Any special instructions..."></textarea></div>
     <div id="at-prev"></div>
@@ -586,7 +586,7 @@ function prevAssign(id){
   const loc=getLoc(t.locationId),state=getState(loc.stateId||t.stateId);
   const raw=document.getElementById('at-d').value;let ds='';if(raw){const[y,m,d]=raw.split('-');ds=`${d}/${m}/${y}`;}
   const notes=document.getElementById('at-n').value;
-  const msg=`Hi ${tech.name},\n\nYou have been assigned a maintenance ticket.\n\nTicket: ${t.id} — ${t.title}\nLocation: ${state.name} › ${loc.name}\nCategory: ${t.category}\nPriority: ${t.priority}\n${ds?'Due: '+ds+'\n':''}${notes?'Notes: '+notes+'\n':''}\nPlease confirm receipt.\n\n— MaintenanceOS`;
+  const msg=`Hi ${tech.name},\n\nYou have been assigned a maintenance ticket.\n\nTicket: ${t.id} - ${t.title}\nLocation: ${state.name} › ${loc.name}\nCategory: ${t.category}\nPriority: ${t.priority}\n${ds?'Due: '+ds+'\n':''}${notes?'Notes: '+notes+'\n':''}\nPlease confirm receipt.\n\n- MaintenanceOS`;
   document.getElementById('at-prev').innerHTML=`<div class="notif-box" id="at-msg">${msg}</div><div style="display:flex;gap:6px;margin-top:8px"><button class="btn sm" onclick="cpText('at-msg')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div>`;
 }
 function confirmAssign(id){
@@ -633,16 +633,16 @@ function expTable(list,showApprove){
       const loc=getLoc(t.locationId),by=getUser(e.addedBy);
       return`<tr>
         <td><strong>${e.ticketId}</strong><div style="font-size:11px;color:#888">${t.title}</div></td>
-        <td style="font-size:12px">${loc.name||'—'}</td>
+        <td style="font-size:12px">${loc.name||'-'}</td>
         <td><span class="badge b-exp">${e.category}</span></td>
         <td style="font-size:12px">${e.description}</td>
         <td style="font-weight:700;color:#059669">${fc(e.amount)}</td>
         <td style="font-size:12px;color:#888">${e.date}</td>
-        <td style="font-size:12px">${by?by.name:'—'}</td>
+        <td style="font-size:12px">${by?by.name:'-'}</td>
         <td>${e.approved?'<span class="badge b-done">Approved</span>':'<span class="badge b-med">Pending</span>'}</td>
         <td>${e.payment_status==='paid'?'<span class="badge b-done">Paid</span>':e.payment_status==='pending_payment'?'<span class="badge b-med">Pending payment</span>':'<span class="badge b-grey">Not paid</span>'}</td>
         ${showApprove?`<td><div style="display:flex;gap:4px">
-          ${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}')">✓ Approve</button>`:''}
+          ${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}')">OK Approve</button>`:''}
           ${e.approved&&e.payment_status!=='paid'?`<button class="btn sm" onclick="markExpPaid('${e.id}')" style="color:#059669;border-color:#6ee7b7">💵 Mark paid</button>`:''}
           <button class="btn sm danger" onclick="deleteExp('${e.id}')">🗑</button>
         </div></td>`:''}
@@ -651,15 +651,15 @@ function expTable(list,showApprove){
     <tr class="tfoot-row"><td colspan="4">Total</td><td style="color:#059669">${fc(grandTotal)}</td><td colspan="${showApprove?4:3}"></td></tr>
     </tbody></table></div>`;
 }
-function approveExp(id){const e=expenses.find(x=>x.id===id);if(e){e.approved=true;LOG('Expense approved',`${e.ticketId} — ${e.description} ${fc(e.amount)}`,'g');}renderExpenses();}
+function approveExp(id){const e=expenses.find(x=>x.id===id);if(e){e.approved=true;LOG('Expense approved',`${e.ticketId} - ${e.description} ${fc(e.amount)}`,'g');}renderExpenses();}
 async function markExpPaid(id){
   const e=expenses.find(x=>x.id===id);if(!e)return;
   if(!confirm('Mark this expense as paid?'))return;
   e.payment_status='paid';
   if(isLive){await dbUpdate('expenses',id,{payment_status:'paid'});await loadLiveData();}
-  LOG('Expense marked paid',`${e.ticketId} — ${fc(e.amount)} by ${session.name}`,'g');
+  LOG('Expense marked paid',`${e.ticketId} - ${fc(e.amount)} by ${session.name}`,'g');
   renderExpenses();
-  showToast('✓ Marked as paid');
+  showToast('Marked as paid');
 }
 function deleteExp(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!==id);renderExpenses();}
 function openExpModal(ticketId){
@@ -670,10 +670,10 @@ function openExpModal(ticketId){
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · Total: <strong style="color:#059669">${fc(total)}</strong></p>
     ${te.length?`<div style="margin-bottom:1rem">${te.map(e=>`
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #f0f0ec;margin-bottom:6px;background:#fafaf8">
-        <div style="flex:1"><div style="font-weight:600">${e.description}</div><div style="font-size:11px;color:#888">${e.category} · ${e.date} · ${getUser(e.addedBy)?getUser(e.addedBy).name:'—'}</div></div>
+        <div style="flex:1"><div style="font-weight:600">${e.description}</div><div style="font-size:11px;color:#888">${e.category} · ${e.date} · ${getUser(e.addedBy)?getUser(e.addedBy).name:'-'}</div></div>
         <span class="${e.approved?'badge b-done':'badge b-med'}">${e.approved?'Approved':'Pending'}</span>
         <span style="font-weight:700;color:#059669;min-width:70px;text-align:right">${fc(e.amount)}</span>
-        ${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}');openExpModal('${ticketId}')">✓</button>`:''}
+        ${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}');openExpModal('${ticketId}')">OK</button>`:''}
       </div>`).join('')}</div>`:'<p style="color:#aaa;font-size:13px;margin-bottom:1rem">No expenses yet.</p>'}
     <div style="border-top:1px solid #e8e8e4;padding-top:1rem;font-weight:600;font-size:13px;margin-bottom:10px">Add new expense</div>
     <div class="frow">
@@ -692,7 +692,7 @@ function addExp(ticketId){
   const desc=document.getElementById('ed').value.trim();
   if(!amt||!desc){alert('Enter amount and description');return;}
   expenses.push({id:'e'+Date.now(),ticketId,addedBy:session.id,category:document.getElementById('ec').value,description:desc,amount:amt,date:nowTs().split(' ')[0],approved:false});
-  LOG('Expense added',`${ticketId} — ${desc} ${fc(amt)} by ${session.name}`,'w');
+  LOG('Expense added',`${ticketId} - ${desc} ${fc(amt)} by ${session.name}`,'w');
   openExpModal(ticketId);
 }
 function renderMyExpenses(){
@@ -740,9 +740,9 @@ function amcCard(a){
       <div class="badges">${statusBadge} <span class="badge b-grey">${a.category}</span></div>
     </div>
     <div class="card-meta">
-      <span>📅 ${a.startDate} → ${a.endDate}</span>
+      <span>📅 ${a.startDate} -> ${a.endDate}</span>
       ${days>0&&days<=60?`<span style="color:${days<=7?'#dc2626':'#d97706'};font-weight:600">⏰ ${days} day${days===1?'':'s'} left</span>`:''}
-      ${days<0?'<span style="color:#dc2626;font-weight:600">⚠ Expired '+Math.abs(days)+' days ago</span>':''}
+      ${days<0?'<span style="color:#dc2626;font-weight:600"> Expired '+Math.abs(days)+' days ago</span>':''}
       <span style="font-weight:600;color:#059669">💰 ${fc(a.amount)}/year</span>
       <span>📞 ${a.contact}</span>
     </div>
@@ -768,7 +768,7 @@ function amcFormHTML(a){
     <div class="fg"><label>Vendor name</label><input type="text" id="av" value="${a.vendor||''}"></div>
     <div class="fg"><label>Category</label><select id="ac">${CATEGORIES.map(c=>`<option${a.category===c?' selected':''}>${c}</option>`).join('')}</select></div>
   </div>
-  <div class="fg"><label>Equipment / scope</label><input type="text" id="ae" value="${a.equipment||''}" placeholder="e.g. AC Units — All outlets"></div>
+  <div class="fg"><label>Equipment / scope</label><input type="text" id="ae" value="${a.equipment||''}" placeholder="e.g. AC Units - All outlets"></div>
   <div class="fg"><label>Coverage details</label><input type="text" id="acov" value="${a.coverage||''}" placeholder="e.g. Quarterly servicing + emergency callouts"></div>
   <div class="frow3">
     <div class="fg"><label>Start date</label><input type="date" id="as" value="${a.startDate?a.startDate.split('/').reverse().join('-'):''}"></div>
@@ -792,7 +792,7 @@ function saveAMC(id){const i=amcRecords.findIndex(x=>x.id===id);amcRecords[i]={.
 function deleteAMC(id){if(!confirm('Delete?'))return;amcRecords=amcRecords.filter(x=>x.id!==id);renderAMC();}
 function sendAMCReminder(id){
   const a=amcRecords.find(x=>x.id===id);const days=amcDaysLeft(a.endDate);
-  const msg=`AMC Renewal Reminder\n\nVendor: ${a.vendor}\nEquipment: ${a.equipment}\nContract end: ${a.endDate}\n${days<0?'Status: EXPIRED — please renew immediately':'Days remaining: '+days+' days'}\nAnnual value: ${fc(a.amount)}\n\nPlease arrange renewal at your earliest.\n\n— MaintenanceOS`;
+  const msg=`AMC Renewal Reminder\n\nVendor: ${a.vendor}\nEquipment: ${a.equipment}\nContract end: ${a.endDate}\n${days<0?'Status: EXPIRED - please renew immediately':'Days remaining: '+days+' days'}\nAnnual value: ${fc(a.amount)}\n\nPlease arrange renewal at your earliest.\n\n- MaintenanceOS`;
   window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
 
@@ -840,7 +840,7 @@ function monthlyReport(){
   return`<div class="report-wrap" id="monthly-report">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:2px solid #f0f0ec">
       <div>
-        <div style="font-size:22px;font-weight:800;letter-spacing:-.5px">⊞ MaintenanceOS — Monthly Report</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.5px">⊞ MaintenanceOS - Monthly Report</div>
         <div style="font-size:13px;color:#888;margin-top:3px">${month} · Generated ${nowTs()}</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -893,7 +893,7 @@ function monthlyReport(){
 
     <div style="font-weight:700;font-size:14px;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f0f0ec">AMC summary</div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:1.5rem">
-      <span style="color:#059669">✓ ${amcOk} active contracts</span>
+      <span style="color:#059669">OK ${amcOk} active contracts</span>
       <span style="color:#d97706">⚠ ${amcWarn} expiring within 60 days</span>
       <span style="color:#dc2626">✗ ${amcExp} expired</span>
       <span style="font-weight:600">Total AMC value: ${fc(amcRecords.reduce((s,a)=>s+Number(a.amount),0))}/year</span>
@@ -953,7 +953,7 @@ function expenseReport(){
   const grand=expenses.reduce((s,e)=>s+Number(e.amount),0);
   return`<div class="report-wrap">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #f0f0ec">
-      <div><div style="font-size:18px;font-weight:800">Expense Report — May 2026</div><div style="font-size:13px;color:#888">Total: ${fc(grand)}</div></div>
+      <div><div style="font-size:18px;font-weight:800">Expense Report - May 2026</div><div style="font-size:13px;color:#888">Total: ${fc(grand)}</div></div>
       <div style="display:flex;gap:8px"><button class="btn" onclick="window.print()">🖨 Print</button><button class="btn primary" onclick="openSendReport()">✉ Send</button></div>
     </div>
     <div class="tbl-wrap"><table>
@@ -967,7 +967,7 @@ function expenseReport(){
 }
 
 function openSendReport(){
-  const summary=`MaintenanceOS — Monthly Report (May 2026)\n\nSummary:\n• ${tickets.length} total tickets\n• ${tickets.filter(t=>t.status==='Resolved').length} resolved (${tickets.length>0?Math.round(tickets.filter(t=>t.status==='Resolved').length/tickets.length*100):0}% resolution rate)\n• ${tickets.filter(t=>['Open','In Progress'].includes(t.status)).length} open/active\n• ${tickets.filter(isESC).length} escalated, ${tickets.filter(isOD).length} overdue\n• Total expenses: ${fc(expenses.reduce((s,e)=>s+Number(e.amount),0))}\n• AMC: ${amcRecords.filter(a=>amcSt(a)==='expired').length} expired, ${amcRecords.filter(a=>amcSt(a)==='expiring').length} expiring soon\n\nGenerated by MaintenanceOS · ${nowTs()}`;
+  const summary=`MaintenanceOS - Monthly Report (May 2026)\n\nSummary:\n• ${tickets.length} total tickets\n• ${tickets.filter(t=>t.status==='Resolved').length} resolved (${tickets.length>0?Math.round(tickets.filter(t=>t.status==='Resolved').length/tickets.length*100):0}% resolution rate)\n• ${tickets.filter(t=>['Open','In Progress'].includes(t.status)).length} open/active\n• ${tickets.filter(isESC).length} escalated, ${tickets.filter(isOD).length} overdue\n• Total expenses: ${fc(expenses.reduce((s,e)=>s+Number(e.amount),0))}\n• AMC: ${amcRecords.filter(a=>amcSt(a)==='expired').length} expired, ${amcRecords.filter(a=>amcSt(a)==='expiring').length} expiring soon\n\nGenerated by MaintenanceOS · ${nowTs()}`;
   document.getElementById('m-title').textContent='Send report';
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">Share this summary via WhatsApp or email. To send a PDF, use the Print button to save as PDF first.</p>
@@ -1021,9 +1021,9 @@ function locListHTML(){
           const lu=users.find(u=>u.locationId===l.id);
           return`<div class="loc-row">
             <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:20px">${l.type==='central_kitchen'?'🍳':'🏪'}</span>
+              <span style="font-size:20px">${l.type==='central_kitchen'?'':''}</span>
               <div><div style="font-weight:600;font-size:13px">${l.name}</div>
-              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':'Outlet'}${l.city?' · '+l.city:''} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
+              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':'Outlet'}${l.city?'  '+l.city:''} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
             </div>
             <div style="display:flex;gap:5px">
               <button class="btn sm" onclick="openEditLocation('${l.id}')">✏</button>
@@ -1082,13 +1082,13 @@ function filterUsers(role,btn){document.querySelectorAll('.tab-btn').forEach(b=>
 function userTable(list){
   if(!list.length)return'<div class="empty">No users</div>';
   return`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead><tbody>${list.map(u=>{
-    const s=u.stateId?getState(u.stateId):{name:'—'},l=u.locationId?getLoc(u.locationId):{name:'—',type:null};
-    return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div>${u.name}</div></td><td style="color:#555">${u.email}</td><td>${roleBadge(u.role)}</td><td style="color:#555">${s.name}</td><td style="color:#555">${l.name!=='—'?locLabel(l):'—'}</td><td><div style="display:flex;gap:5px"><button class="btn sm" onclick="openEditUser('${u.id}')">✏ Edit</button>${u.id!==session.id?`<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑</button>`:'<span style="font-size:11px;color:#aaa">(you)</span>'}</div></td></tr>`;
+    const s=u.stateId?getState(u.stateId):{name:'-'},l=u.locationId?getLoc(u.locationId):{name:'-',type:null};
+    return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div>${u.name}</div></td><td style="color:#555">${u.email}</td><td>${roleBadge(u.role)}</td><td style="color:#555">${s.name}</td><td style="color:#555">${l.name!=='-'?locLabel(l):'-'}</td><td><div style="display:flex;gap:5px"><button class="btn sm" onclick="openEditUser('${u.id}')">✏ Edit</button>${u.id!==session.id?`<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑</button>`:'<span style="font-size:11px;color:#aaa">(you)</span>'}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
 }
 function userFormHTML(u){
-  const sOpts=`<option value="">— None —</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
-  const lOpts=`<option value="">— None —</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
+  const sOpts=`<option value="">- None -</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
+  const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
   return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
   <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
@@ -1099,7 +1099,7 @@ function userFormHTML(u){
   <div class="fg" id="usf" style="${u.role==='technician'?'':'display:none'}"><label>Specialty</label><input type="text" id="usp" value="${u.specialty||''}" placeholder="e.g. Electrical"></div>`;
 }
 function toggleUF(){const r=document.getElementById('ur').value;document.getElementById('ulf').style.display=r==='outlet'?'':'none';document.getElementById('usf').style.display=r==='technician'?'':'none';}
-function refreshLocDrop(){const sid=document.getElementById('us').value;const locs=sid?locations.filter(l=>l.stateId===sid):locations;document.getElementById('ul').innerHTML=`<option value="">— None —</option>`+locs.map(l=>`<option value="${l.id}">${locLabel(l)}</option>`).join('');}
+function refreshLocDrop(){const sid=document.getElementById('us').value;const locs=sid?locations.filter(l=>l.stateId===sid):locations;document.getElementById('ul').innerHTML=`<option value="">- None -</option>`+locs.map(l=>`<option value="${l.id}">${locLabel(l)}</option>`).join('');}
 function openAddUser(){document.getElementById('m-title').textContent='Add user';document.getElementById('m-body').innerHTML=userFormHTML({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewUser()">Create</button></div>`;openModal();}
 function openEditUser(id){
   const u=getUser(id);
@@ -1122,7 +1122,7 @@ async function saveUser(id){
     const saved=await dbUpdate('users',id,updates);
     if(!saved){alert('Error saving. Please try again.');return;}
     await loadLiveData();
-    showToast('✓ User updated — they can now log in with the new email/password');
+    showToast('User updated - they can now log in with the new email/password');
   }else{
     const i=users.findIndex(u=>u.id===id);
     users[i]={...users[i],...updates,stateId:updates.state_id,locationId:updates.location_id};
@@ -1137,7 +1137,7 @@ function deleteUser(id){if(!confirm('Delete?'))return;users=users.filter(u=>u.id
 // ============================================================
 
 // ============================================================
-// PROFILE — My account + Telegram connect
+// PROFILE - My account + Telegram connect
 // ============================================================
 function renderProfile() {
   const tgConnected = session.telegram_id;
@@ -1158,7 +1158,7 @@ function renderProfile() {
 
       <div class="card">
         <div style="font-weight:700;font-size:15px;margin-bottom:4px">Telegram notifications</div>
-        <div style="font-size:13px;color:#666;margin-bottom:1rem">Connect Telegram to receive instant alerts for tickets, assignments and escalations — completely free.</div>
+        <div style="font-size:13px;color:#666;margin-bottom:1rem">Connect Telegram to receive instant alerts for tickets, assignments and escalations - completely free.</div>
 
         ${tgConnected ? `
           <div style="background:#d1fae5;border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:1rem">
@@ -1209,7 +1209,7 @@ async function saveProfile() {
     // Update session
     session = { ...session, ...updates };
     document.getElementById('sb-name').textContent = session.name;
-    showToast('✓ Profile updated');
+    showToast('Profile updated');
   } else {
     const i = users.findIndex(u => u.id === session.id);
     if (i > -1) users[i] = { ...users[i], ...updates };
@@ -1226,9 +1226,9 @@ async function saveTelegramId() {
     await dbUpdate('users', session.id, { telegram_id: tgId });
     await loadLiveData();
     session.telegram_id = tgId;
-    showToast('✓ Telegram connected!');
+    showToast('Telegram connected!');
     // Send test message
-    await tgSend(tgId, `✅ <b>Telegram connected!</b>\n\nHi ${session.name}, you will now receive notifications from MaintenanceOS.\n\n— Benne MaintenanceOS`);
+    await tgSend(tgId, `✅ <b>Telegram connected!</b>\n\nHi ${session.name}, you will now receive notifications from MaintenanceOS.\n\n- Benne MaintenanceOS`);
   } else {
     const i = users.findIndex(u => u.id === session.id);
     if (i > -1) users[i].telegram_id = tgId;
@@ -1252,7 +1252,7 @@ async function disconnectTelegram() {
 
 // Auto-detect: polls the bot for recent messages to find this user's chat ID
 async function checkTelegramAuto() {
-  showToast('⏳ Checking for your Telegram message...');
+  showToast(' Checking for your Telegram message...');
   try {
     const res = await fetch('https://api.telegram.org/bot' + TG_TOKEN + '/getUpdates?limit=20&offset=-20');
     const data = await res.json();
@@ -1266,7 +1266,7 @@ async function checkTelegramAuto() {
     const username = latest?.message?.from?.first_name || '';
     if (chatId) {
       document.getElementById('tg-id-input').value = chatId;
-      showToast('✓ Found your Chat ID: ' + chatId + ' - click Save to confirm');
+      showToast('Found your Chat ID: ' + chatId + ' - click Save to confirm');
     } else {
       showToast('Could not detect. Please paste your Chat ID manually.');
     }
@@ -1311,7 +1311,7 @@ function downloadVendorTemplate(){
   const a = document.createElement('a');
   a.href=url; a.download='vendor_import_template.csv'; a.click();
   URL.revokeObjectURL(url);
-  showToast('Template downloaded — fill it in and import');
+  showToast('Template downloaded - fill it in and import');
 }
 
 function exportVendors(){
@@ -1405,7 +1405,7 @@ function parseVendorCSV(text){
     <div style="max-height:180px;overflow-y:auto;border:1px solid #e8e8e4;border-radius:8px;margin-bottom:10px">
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="background:#f9f9f7"><th style="padding:7px 10px;text-align:left;border-bottom:1px solid #e8e8e4">Name</th><th style="padding:7px 10px;text-align:left;border-bottom:1px solid #e8e8e4">Phone</th><th style="padding:7px 10px;text-align:left;border-bottom:1px solid #e8e8e4">Specialty</th></tr></thead>
-        <tbody>${parsed.slice(0,15).map(v=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef">${v.name}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef;color:#555">${v.phone||'—'}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef;color:#555">${v.specialty||'—'}</td></tr>`).join('')}
+        <tbody>${parsed.slice(0,15).map(v=>`<tr><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef">${v.name}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef;color:#555">${v.phone||'-'}</td><td style="padding:7px 10px;border-bottom:1px solid #f4f3ef;color:#555">${v.specialty||'-'}</td></tr>`).join('')}
         ${parsed.length>15?`<tr><td colspan="3" style="padding:7px 10px;color:#aaa;font-style:italic">... and ${parsed.length-15} more</td></tr>`:''}
         </tbody>
       </table>
@@ -1431,7 +1431,7 @@ async function confirmVendorImport(){
   if(isLive)await loadLiveData();
   LOG('Vendors imported',imported+' vendors added','p');
   closeModal();renderVendors();
-  showToast('Imported '+imported+' vendors'+(skipped>0?' · '+skipped+' duplicates skipped':''));
+  showToast('Imported '+imported+' vendors'+(skipped>0?'  '+skipped+' duplicates skipped':''));
 }
 
 
@@ -1489,13 +1489,13 @@ function getVendorFormData(){return{name:document.getElementById('vn').value.tri
 async function saveNewVendor(){
   const d=getVendorFormData();if(!d.name){alert('Enter vendor name');return;}
   const row={id:'v'+Date.now(),...d,active:true};
-  if(isLive){await dbInsert('vendors',row);await loadLiveData();showToast('✓ Vendor added');}
+  if(isLive){await dbInsert('vendors',row);await loadLiveData();showToast('Vendor added');}
   else vendors.push(row);
   closeModal();renderVendors();
 }
 async function saveVendor(id){
   const d=getVendorFormData();
-  if(isLive){await dbUpdate('vendors',id,d);await loadLiveData();showToast('✓ Vendor updated');}
+  if(isLive){await dbUpdate('vendors',id,d);await loadLiveData();showToast('Vendor updated');}
   else{const i=vendors.findIndex(v=>v.id===id);vendors[i]={...vendors[i],...d};}
   closeModal();renderVendors();
 }
@@ -1508,7 +1508,7 @@ async function toggleVendor(id){
 }
 
 // ============================================================
-// MATERIALS — per ticket
+// MATERIALS - per ticket
 // ============================================================
 function openMaterialsModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
@@ -1553,7 +1553,7 @@ async function addMaterial(ticketId){
   const cost=parseFloat(document.getElementById('mc').value)||0;
   if(!name){alert('Enter material name');return;}
   const row={id:'m'+Date.now(),ticketId,ticket_id:ticketId,addedBy:session.id,added_by:session.id,name,quantity:qty,unit:document.getElementById('mu').value,unitCost:cost,unit_cost:cost,totalCost:qty*cost,total_cost:qty*cost,vendorId:document.getElementById('mv').value||null,vendor_id:document.getElementById('mv').value||null,notes:document.getElementById('mno').value,createdAt:nowTs()};
-  if(isLive){await dbInsert('materials',{id:row.id,ticket_id:ticketId,added_by:session.id,name,quantity:qty,unit:row.unit,unit_cost:cost,vendor_id:row.vendor_id,notes:row.notes});await loadLiveData();showToast('✓ Material added');}
+  if(isLive){await dbInsert('materials',{id:row.id,ticket_id:ticketId,added_by:session.id,name,quantity:qty,unit:row.unit,unit_cost:cost,vendor_id:row.vendor_id,notes:row.notes});await loadLiveData();showToast('Material added');}
   else materials.push(row);
   LOG('Material added',ticketId+' - '+name+' x'+qty,'w');
   openMaterialsModal(ticketId);
@@ -1615,13 +1615,13 @@ async function uploadAttachment(ticketId){
       const fileUrl=urlData.publicUrl;
       await dbInsert('ticket_attachments',{id,ticket_id:ticketId,uploaded_by:session.id,file_name:file.name,file_url:fileUrl,file_type:file.type,file_size:file.size,caption});
       await loadLiveData();
-      showToast('✓ File uploaded');
+      showToast('File uploaded');
     }catch(e){
       // Fallback: store as base64 locally
       const reader=new FileReader();
       reader.onload=function(ev){
         attachments.push({id,ticketId,uploadedBy:session.id,fileName:file.name,fileUrl:ev.target.result,fileType:file.type,caption,createdAt:nowTs()});
-        showToast('✓ Saved locally (Supabase storage not configured)');
+        showToast('Saved locally (Supabase storage not configured)');
         if(progress)progress.style.display='none';
         openAttachmentsModal(ticketId);
       };
@@ -1629,11 +1629,11 @@ async function uploadAttachment(ticketId){
       return;
     }
   } else {
-    // Local mode — store as base64
+    // Local mode - store as base64
     const reader=new FileReader();
     reader.onload=function(ev){
       attachments.push({id,ticketId,uploadedBy:session.id,fileName:file.name,fileUrl:ev.target.result,fileType:file.type,caption,createdAt:nowTs()});
-      showToast('✓ Photo saved');
+      showToast('Photo saved');
       if(progress)progress.style.display='none';
       openAttachmentsModal(ticketId);
     };
@@ -1656,7 +1656,7 @@ async function deleteAttachment(id,ticketId){
 // ============================================================
 async function techCheckIn(ticketId, status){
   if(!navigator.geolocation){alert('Location not available on this device');return;}
-  showToast('📍 Getting your location...');
+  showToast(' Getting your location...');
   navigator.geolocation.getCurrentPosition(async pos=>{
     const{latitude,longitude}=pos.coords;
     const row={id:'ci'+Date.now(),ticket_id:ticketId,tech_id:session.id,status,latitude,longitude,address_approx:'Location captured'};
@@ -1666,9 +1666,9 @@ async function techCheckIn(ticketId, status){
     } else {
       checkins.push({...row,ticketId,techId:session.id,createdAt:nowTs()});
     }
-    const msgs={on_way:'🚗 On the way to job',arrived:'📍 Arrived at location',completed:'✅ Job completed'};
+    const msgs={on_way:' On the way to job',arrived:' Arrived at location',completed:' Job completed'};
     LOG(msgs[status]||status,ticketId+' by '+session.name,'b');
-    showToast('✓ '+( msgs[status]||status));
+    showToast(''+( msgs[status]||status));
     // Notify manager
     const t=tickets.find(x=>x.id===ticketId);
     const loc=t?getLoc(t.locationId||t.location_id):{name:''};
@@ -1682,7 +1682,7 @@ Coords: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}
 https://maps.google.com/?q=${latitude},${longitude}`;
     await tgNotifyRole('manager',`<b>${msgs[status]}</b>
 
-Ticket: ${ticketId} — ${t?t.title:''}
+Ticket: ${ticketId} - ${t?t.title:''}
 Location: ${loc.name}
 Tech: ${session.name}
 
@@ -1697,13 +1697,13 @@ Tech: ${session.name}
 // SUPER ADMIN
 // ============================================================
 const SUPER_NAV=[
-  {s:'Super Admin — Hidden'},{id:'superadmin',i:'🔐',l:'Control panel'},
-  {s:'Everything'},{id:'dashboard',i:'⊞',l:'Dashboard'},{id:'tickets',i:'📋',l:'Tickets'},{id:'users',i:'👤',l:'Users'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC'},{id:'log',i:'🕐',l:'Audit log'},{id:'reports',i:'📊',l:'Reports'},{id:'locations',i:'🏠',l:'Locations'},
+  {s:'Super Admin - Hidden'},{id:'superadmin',i:'',l:'Control panel'},
+  {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
 ];
 
 function renderSuperAdmin(){
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title" style="color:#dc2626">🔐 Super Admin Panel</div><div class="page-sub">Full system access — visible only to you</div></div></div>
+    <div class="page-hdr"><div><div class="page-title" style="color:#dc2626">🔐 Super Admin Panel</div><div class="page-sub">Full system access - visible only to you</div></div></div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem">
       <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="ml">Total tickets</div><div class="mv b">${tickets.length}</div></div>
@@ -1756,7 +1756,7 @@ function renderSuperAdmin(){
 function resetTickets(){if(!confirm('Delete ALL tickets? This cannot be undone.'))return;tickets=[];materials=[];attachments=[];checkins=[];if(isLive){supaClient.from('tickets').delete().neq('id','x').then(()=>{});supaClient.from('ticket_comments').delete().neq('id','x').then(()=>{});supaClient.from('expenses').delete().neq('id','x').then(()=>{});supaClient.from('materials').delete().neq('id','x').then(()=>{});supaClient.from('ticket_attachments').delete().neq('id','x').then(()=>{});}LOG('SUPER: Tickets cleared','by '+session.name,'r');refreshPage();}
 function resetExpenses(){if(!confirm('Delete ALL expenses?'))return;expenses=[];LOG('SUPER: Expenses cleared','by '+session.name,'r');refreshPage();}
 function resetAll(){
-  if(!confirm('FULL RESET — delete all tickets, expenses, materials, attachments and audit log? Users and locations kept.'))return;
+  if(!confirm('FULL RESET - delete all tickets, expenses, materials, attachments and audit log? Users and locations kept.'))return;
   if(!confirm('FINAL WARNING: Are you absolutely sure?'))return;
   tickets=[];expenses=[];materials=[];attachments=[];checkins=[];auditLog=[];
   if(isLive){
@@ -1773,13 +1773,13 @@ function exportAllData(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='maintenanceos_export_'+Date.now()+'.json';a.click();
   URL.revokeObjectURL(url);
-  showToast('✓ Data exported');
+  showToast('Data exported');
 }
 
 
 
 // ============================================================
-// ON HOLD — tech puts ticket on hold with reason
+// ON HOLD - tech puts ticket on hold with reason
 // ============================================================
 function openOnHoldModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
@@ -1818,10 +1818,10 @@ async function confirmOnHold(ticketId){
   if(!reason){alert('Please provide a reason');return;}
   const t=tickets.find(x=>x.id===ticketId);if(!t)return;
   t.status='On Hold';
-  t.comments.push({user:session.id,text:'⏸ Put on hold: '+reason,time:nowTs()});
+  t.comments.push({user:session.id,text:' Put on hold: '+reason,time:nowTs()});
   if(isLive){
     await dbUpdate('tickets',ticketId,{status:'On Hold',updated_at:new Date().toISOString()});
-    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:'⏸ Put on hold: '+reason});
+    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:' Put on hold: '+reason});
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket on hold',detail:ticketId+' - '+reason,user_id:session.id,color:'w'});
     await loadLiveData();
   }
@@ -1829,7 +1829,7 @@ async function confirmOnHold(ticketId){
   const loc=getLoc(t.locationId||t.location_id);const state=getState(loc.stateId||loc.state_id);
   const msg=`⏸ <b>Ticket On Hold</b>
 
-${ticketId} — ${t.title}
+${ticketId} - ${t.title}
 ${state.name} › ${loc.name}
 Tech: ${session.name}
 
@@ -1840,7 +1840,7 @@ Please review and advise.`;
   await tgNotifyRole('supervisor',msg);
   LOG('Ticket on hold',ticketId+' - '+reason,'w');
   closeModal();refreshPage();
-  showToast('Ticket put on hold — manager notified');
+  showToast('Ticket put on hold - manager notified');
 }
 async function resumeTicket(ticketId){
   if(!confirm('Resume this ticket?'))return;
@@ -1848,7 +1848,7 @@ async function resumeTicket(ticketId){
   t.status='In Progress';
   if(isLive){
     await dbUpdate('tickets',ticketId,{status:'In Progress',updated_at:new Date().toISOString()});
-    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:'▶ Ticket resumed by '+session.name});
+    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:' Ticket resumed by '+session.name});
     await loadLiveData();
   }
   LOG('Ticket resumed',ticketId,'b');
@@ -1856,7 +1856,7 @@ async function resumeTicket(ticketId){
 }
 
 // ============================================================
-// ESTIMATES — tech submits estimate, manager approves
+// ESTIMATES - tech submits estimate, manager approves
 // ============================================================
 function openEstimateModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
@@ -1876,7 +1876,7 @@ function openEstimateModal(ticketId){
         <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:8px"><span>Total</span><span style="color:#059669">${fc(est.totalCost)}</span></div>
         ${est.notes?`<div style="font-size:12px;color:#888;margin-top:6px">${est.notes}</div>`:''}
         ${est.status==='pending'&&['admin','manager','supervisor'].includes(session.role)?`<div style="display:flex;gap:6px;margin-top:10px">
-          <button class="btn sm success" onclick="approveEstimate('${est.id}','${ticketId}')">✓ Approve estimate</button>
+          <button class="btn sm success" onclick="approveEstimate('${est.id}','${ticketId}')">OK Approve estimate</button>
           <button class="btn sm danger" onclick="rejectEstimate('${est.id}','${ticketId}')">✗ Reject</button>
         </div>`:''}
         ${est.status==='approved'&&session.role==='technician'?`<button class="btn sm primary" onclick="convertEstimateToExpense('${est.id}','${ticketId}')" style="margin-top:8px">💰 Convert to expense</button>`:''}
@@ -1930,19 +1930,19 @@ async function submitEstimate(ticketId){
   }
   // Notify manager
   const t=tickets.find(x=>x.id===ticketId);
-  const msg=`📝 <b>Estimate Submitted — Needs Approval</b>
+  const msg=`📝 <b>Estimate Submitted - Needs Approval</b>
 
-Ticket: ${ticketId} — ${t?t.title:''}
+Ticket: ${ticketId} - ${t?t.title:''}
 Total: ${fc(totalCost)}
 By: ${session.name}
 
-${items.map(i=>i.name+' × '+i.qty+' = '+fc(i.qty*i.unitCost)).join('
+${items.map(i=>i.name+'  '+i.qty+' = '+fc(i.qty*i.unitCost)).join('
 ')}
 
 Please approve in MaintenanceOS.`;
   await tgNotifyRole('manager',msg);await tgNotifyRole('supervisor',msg);
   LOG('Estimate submitted',ticketId+' '+fc(totalCost),'b');
-  closeModal();showToast('✓ Estimate submitted for approval');refreshPage();
+  closeModal();showToast('Estimate submitted for approval');refreshPage();
 }
 
 async function approveEstimate(estId,ticketId){
@@ -1958,7 +1958,7 @@ Total: ${fc(est.totalCost)}
 Approved by: ${session.name}
 
 You can now proceed with the work and convert to expense.`);
-  closeModal();openEstimateModal(ticketId);showToast('✓ Estimate approved');
+  closeModal();openEstimateModal(ticketId);showToast('Estimate approved');
 }
 
 async function rejectEstimate(estId,ticketId){
@@ -1983,14 +1983,14 @@ async function convertEstimateToExpense(estId,ticketId){
   if(!confirm('Convert this approved estimate to an expense?'))return;
   // Create one expense entry per item
   for(const item of est.items){
-    const row={id:'e'+Date.now()+Math.random().toString(36).slice(2,4),ticketId,ticket_id:ticketId,addedBy:session.id,added_by:session.id,category:'Parts',description:item.name+' × '+item.qty,amount:item.qty*item.unitCost,date:nowTs().split(' ')[0],approved:true,payment_status:'pending_payment'};
+    const row={id:'e'+Date.now()+Math.random().toString(36).slice(2,4),ticketId,ticket_id:ticketId,addedBy:session.id,added_by:session.id,category:'Parts',description:item.name+'  '+item.qty,amount:item.qty*item.unitCost,date:nowTs().split(' ')[0],approved:true,payment_status:'pending_payment'};
     if(isLive)await dbInsert('expenses',{id:row.id,ticket_id:ticketId,added_by:session.id,category:'Parts',description:row.description,amount:row.amount,date:row.date,approved:true,payment_status:'pending_payment'});
     else expenses.push(row);
   }
   est.status='converted';
   if(isLive)await loadLiveData();
   LOG('Estimate converted to expense',ticketId+' '+fc(est.totalCost),'g');
-  closeModal();showToast('✓ Estimate converted to expense');refreshPage();
+  closeModal();showToast('Estimate converted to expense');refreshPage();
 }
 
 
@@ -2003,7 +2003,7 @@ function renderRecurring(){
       return`<div class="card" style="margin-bottom:10px">
         <div class="card-top"><span class="card-title">↺ ${r.title}</span>${['admin','manager'].includes(session.role)?`<label class="tgl"><input type="checkbox" ${r.on?'checked':''} onchange="toggleR('${r.id}',this.checked)"><span class="tgl-s"></span></label>`:''}</div>
         <div class="card-meta"><span>Every ${r.freq}</span><span class="badge ${r.priority==='High'?'b-high':r.priority==='Low'?'b-low':'b-med'}">${r.priority}</span><span>${r.category}</span><span>📅 Next: ${r.next}</span></div>
-        <div style="font-size:12px;color:#888;margin-top:6px">${Object.entries(byS).map(([s,ls])=>`${s}: ${ls.join(', ')}`).join(' · ')}</div>
+        <div style="font-size:12px;color:#888;margin-top:6px">${Object.entries(byS).map(([s,ls])=>`${s}: ${ls.join(', ')}`).join('  ')}</div>
         ${['admin','manager'].includes(session.role)?`<div class="card-actions"><button class="btn sm" onclick="genNow('${r.id}')">▶ Generate now</button><button class="btn sm danger" onclick="delR('${r.id}')">🗑</button></div>`:''}
       </div>`;
     }).join('')||'<div class="empty">No recurring schedules</div>'}</div>`;
@@ -2028,11 +2028,11 @@ function renderNotifications(){
   const esc=tickets.filter(isESC),od=tickets.filter(t=>isOD(t)&&!isESC(t)),unass=tickets.filter(t=>t.status==='Open'&&!t.assignedTo);
   const amcAlerts=amcRecords.filter(a=>amcSt(a)!=='active');
   let h='';
-  if(esc.length){h+=`<p style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠ Escalated</p>`;esc.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`*ESCALATED TICKET*\n\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority} · Due: ${t.dueDate} (${dAgo(t.dueDate)}d overdue)\n${tech?'Assigned: '+tech.name:'No technician assigned'}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-esc','Escalated');});}
-  if(od.length){h+=`<p style="font-size:13px;font-weight:700;color:#d97706;margin:1rem 0 8px">⏰ Overdue</p>`;od.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`Hi${tech?' '+tech.name:''},\n\nFollow-up: ${t.id} — *${t.title}*\n${state.name} › ${loc.name}\nDue: ${t.dueDate} (${dAgo(t.dueDate)} days overdue)\n\nPlease update.\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-ov','Overdue');});}
-  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','To be assigned');});}
-  if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n— MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
-  if(!h)h='<div class="empty">✓ All clear — no notifications needed</div>';
+  if(esc.length){h+=`<p style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠ Escalated</p>`;esc.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`*ESCALATED TICKET*\n\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority} · Due: ${t.dueDate} (${dAgo(t.dueDate)}d overdue)\n${tech?'Assigned: '+tech.name:'No technician assigned'}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-esc','Escalated');});}
+  if(od.length){h+=`<p style="font-size:13px;font-weight:700;color:#d97706;margin:1rem 0 8px">⏰ Overdue</p>`;od.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`Hi${tech?' '+tech.name:''},\n\nFollow-up: ${t.id} - *${t.title}*\n${state.name} › ${loc.name}\nDue: ${t.dueDate} (${dAgo(t.dueDate)} days overdue)\n\nPlease update.\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-ov','Overdue');});}
+  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','To be assigned');});}
+  if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n- MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
+  if(!h)h='<div class="empty">OK All clear - no notifications needed</div>';
   document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications</div></div></div>${h}`;
 }
 function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
@@ -2050,14 +2050,14 @@ function renderMyTasks(){
       <button class="tab-btn" id="avail-tab-btn" onclick="showMTTab('mtu','mto','mtd',this)">Available to take (${unassigned.length})</button>
       <button class="tab-btn" onclick="showMTTab('mtd','mto','mtu',this)">Resolved (${done.length})</button>
     </div>
-    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ No active tasks assigned to you</div>'}</div>
+    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">OK No active tasks assigned to you</div>'}</div>
     <div id="mtu" style="display:none">
       ${unassigned.length?`
         <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px">
           💡 These tickets have no technician assigned. Tap <strong>"Assign to me"</strong> to take ownership.
         </div>
         ${unassigned.map(t=>ticketCard(t)).join('')}
-      `:'<div class="empty">✓ No unassigned tickets right now</div>'}
+      `:'<div class="empty">OK No unassigned tickets right now</div>'}
     </div>
     <div id="mtd" style="display:none">${done.length?done.map(t=>ticketCard(t)).join(''):'<div class="empty">None resolved yet</div>'}</div>`;
 }
@@ -2113,7 +2113,7 @@ function renderMyTickets(){
   const loc=getLoc(session.locationId),state=getState(loc.stateId);
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">My tickets</div><div class="page-sub">${state.name} › ${loc.name} · ${mine.length} tickets</div></div><button class="btn primary" onclick="navTo('raise')">＋ Raise new</button></div>
-    ${mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty">No issues raised yet.<br><br><button class="btn primary" onclick="navTo(\'raise\')">＋ Raise your first issue</button></div>'}`;
+    ${mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty">No issues raised yet.<br><br><button class="btn primary" onclick="navTo(\'raise\')"> Raise your first issue</button></div>'}`;
 }
 function renderLog(){
   document.getElementById('main-content').innerHTML=`
@@ -2161,7 +2161,7 @@ async function assignToSelf(id) {
       color: 'b'
     });
     await loadLiveData();
-    showToast('✓ Ticket assigned to you — it now appears in My Tasks');
+    showToast('Ticket assigned to you - it now appears in My Tasks');
     const _st=tickets.find(x=>x.id===id)||{};
     const _sloc=getLoc(_st.location_id||_st.locationId), _sstate=getState(_sloc.stateId||_sloc.state_id);
     tgOnSelfAssigned(_st, session.name, _sloc.name, _sstate.name);
@@ -2180,7 +2180,7 @@ async function initSupabase() {
     const { data, error } = await supaClient.from('states').select('id').limit(1);
     if (error) throw error;
     isLive = true;
-    console.log('✓ Supabase connected — LIVE MODE');
+    console.log('OK Supabase connected - LIVE MODE');
     updateSyncBar(true);
     startRealtime();
   } catch(e) {
@@ -2211,7 +2211,7 @@ function startRealtime() {
   if (!supaClient) return;
   supaClient.channel('realtime-all')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tickets' }, payload => {
-      showToast('🔔 New ticket raised: ' + payload.new.title);
+      showToast(' New ticket raised: ' + payload.new.title);
       if (['admin','manager'].includes(session?.role)) {
         notifyNewTicket(payload.new, payload.new.location_id);
       }
@@ -2222,23 +2222,23 @@ function startRealtime() {
       // Notify technician if assigned
       if (t.assigned_to === session?.id && payload.old.assigned_to !== t.assigned_to) {
         notifyAssigned(t, t.location_id);
-        showToast('👷 You have been assigned: ' + t.title);
+        showToast(' You have been assigned: ' + t.title);
       }
       // Notify if resolved
       if (t.status === 'Resolved' && payload.old.status !== 'Resolved') {
-        showToast('✅ Resolved: ' + t.title);
+        showToast(' Resolved: ' + t.title);
         if (t.raised_by === session?.id) notifyResolved(t, t.location_id);
       }
       setTimeout(() => refreshPage(), 300);
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'expenses' }, payload => {
       if (['admin','manager'].includes(session?.role)) {
-        showToast('💰 New expense needs approval: ₹' + payload.new.amount);
+        showToast(' New expense needs approval: ' + payload.new.amount);
         notifyExpenseApproval(payload.new);
       }
     })
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ticket_comments' }, payload => {
-      showToast('💬 New comment on ticket ' + payload.new.ticket_id);
+      showToast(' New comment on ticket ' + payload.new.ticket_id);
       setTimeout(() => refreshPage(), 300);
     })
     .subscribe();
@@ -2264,7 +2264,7 @@ async function dbDelete(table, id) {
 
 async function loadLiveData() {
   if (!isLive) return;
-  showToast('⏳ Loading live data...');
+  showToast(' Loading live data...');
   try {
     const [st,lo,us,ti,ex,am,re,al,cm,vn,mt,att,ci] = await Promise.all([
       supaClient.from('states').select('*').order('name'),
@@ -2294,10 +2294,10 @@ async function loadLiveData() {
     if (mt.data) materials = mt.data.map(m=>({...m,ticketId:m.ticket_id,addedBy:m.added_by,unitCost:m.unit_cost,totalCost:m.total_cost,vendorId:m.vendor_id}));
     if (att.data) attachments = att.data.map(a=>({...a,ticketId:a.ticket_id,uploadedBy:a.uploaded_by,fileName:a.file_name,fileUrl:a.file_url,fileType:a.file_type}));
     if (ci.data) checkins = ci.data.map(c=>({...c,ticketId:c.ticket_id,techId:c.tech_id}));
-    showToast('✓ Live data loaded');
+    showToast('Live data loaded');
   } catch(e) {
     console.error('loadLiveData error',e);
-    showToast('⚠ Using demo data');
+    showToast(' Using demo data');
   }
 }
 
@@ -2327,7 +2327,7 @@ window.doLogin = async function() {
     document.getElementById('sb-name').textContent=session.name;
     document.getElementById('sb-role').innerHTML=roleBadge(session.role);
     let locStr='Locations';
-    if(session.locationId){const l=getLoc(session.locationId);locStr=getState(l.stateId||l.state_id).name+' › '+l.name;}
+    if(session.locationId){const l=getLoc(session.locationId);locStr=getState(l.stateId||l.state_id).name+'  '+l.name;}
     else if(session.stateId){locStr=getState(session.stateId).name+' region';}
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
@@ -2374,7 +2374,7 @@ window.submitTicket = async function() {
     await dbInsert('tickets',row);
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' - '+loc.name,user_id:session.id,color:'p'});
     await loadLiveData();
-    showToast('✓ Ticket '+id+' submitted!');
+    showToast('Ticket '+id+' submitted!');
     // Telegram notification
     const _loc=getLoc(locationId), _state=getState(_loc.stateId||_loc.state_id);
     tgOnTicketRaised({id,title,category:row.category,priority:row.priority,raised_by:session.id}, _loc.name, _state.name, session.name);
@@ -2414,7 +2414,7 @@ window.resolveTicket = async function(id) {
     await dbUpdate('tickets',id,{status:'Resolved',updated_at:new Date().toISOString()});
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket resolved',detail:id,user_id:session.id,color:'g'});
     await loadLiveData();
-    showToast('✓ Ticket resolved');
+    showToast('Ticket resolved');
     // Telegram notification
     const _rt=tickets.find(x=>x.id===id)||{};
     const _rloc=getLoc(_rt.location_id||_rt.locationId), _rstate=getState(_rloc.stateId||_rloc.state_id);
@@ -2439,7 +2439,7 @@ window.confirmAssign = async function(id) {
     if(notes)await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:'Assigned: '+notes});
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket assigned',detail:id+' to '+tech?.name,user_id:session.id,color:'b'});
     await loadLiveData();
-    showToast('✓ Assigned to '+tech?.name);
+    showToast('Assigned to '+tech?.name);
     // Telegram notification
     const _at=tickets.find(x=>x.id===id)||{};
     const _aloc=getLoc(_at.location_id||_at.locationId), _astate=getState(_aloc.stateId||_aloc.state_id);
@@ -2461,13 +2461,13 @@ window.addExp = async function(ticketId) {
   const row={id:'e'+Date.now(),ticket_id:ticketId,added_by:session.id,category:document.getElementById('ec')?.value,description:desc,amount:amt,date:nowTs().split(' ')[0],approved:false};
   if(isLive){
     await dbInsert('expenses',row);
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense added',detail:ticketId+' ₹'+amt,user_id:session.id,color:'w'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense added',detail:ticketId+' '+amt,user_id:session.id,color:'w'});
     await loadLiveData();
-    showToast('✓ Expense saved');
+    showToast('Expense saved');
     tgOnExpenseAdded(ticketId, desc, amt, session.name);
   }else{
     expenses.push({...row,ticketId,addedBy:session.id});
-    LOG('Expense added',ticketId+' ₹'+amt,'w');
+    LOG('Expense added',ticketId+' '+amt,'w');
   }
   openExpModal(ticketId);
 };
@@ -2475,9 +2475,9 @@ window.addExp = async function(ticketId) {
 window.approveExp = async function(id) {
   if(isLive){
     await dbUpdate('expenses',id,{approved:true,approved_by:session.id});
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense approved',detail:'₹'+expenses.find(e=>e.id===id)?.amount,user_id:session.id,color:'g'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Expense approved',detail:''+expenses.find(e=>e.id===id)?.amount,user_id:session.id,color:'g'});
     await loadLiveData();
-    showToast('✓ Expense approved');
+    showToast('Expense approved');
     const _expApproved = expenses.find(e=>e.id===id);
     if(_expApproved) tgOnExpenseApproved(_expApproved, session.name);
   }else{
@@ -2495,7 +2495,7 @@ window.saveNewUser = async function() {
   if(isLive){
     await dbInsert('users',row);
     await loadLiveData();
-    showToast('✓ User created');
+    showToast('User created');
   }else{
     users.push({...row,stateId:row.state_id,locationId:row.location_id});
   }
@@ -2509,7 +2509,7 @@ window.saveLocation = async function() {
   if(isLive){
     await dbInsert('locations',row);
     await loadLiveData();
-    showToast('✓ Location saved');
+    showToast('Location saved');
   }else{
     locations.push({...row,stateId:sid});
   }
@@ -2522,7 +2522,7 @@ window.saveState = async function() {
   if(isLive){
     await dbInsert('states',row);
     await loadLiveData();
-    showToast('✓ State added');
+    showToast('State added');
   }else{
     states.push(row);
   }
@@ -2535,7 +2535,7 @@ window.saveNewAMC = async function() {
   if(isLive){
     await dbInsert('amc_records',row);
     await loadLiveData();
-    showToast('✓ AMC contract saved');
+    showToast('AMC contract saved');
   }else{
     amcRecords.push({...row,locationIds:row.location_ids,startDate:row.start_date,endDate:row.end_date});
   }
@@ -2562,7 +2562,7 @@ function submitForgotPassword() {
   const msg = document.getElementById('fp-msg');
   if (msg) {
     msg.style.display = 'block';
-    msg.textContent = '✓ Password reset request sent. Please contact your manager or admin to reset your password.';
+    msg.textContent = 'OK Password reset request sent. Please contact your manager or admin to reset your password.';
   }
   setTimeout(() => closeModal(), 3000);
 }
@@ -2575,7 +2575,7 @@ window.addEventListener('load', async () => {
 <script>
 
 // ============================================================
-// PWA — Service Worker + Push Notifications
+// PWA - Service Worker + Push Notifications
 // ============================================================
 
 const VAPID_PUBLIC_KEY = ''; // Add your VAPID key here for push (optional)
@@ -2587,7 +2587,7 @@ async function initPWA() {
   if (!('serviceWorker' in navigator)) return;
   try {
     swRegistration = await navigator.serviceWorker.register('/sw.js');
-    console.log('✓ Service Worker registered');
+    console.log('OK Service Worker registered');
     
     // Check notification permission
     notifPermission = Notification.permission;
@@ -2637,36 +2637,36 @@ async function pushNotify(title, body, options = {}) {
   }
 }
 
-// Notification triggers — called throughout the app
+// Notification triggers - called throughout the app
 function notifyNewTicket(ticket, location) {
   if (['admin','manager'].includes(session?.role)) return; // They raised it or are logged in
   pushNotify(
-    '🔔 New Ticket Raised',
-    `${ticket.title} — ${location}`,
+    ' New Ticket Raised',
+    `${ticket.title} - ${location}`,
     { tag: 'ticket-new-' + ticket.id, requireInteraction: ticket.priority === 'High' }
   );
 }
 
 function notifyAssigned(ticket, location) {
   pushNotify(
-    '👷 Task Assigned to You',
-    `${ticket.title} — ${location}`,
+    ' Task Assigned to You',
+    `${ticket.title} - ${location}`,
     { tag: 'ticket-assigned-' + ticket.id, requireInteraction: true }
   );
 }
 
 function notifyResolved(ticket, location) {
   pushNotify(
-    '✅ Ticket Resolved',
-    `${ticket.title} — ${location}`,
+    ' Ticket Resolved',
+    `${ticket.title} - ${location}`,
     { tag: 'ticket-resolved-' + ticket.id }
   );
 }
 
 function notifyExpenseApproval(expense) {
   pushNotify(
-    '💰 Expense Needs Approval',
-    `${expense.description} — ₹${Number(expense.amount).toLocaleString('en-IN')}`,
+    ' Expense Needs Approval',
+    `${expense.description} - ₹${Number(expense.amount).toLocaleString('en-IN')}`,
     { tag: 'expense-' + expense.id }
   );
 }
@@ -2674,23 +2674,23 @@ function notifyExpenseApproval(expense) {
 function notifyOverdue(ticket, location, daysOverdue) {
   pushNotify(
     `⏰ Overdue Ticket (${daysOverdue}d)`,
-    `${ticket.title} — ${location}`,
+    `${ticket.title} - ${location}`,
     { tag: 'overdue-' + ticket.id, requireInteraction: true }
   );
 }
 
 function notifyEscalated(ticket, location) {
   pushNotify(
-    '🚨 ESCALATED — Action Required',
-    `${ticket.title} — ${location}`,
+    ' ESCALATED - Action Required',
+    `${ticket.title} - ${location}`,
     { tag: 'esc-' + ticket.id, requireInteraction: true, vibrate: [500, 200, 500, 200, 500] }
   );
 }
 
 function notifyAMCExpiring(vendor, daysLeft) {
   pushNotify(
-    daysLeft < 0 ? '🔴 AMC Expired' : `🟡 AMC Expiring in ${daysLeft} days`,
-    `${vendor} — Please arrange renewal`,
+    daysLeft < 0 ? ' AMC Expired' : `🟡 AMC Expiring in ${daysLeft} days`,
+    `${vendor} - Please arrange renewal`,
     { tag: 'amc-' + vendor, requireInteraction: true }
   );
 }
@@ -2708,10 +2708,10 @@ function checkOverdueAndEscalated() {
     if (['Resolved','Closed'].includes(t.status)) return;
     if (isESC(t)) {
       const loc = getLoc(t.locationId), state = getState(loc.stateId);
-      notifyEscalated(t, state.name + ' › ' + loc.name);
+      notifyEscalated(t, state.name + '  ' + loc.name);
     } else if (isOD(t)) {
       const loc = getLoc(t.locationId), state = getState(loc.stateId);
-      notifyOverdue(t, state.name + ' › ' + loc.name, dAgo(t.dueDate));
+      notifyOverdue(t, state.name + '  ' + loc.name, dAgo(t.dueDate));
     }
   });
 }
@@ -2727,7 +2727,7 @@ function checkAMCAlerts() {
 }
 
 // ============================================================
-// INSTALL PROMPT — Add to Home Screen
+// INSTALL PROMPT - Add to Home Screen
 // ============================================================
 let deferredInstallPrompt = null;
 
@@ -2742,7 +2742,7 @@ window.addEventListener('appinstalled', () => {
   deferredInstallPrompt = null;
   const banner = document.getElementById('install-banner');
   if (banner) banner.remove();
-  showToast('✓ App installed on your home screen!');
+  showToast('App installed on your home screen!');
 });
 
 function showInstallBanner() {
@@ -2798,8 +2798,8 @@ async function enableNotifs() {
   if (banner) banner.remove();
   const granted = await requestNotificationPermission();
   if (granted) {
-    showToast('✓ Notifications enabled!');
-    pushNotify('✓ MaintenanceOS', 'Notifications are now enabled. You will be alerted for new tickets, assignments and escalations.');
+    showToast('Notifications enabled!');
+    pushNotify('OK MaintenanceOS', 'Notifications are now enabled. You will be alerted for new tickets, assignments and escalations.');
   } else {
     showToast('Notifications blocked. Enable in browser settings.');
   }
@@ -2807,7 +2807,7 @@ async function enableNotifs() {
 
 
 // ============================================================
-// TELEGRAM BOT NOTIFICATIONS — Free & Automatic
+// TELEGRAM BOT NOTIFICATIONS - Free & Automatic
 // ============================================================
 const TG_TOKEN = '8844109324:AAGG3_D1ujUVVKm1TSF5hdVCc9HpmkpB9N4';
 const TG_API = 'https://api.telegram.org/bot' + TG_TOKEN;
@@ -2850,7 +2850,7 @@ async function tgNotifyUser(userId, message) {
 // ---- NOTIFICATION TRIGGERS ----
 
 async function tgOnTicketRaised(ticket, loc, state, raiser) {
-  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} — ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
   await tgNotifyRole('manager', msg, ticket.raised_by || ticket.raisedBy);
   await tgNotifyRole('admin', msg, ticket.raised_by || ticket.raisedBy);
 }
@@ -2858,7 +2858,7 @@ async function tgOnTicketRaised(ticket, loc, state, raiser) {
 async function tgOnTicketAssigned(ticket, techId, loc, state) {
   const tech = getUser(techId);
   if (!tech) return;
-  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} — ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
+  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
   await tgNotifyUser(techId, msg);
   // Also notify managers
   const mgrMsg = `✅ <b>Ticket Assigned</b>\n${ticket.id} assigned to ${tech.name}\n${state} › ${loc}`;
@@ -2867,7 +2867,7 @@ async function tgOnTicketAssigned(ticket, techId, loc, state) {
 
 async function tgOnTicketResolved(ticket, loc, state, resolvedBy) {
   const raiser = getUser(ticket.raised_by || ticket.raisedBy);
-  const msg = `✅ <b>Ticket Resolved</b>\n\n<b>${ticket.id} — ${ticket.title}</b>\nLocation: ${state} › ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  const msg = `✅ <b>Ticket Resolved</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} › ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
   if (raiser) await tgNotifyUser(raiser.id, msg);
   await tgNotifyRole('manager', msg);
 }
@@ -2900,12 +2900,12 @@ async function tgOnExpenseApproved(expense, approverName) {
 }
 
 async function tgOnSelfAssigned(ticket, techName, loc, state) {
-  const msg = `✋ <b>Ticket Self-Assigned</b>\n\n${ticket.id} — ${ticket.title}\n${state} › ${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  const msg = `✋ <b>Ticket Self-Assigned</b>\n\n${ticket.id} - ${ticket.title}\n${state} › ${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
   await tgNotifyRole('manager', msg);
 }
 
 async function tgOnAMCAlert(vendor, equipment, endDate, daysLeft) {
-  const status = daysLeft < 0 ? '🔴 EXPIRED' : `🟡 Expiring in ${daysLeft} days`;
+  const status = daysLeft < 0 ? ' EXPIRED' : `🟡 Expiring in ${daysLeft} days`;
   const msg = `${status}\n\n<b>AMC Alert</b>\nVendor: ${vendor}\nEquipment: ${equipment}\nEnd date: ${endDate}\n\nPlease arrange renewal.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
   await tgNotifyRole('manager', msg);
   await tgNotifyRole('admin', msg);
