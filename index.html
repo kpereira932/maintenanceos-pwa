@@ -153,13 +153,26 @@ tr:hover td{background:#fafaf8}
 .main{padding-bottom:calc(1.75rem + env(safe-area-inset-bottom))}
 /* Mobile improvements */
 @media(max-width:768px){
-  .sidebar{width:220px;z-index:100}
-  .main{margin-left:0;padding:1rem}
-  .nav-item{padding:11px 1rem}
+  .sidebar{width:260px;z-index:1000;position:fixed;top:0;left:-260px;transition:left .25s ease;height:100vh}
+  .sidebar.open{left:0;box-shadow:4px 0 20px rgba(0,0,0,.4)}
+  .main{margin-left:0;padding:1rem;padding-top:56px}
+  .nav-item{padding:12px 1rem}
   .btn{padding:8px 12px}
   .metrics{grid-template-columns:repeat(2,1fr)}
   .two-col{grid-template-columns:1fr}
   .frow{grid-template-columns:1fr}
+  .frow3{grid-template-columns:1fr}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
+  .sidebar-overlay.open{display:block}
+  .mobile-topbar{display:flex;align-items:center;justify-content:space-between;background:#1a1a18;color:#fff;padding:12px 16px;position:fixed;top:0;left:0;right:0;z-index:998;height:50px}
+  .mobile-topbar-title{font-size:15px;font-weight:700}
+  .hamburger{background:none;border:none;color:#fff;cursor:pointer;padding:4px;display:flex;flex-direction:column;gap:4px}
+  .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
+}
+@media(min-width:769px){
+  .mobile-topbar{display:none}
+  .sidebar-overlay{display:none!important}
+  .sidebar{left:0!important}
 }
 </style>
 </head>
@@ -193,7 +206,17 @@ tr:hover td{background:#fafaf8}
 
 <!-- APP -->
 <div class="app" id="app" style="display:none">
-  <div class="sidebar">
+  <!-- Mobile top bar -->
+  <div class="mobile-topbar">
+    <button class="hamburger" onclick="toggleSidebar()" id="hamburger-btn">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="mobile-topbar-title">MaintenanceOS</div>
+    <div style="width:30px"></div>
+  </div>
+  <!-- Sidebar overlay (dark bg when sidebar open) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <div class="sidebar" id="main-sidebar">
     <div class="sidebar-logo">&#9883; MaintenanceOS</div>
     <div class="sidebar-user">
       <div class="sb-name" id="sb-name"></div>
@@ -269,13 +292,31 @@ function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'
 function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
 function sbadge(t){if(isESC(t))return'<span class="badge b-esc"> Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done','On Hold':'b-med'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
 function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
+// Get locations visible to current user based on state/city scope
+function visibleLocationIds(){
+  if(['superadmin','admin'].includes(session.role)) return locations.map(l=>l.id);
+  if(session.locationId) return [session.locationId]; // outlet/specific location
+  if(session.cityId){
+    // city-scoped: show all locations in that city
+    return locations.filter(l=>(l.stateId===session.stateId||l.state_id===session.stateId)&&(l.city||'').toLowerCase()===(session.cityName||'').toLowerCase()).map(l=>l.id);
+  }
+  if(session.stateId) return locations.filter(l=>l.stateId===session.stateId||l.state_id===session.stateId).map(l=>l.id);
+  return locations.map(l=>l.id); // no scope = see all (admin)
+}
+
 function visT(){
-  if(['admin','manager','supervisor','superadmin'].includes(session.role)) return tickets;
-  if(session.role==='technician') return tickets.filter(t=>
-    t.assignedTo===session.id ||
-    (!t.assignedTo && !['Resolved','Closed'].includes(t.status))
-  );
-  if(session.role==='outlet') return tickets.filter(t=>t.locationId===session.locationId);
+  if(session.role==='superadmin') return tickets;
+  const visLocs = visibleLocationIds();
+  if(['admin','manager','supervisor'].includes(session.role)){
+    return tickets.filter(t=>visLocs.includes(t.locationId||t.location_id));
+  }
+  if(session.role==='technician'){
+    return tickets.filter(t=>
+      (t.assignedTo===session.id||t.assigned_to===session.id) ||
+      (!t.assignedTo&&!t.assigned_to&&!['Resolved','Closed'].includes(t.status)&&visLocs.includes(t.locationId||t.location_id))
+    );
+  }
+  if(session.role==='outlet') return tickets.filter(t=>t.locationId===session.locationId||t.location_id===session.locationId);
   return[];
 }
 function ticketExp(id){return expenses.filter(e=>e.ticketId===id);}
@@ -348,7 +389,7 @@ function buildNav(){
   const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||[]);
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
     if(i.s)return`<div class="nav-section">${i.s}</div>`;
-    return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}')"><span class="ni">${i.i}</span>${i.l}</div>`;
+    return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}');closeSidebar()"><span class="ni">${i.i}</span>${i.l}</div>`;
   }).join('');
 }
 function navTo(p){
@@ -482,8 +523,8 @@ function renderTickets(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Tickets</div><div class="page-sub">${vis.length} tickets</div></div></div>
     <div style="display:flex;gap:7px;margin-bottom:1rem;flex-wrap:wrap">
-      <select id="tf-st" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">States</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${locations.map(l=>`<option value="${l.id}">${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('')}</select>
+      <select id="tf-st" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">States</option>${(session.stateId?states.filter(s=>s.id===session.stateId):states).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
+      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')}</select>
       <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select>
       <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
       <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Priority</option><option>High</option><option>Medium</option><option>Low</option></select>
@@ -1091,6 +1132,7 @@ function userFormHTML(u){
   const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
   return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
+  <div class="fg" id="ucf" style="${['admin','superadmin','outlet'].includes(u.role)?'display:none':''}"><label>City scope <span style="color:#888;font-weight:400">(restrict to one city — leave blank for whole state)</span></label><input type="text" id="ucity" value="${u.cityName||u.city_name||''}" placeholder="e.g. Mumbai, Pune, Delhi..."></div>
   <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
   <div class="fg"><label>WhatsApp number <span style="color:#888;font-weight:400">(with country code, e.g. +919876543210)</span></label><input type="text" id="uwa" value="${u.whatsapp||''}" placeholder="+91XXXXXXXXXX"></div>
   <div class="fg"><label>Telegram Chat ID <span style="color:#888;font-weight:400">(<a href="https://t.me/BennemaintenanceOSBot" target="_blank" style="color:#2563eb">open bot</a>, send /start, paste the ID shown)</span></label><input type="text" id="utg" value="${u.telegram_id||''}" placeholder="e.g. 123456789"></div>
@@ -1098,7 +1140,13 @@ function userFormHTML(u){
   <div class="fg" id="ulf" style="${u.role==='outlet'?'':'display:none'}"><label>Location</label><select id="ul">${lOpts}</select></div>
   <div class="fg" id="usf" style="${u.role==='technician'?'':'display:none'}"><label>Specialty</label><input type="text" id="usp" value="${u.specialty||''}" placeholder="e.g. Electrical"></div>`;
 }
-function toggleUF(){const r=document.getElementById('ur').value;document.getElementById('ulf').style.display=r==='outlet'?'':'none';document.getElementById('usf').style.display=r==='technician'?'':'none';}
+function toggleUF(){
+  const r=document.getElementById('ur').value;
+  document.getElementById('ulf').style.display=r==='outlet'?'':'none';
+  document.getElementById('usf').style.display=r==='technician'?'':'none';
+  const ucf=document.getElementById('ucf');
+  if(ucf)ucf.style.display=['admin','superadmin','outlet'].includes(r)?'none':'';
+}
 function refreshLocDrop(){const sid=document.getElementById('us').value;const locs=sid?locations.filter(l=>l.stateId===sid):locations;document.getElementById('ul').innerHTML=`<option value="">- None -</option>`+locs.map(l=>`<option value="${l.id}">${locLabel(l)}</option>`).join('');}
 function openAddUser(){document.getElementById('m-title').textContent='Add user';document.getElementById('m-body').innerHTML=userFormHTML({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewUser()">Create</button></div>`;openModal();}
 function openEditUser(id){
@@ -1116,7 +1164,8 @@ async function saveUser(id){
   const email=document.getElementById('ue').value.trim().toLowerCase();
   const wa=document.getElementById('uwa')?.value?.trim()||null;
   const tg=document.getElementById('utg')?.value?.trim()||null;
-  const updates={name,email,role:r,state_id:document.getElementById('us').value||null,location_id:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,whatsapp:wa,telegram_id:tg};
+  const cityName=document.getElementById('ucity')?.value?.trim()||null;
+  const updates={name,email,role:r,state_id:document.getElementById('us').value||null,location_id:r==='outlet'?document.getElementById('ul').value||null:null,specialty:r==='technician'?document.getElementById('usp').value:null,whatsapp:wa,telegram_id:tg,city_name:cityName};
   if(p) updates.pass=p;
   if(isLive){
     const saved=await dbUpdate('users',id,updates);
@@ -2073,8 +2122,9 @@ function renderRaise(){
   // For outlet: fixed to their location
   // For manager/admin/technician: can pick any location
   const canPickLocation = ['admin','manager','technician'].includes(session.role);
+  const visLocs = canPickLocation ? visibleLocationIds() : [];
   const locOptions = canPickLocation
-    ? locations.map(l=>`<option value="${l.id}">${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('')
+    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')
     : '';
   const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
   const fixedState = fixedLoc ? getState(fixedLoc.stateId) : null;
@@ -2282,7 +2332,7 @@ async function loadLiveData() {
     ]);
     if (st.data) states = st.data;
     if (lo.data) locations = lo.data.map(l=>({...l,stateId:l.state_id}));
-    if (us.data) users = us.data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id}));
+    if (us.data) users = us.data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id,cityName:u.city_name}));
     if (ti.data) tickets = ti.data.map(t=>({...t,locationId:t.location_id,stateId:t.state_id,raisedBy:t.raised_by,assignedTo:t.assigned_to,dueDate:t.due_date,desc:t.description,comments:[]}));
     if (cm.data) cm.data.forEach(c=>{ const t=tickets.find(x=>x.id===c.ticket_id); if(t) t.comments.push({user:c.user_id,text:c.text,time:c.created_at?.slice(0,16).replace('T',' ')}); });
     if (ex.data) expenses = ex.data.map(e=>({...e,ticketId:e.ticket_id,addedBy:e.added_by}));
@@ -2320,7 +2370,7 @@ window.doLogin = async function() {
         return;
       }
     }
-    session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId};
+    session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName};
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     document.getElementById('sb-name').textContent=session.name;
@@ -2347,13 +2397,21 @@ window.doLogin = async function() {
 window.submitTicket = async function() {
   const raisedByName=document.getElementById('ri-name')?.value?.trim();
   const title=document.getElementById('ri-t')?.value?.trim();
+  const fileInput=document.getElementById('raise-file');
+  const hasFile=fileInput&&fileInput.files&&fileInput.files.length>0;
   if(!raisedByName){
     document.getElementById('ri-name').style.borderColor='#dc2626';
     alert('Please enter your name before submitting');
     document.getElementById('ri-name').focus();
     return;
   }
-  if(!title){alert('Enter a title');return;}
+  if(!title){alert('Please enter an issue title');return;}
+  if(!hasFile){
+    document.getElementById('raise-file').style.borderColor='#dc2626';
+    alert('Please attach a photo or video of the issue before submitting');
+    document.getElementById('raise-file').focus();
+    return;
+  }
 
   // Determine location
   let locationId = session.locationId; // outlet uses their own
@@ -2490,7 +2548,8 @@ window.saveNewUser = async function() {
   const email=document.getElementById('ue')?.value?.trim()?.toLowerCase();
   if(!name||!email){alert('Name and email required');return;}
   const role=document.getElementById('ur')?.value;
-  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,telegram_id:document.getElementById('utg')?.value?.trim()||null,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
+  const cityName=document.getElementById('ucity')?.value?.trim()||null;
+  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,telegram_id:document.getElementById('utg')?.value?.trim()||null,city_name:cityName,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
   if(isLive){
     await dbInsert('users',row);
     await loadLiveData();
@@ -2564,6 +2623,24 @@ function submitForgotPassword() {
     msg.textContent = 'OK Password reset request sent. Please contact your manager or admin to reset your password.';
   }
   setTimeout(() => closeModal(), 3000);
+}
+
+
+// ============================================================
+// MOBILE SIDEBAR
+// ============================================================
+function toggleSidebar(){
+  const sb=document.getElementById('main-sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  if(!sb)return;
+  const isOpen=sb.classList.contains('open');
+  if(isOpen){closeSidebar();}else{sb.classList.add('open');if(ov)ov.classList.add('open');}
+}
+function closeSidebar(){
+  const sb=document.getElementById('main-sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  if(sb)sb.classList.remove('open');
+  if(ov)ov.classList.remove('open');
 }
 
 window.addEventListener('load', async () => {
