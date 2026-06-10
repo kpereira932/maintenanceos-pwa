@@ -2212,8 +2212,9 @@ async function assignToSelf(id) {
     await loadLiveData();
     showToast('Ticket assigned to you - it now appears in My Tasks');
     const _st=tickets.find(x=>x.id===id)||{};
-    const _sloc=getLoc(_st.location_id||_st.locationId), _sstate=getState(_sloc.stateId||_sloc.state_id);
-    tgOnSelfAssigned(_st, session.name, _sloc.name, _sstate.name);
+    const _stLocId=_st.location_id||_st.locationId;
+    const _sloc=getLoc(_stLocId), _sstate=getState(_sloc.stateId||_sloc.state_id);
+    tgOnSelfAssigned(_st, session.name, _sloc.name, _sstate.name, _stLocId);
   } else {
     t.assignedTo = session.id;
     t.status = 'In Progress';
@@ -2434,7 +2435,7 @@ window.submitTicket = async function() {
     showToast('Ticket '+id+' submitted!');
     // Telegram notification
     const _loc=getLoc(locationId), _state=getState(_loc.stateId||_loc.state_id);
-    tgOnTicketRaised({id,title,category:row.category,priority:row.priority,raised_by:session.id}, _loc.name, _state.name, session.name);
+    tgOnTicketRaised({id,title,category:row.category,priority:row.priority,raised_by:session.id}, _loc.name, _state.name, session.name, locationId);
   }else{
     tickets.unshift({...row,locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:dd,desc:row.description,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
     LOG('Ticket raised',id+' '+title,'p');
@@ -2455,8 +2456,9 @@ window.addComment = async function(id) {
     await loadLiveData();
     // Telegram notification
     const _ct=tickets.find(x=>x.id===id)||{};
-    const _cloc=getLoc(_ct.location_id||_ct.locationId), _cstate=getState(_cloc.stateId||_cloc.state_id);
-    tgOnCommentAdded(_ct, session.name, txt, _cloc.name, _cstate.name);
+    const _ctLocId=_ct.location_id||_ct.locationId;
+    const _cloc=getLoc(_ctLocId), _cstate=getState(_cloc.stateId||_cloc.state_id);
+    tgOnCommentAdded(_ct, session.name, txt, _cloc.name, _cstate.name, _ctLocId);
   }else{
     t.comments.push({user:session.id,text:txt,time:nowTs()});
     t.updatedAt=nowTs();
@@ -2474,8 +2476,9 @@ window.resolveTicket = async function(id) {
     showToast('Ticket resolved');
     // Telegram notification
     const _rt=tickets.find(x=>x.id===id)||{};
-    const _rloc=getLoc(_rt.location_id||_rt.locationId), _rstate=getState(_rloc.stateId||_rloc.state_id);
-    tgOnTicketResolved(_rt, _rloc.name, _rstate.name, session.name);
+    const _rtLocId=_rt.location_id||_rt.locationId;
+    const _rloc=getLoc(_rtLocId), _rstate=getState(_rloc.stateId||_rloc.state_id);
+    tgOnTicketResolved(_rt, _rloc.name, _rstate.name, session.name, _rtLocId);
   }else{
     const t=tickets.find(x=>x.id===id);
     if(t){t.status='Resolved';t.updatedAt=nowTs();}
@@ -2499,8 +2502,9 @@ window.confirmAssign = async function(id) {
     showToast('Assigned to '+tech?.name);
     // Telegram notification
     const _at=tickets.find(x=>x.id===id)||{};
-    const _aloc=getLoc(_at.location_id||_at.locationId), _astate=getState(_aloc.stateId||_aloc.state_id);
-    tgOnTicketAssigned({..._at,due_date:dd||_at.due_date}, techId, _aloc.name, _astate.name);
+    const _atLocId=_at.location_id||_at.locationId;
+    const _aloc=getLoc(_atLocId), _astate=getState(_aloc.stateId||_aloc.state_id);
+    tgOnTicketAssigned({..._at,due_date:dd||_at.due_date}, techId, _aloc.name, _astate.name, _atLocId);
   }else{
     const t=tickets.find(x=>x.id===id);
     t.assignedTo=techId;t.status='In Progress';
@@ -2909,9 +2913,28 @@ async function tgSend(chatId, message) {
   }
 }
 
-// Send to all users with a specific role
-async function tgNotifyRole(role, message, excludeId = null) {
-  const targets = users.filter(u => u.role === role && u.telegram_id && u.id !== excludeId);
+// Send to users with a specific role, scoped to location
+async function tgNotifyRole(role, message, excludeId = null, locationId = null) {
+  let targets = users.filter(u => u.role === role && u.telegram_id && u.id !== excludeId);
+
+  if (locationId) {
+    const loc = getLoc(locationId);
+    const locStateId = loc.stateId || loc.state_id;
+    const locCity = (loc.city || '').toLowerCase().trim();
+
+    targets = targets.filter(u => {
+      // Admin/superadmin with no state = sees everything
+      if (!u.stateId && !u.state_id) return true;
+      const uStateId = u.stateId || u.state_id;
+      // State must match
+      if (uStateId !== locStateId) return false;
+      // If user has a city scope, city must match too
+      const uCity = (u.cityName || u.city_name || '').toLowerCase().trim();
+      if (uCity && locCity && uCity !== locCity) return false;
+      return true;
+    });
+  }
+
   for (const u of targets) {
     await tgSend(u.telegram_id, message);
   }
@@ -2925,47 +2948,50 @@ async function tgNotifyUser(userId, message) {
 
 // ---- NOTIFICATION TRIGGERS ----
 
-async function tgOnTicketRaised(ticket, loc, state, raiser) {
-  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
-  await tgNotifyRole('manager', msg, ticket.raised_by || ticket.raisedBy);
-  await tgNotifyRole('admin', msg, ticket.raised_by || ticket.raisedBy);
+async function tgOnTicketRaised(ticket, loc, state, raiser, locationId) {
+  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} - ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg, ticket.raised_by || ticket.raisedBy, locationId);
+  await tgNotifyRole('supervisor', msg, ticket.raised_by || ticket.raisedBy, locationId);
+  await tgNotifyRole('admin', msg, ticket.raised_by || ticket.raisedBy, locationId);
 }
 
-async function tgOnTicketAssigned(ticket, techId, loc, state) {
+async function tgOnTicketAssigned(ticket, techId, loc, state, locationId) {
   const tech = getUser(techId);
   if (!tech) return;
-  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} › ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
+  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} - ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
   await tgNotifyUser(techId, msg);
-  // Also notify managers
-  const mgrMsg = `✅ <b>Ticket Assigned</b>\n${ticket.id} assigned to ${tech.name}\n${state} › ${loc}`;
-  await tgNotifyRole('manager', mgrMsg);
+  const mgrMsg = `<b>Ticket Assigned</b>\n${ticket.id} assigned to ${tech.name}\n${state} - ${loc}`;
+  await tgNotifyRole('manager', mgrMsg, null, locationId);
+  await tgNotifyRole('supervisor', mgrMsg, null, locationId);
 }
 
-async function tgOnTicketResolved(ticket, loc, state, resolvedBy) {
+async function tgOnTicketResolved(ticket, loc, state, resolvedBy, locationId) {
   const raiser = getUser(ticket.raised_by || ticket.raisedBy);
-  const msg = `✅ <b>Ticket Resolved</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} › ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  const msg = `<b>Ticket Resolved</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} - ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
   if (raiser) await tgNotifyUser(raiser.id, msg);
-  await tgNotifyRole('manager', msg);
+  await tgNotifyRole('manager', msg, null, locationId);
+  await tgNotifyRole('supervisor', msg, null, locationId);
 }
 
-async function tgOnCommentAdded(ticket, commenterName, commentText, loc, state) {
-  const msg = `💬 <b>Update on Ticket ${ticket.id}</b>\n\n${ticket.title}\n${state} › ${loc}\n\n<b>${commenterName}:</b> ${commentText}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
-  // Notify manager
-  await tgNotifyRole('manager', msg, session.id);
-  // Notify technician if manager commented
-  if (['manager','admin'].includes(session.role) && (ticket.assigned_to || ticket.assignedTo)) {
+async function tgOnCommentAdded(ticket, commenterName, commentText, loc, state, locationId) {
+  const msg = `<b>Update on Ticket ${ticket.id}</b>\n\n${ticket.title}\n${state} - ${loc}\n\n<b>${commenterName}:</b> ${commentText}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg, session.id, locationId);
+  await tgNotifyRole('supervisor', msg, session.id, locationId);
+  if (['manager','admin','supervisor'].includes(session.role) && (ticket.assigned_to || ticket.assignedTo)) {
     await tgNotifyUser(ticket.assigned_to || ticket.assignedTo, msg);
   }
-  // Notify outlet if tech/manager commented
-  if (['technician','manager','admin'].includes(session.role) && (ticket.raised_by || ticket.raisedBy)) {
+  if (['technician','manager','admin','supervisor'].includes(session.role) && (ticket.raised_by || ticket.raisedBy)) {
     await tgNotifyUser(ticket.raised_by || ticket.raisedBy, msg);
   }
 }
 
 async function tgOnExpenseAdded(ticketId, description, amount, techName) {
-  const msg = `💰 <b>Expense Needs Approval</b>\n\nTicket: ${ticketId}\n${description}\nAmount: ₹${Number(amount).toLocaleString('en-IN')}\nAdded by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">Approve in MaintenanceOS</a>`;
-  await tgNotifyRole('manager', msg);
-  await tgNotifyRole('admin', msg);
+  const t = tickets.find(x=>x.id===ticketId);
+  const locationId = t ? (t.locationId||t.location_id) : null;
+  const msg = `<b>Expense Needs Approval</b>\n\nTicket: ${ticketId}\n${description}\nAmount: ${fc(amount)}\nAdded by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">Approve in MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg, null, locationId);
+  await tgNotifyRole('supervisor', msg, null, locationId);
+  await tgNotifyRole('admin', msg, null, locationId);
 }
 
 async function tgOnExpenseApproved(expense, approverName) {
@@ -2975,9 +3001,10 @@ async function tgOnExpenseApproved(expense, approverName) {
   await tgNotifyUser(u.id, msg);
 }
 
-async function tgOnSelfAssigned(ticket, techName, loc, state) {
-  const msg = `✋ <b>Ticket Self-Assigned</b>\n\n${ticket.id} - ${ticket.title}\n${state} › ${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
-  await tgNotifyRole('manager', msg);
+async function tgOnSelfAssigned(ticket, techName, loc, state, locationId) {
+  const msg = `<b>Ticket Self-Assigned</b>\n\n${ticket.id} - ${ticket.title}\n${state} - ${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  await tgNotifyRole('manager', msg, null, locationId);
+  await tgNotifyRole('supervisor', msg, null, locationId);
 }
 
 async function tgOnAMCAlert(vendor, equipment, endDate, daysLeft) {
