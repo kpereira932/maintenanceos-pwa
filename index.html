@@ -224,68 +224,20 @@ tr:hover td{background:#fafaf8}
 // ============================================================
 // DATA & HELPERS
 // ============================================================
-let states = [
-  {id:'s1',name:'Maharashtra'},
-  {id:'s2',name:'Delhi'},
-];
-let locations = [
-  {id:'l1',stateId:'s1',name:'Bandra',type:'outlet'},
-  {id:'l2',stateId:'s1',name:'Juhu',type:'outlet'},
-  {id:'l3',stateId:'s1',name:'Chowpatty',type:'outlet'},
-  {id:'l4',stateId:'s1',name:'Mumbai CK',type:'central_kitchen'},
-  {id:'l5',stateId:'s2',name:'Connaught Place',type:'outlet'},
-  {id:'l6',stateId:'s2',name:'Delhi CK',type:'central_kitchen'},
-];
+let states = [];
+let locations = [];
 const CATEGORIES = ['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Furniture','Cleaning','Kitchen Equipment','Other'];
 let users = [
-  {id:'u1',name:'Rahul Sharma',email:'admin@mtos.in',pass:'admin123',role:'admin',stateId:null,locationId:null,specialty:null,avatar:'RS'},
-  {id:'u2',name:'Priya Nair',email:'manager@mtos.in',pass:'manager123',role:'manager',stateId:null,locationId:null,specialty:null,avatar:'PN'},
-  {id:'u3',name:'Arjun Mehta',email:'tech1@mtos.in',pass:'tech123',role:'technician',stateId:'s1',locationId:null,specialty:'Electrical',avatar:'AM'},
-  {id:'u4',name:'Suresh Kumar',email:'tech2@mtos.in',pass:'tech123',role:'technician',stateId:'s1',locationId:null,specialty:'Plumbing & Gas',avatar:'SK'},
-  {id:'u5',name:'Vikram Singh',email:'tech3@mtos.in',pass:'tech123',role:'technician',stateId:'s2',locationId:null,specialty:'General',avatar:'VS'},
-  {id:'u6',name:'Bandra Outlet',email:'bandra@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l1',specialty:null,avatar:'BN'},
-  {id:'u7',name:'Juhu Outlet',email:'juhu@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l2',specialty:null,avatar:'JH'},
-  {id:'u8',name:'Chowpatty',email:'chow@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l3',specialty:null,avatar:'CP'},
-  {id:'u9',name:'Mumbai CK',email:'mumbaick@mtos.in',pass:'outlet123',role:'outlet',stateId:'s1',locationId:'l4',specialty:null,avatar:'MK'},
-  {id:'u10',name:'CP Delhi',email:'cp@mtos.in',pass:'outlet123',role:'outlet',stateId:'s2',locationId:'l5',specialty:null,avatar:'CD'},
-  {id:'u11',name:'Delhi CK',email:'delhick@mtos.in',pass:'outlet123',role:'outlet',stateId:'s2',locationId:'l6',specialty:null,avatar:'DK'},
   {id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'},
 ];
-let tickets = [
-  {id:'T001',locationId:'l1',stateId:'s1',category:'Electrical',title:'Wiring upgrade required',desc:'Outside 4mm to 25mm wiring still pending.',priority:'High',status:'In Progress',raisedBy:'u6',assignedTo:'u3',createdAt:'08/05/2026 09:00',updatedAt:'10/05/2026 14:00',dueDate:'11/05/2026',comments:[{user:'u6',text:'Kitchen area unsafe, urgent.',time:'08/05/2026 09:00'},{user:'u3',text:'Inside done, outside pending.',time:'10/05/2026 14:00'}]},
-  {id:'T002',locationId:'l1',stateId:'s1',category:'Gas & Appliances',title:'Gas regulator replacement',desc:'Old regulator leaking slightly.',priority:'High',status:'Open',raisedBy:'u6',assignedTo:null,createdAt:'08/05/2026 09:10',updatedAt:'08/05/2026 09:10',dueDate:'11/05/2026',comments:[]},
-  {id:'T003',locationId:'l1',stateId:'s1',category:'Kitchen Equipment',title:'Idli steamer rubber replacement',desc:'Rubber seal worn out.',priority:'High',status:'Open',raisedBy:'u6',assignedTo:null,createdAt:'08/05/2026 09:15',updatedAt:'08/05/2026 09:15',dueDate:'11/05/2026',comments:[]},
-  {id:'T004',locationId:'l2',stateId:'s1',category:'Electrical',title:'Switchboard sparking in kitchen',desc:'Sparking near tandoor area.',priority:'High',status:'Open',raisedBy:'u7',assignedTo:null,createdAt:'25/05/2026 10:00',updatedAt:'25/05/2026 10:00',dueDate:'27/05/2026',comments:[]},
-  {id:'T005',locationId:'l2',stateId:'s1',category:'Plumbing',title:'Staff toilet drain blocked',desc:'Completely blocked.',priority:'Medium',status:'In Progress',raisedBy:'u7',assignedTo:'u4',createdAt:'24/05/2026 08:30',updatedAt:'26/05/2026 12:00',dueDate:'28/05/2026',comments:[{user:'u4',text:'Partially cleared.',time:'26/05/2026 12:00'}]},
-  {id:'T006',locationId:'l4',stateId:'s1',category:'HVAC / AC',title:'Cold room temperature fluctuating',desc:'Swinging 2-3 degrees, produce at risk.',priority:'High',status:'Open',raisedBy:'u9',assignedTo:null,createdAt:'27/05/2026 07:00',updatedAt:'27/05/2026 07:00',dueDate:'28/05/2026',comments:[]},
-  {id:'T007',locationId:'l5',stateId:'s2',category:'Plumbing',title:'Water pressure low in kitchen',desc:'Insufficient for dishwasher.',priority:'Medium',status:'Open',raisedBy:'u10',assignedTo:null,createdAt:'26/05/2026 11:00',updatedAt:'26/05/2026 11:00',dueDate:'',comments:[]},
-  {id:'T008',locationId:'l6',stateId:'s2',category:'Kitchen Equipment',title:'Bulk mixer not starting',desc:'Motor noise but wont start.',priority:'High',status:'In Progress',raisedBy:'u11',assignedTo:'u5',createdAt:'25/05/2026 09:00',updatedAt:'27/05/2026 10:00',dueDate:'28/05/2026',comments:[{user:'u5',text:'Capacitor likely blown, ordering part.',time:'27/05/2026 10:00'}]},
-  {id:'T009',locationId:'l3',stateId:'s1',category:'HVAC / AC',title:'AC not cooling dining area',desc:'Main AC unit not cooling below 28°C.',priority:'Medium',status:'Resolved',raisedBy:'u8',assignedTo:'u3',createdAt:'01/05/2026 10:00',updatedAt:'05/05/2026 16:00',dueDate:'05/05/2026',comments:[{user:'u3',text:'Gas refilled and coil cleaned. Working now.',time:'05/05/2026 16:00'}]},
-  {id:'T010',locationId:'l4',stateId:'s1',category:'Kitchen Equipment',title:'Dishwasher leaking from bottom',desc:'Puddle forming under dishwasher.',priority:'Medium',status:'Resolved',raisedBy:'u9',assignedTo:'u4',createdAt:'03/05/2026 08:00',updatedAt:'04/05/2026 14:00',dueDate:'06/05/2026',comments:[{user:'u4',text:'Seal replaced. Fixed.',time:'04/05/2026 14:00'}]},
-];
-let expenses = [
-  {id:'e1',ticketId:'T001',addedBy:'u3',category:'Parts',description:'Copper wire 4mm 50m roll',amount:2800,date:'10/05/2026',approved:true},
-  {id:'e2',ticketId:'T001',addedBy:'u3',category:'Labour',description:'Electrician helper — 2 days',amount:1200,date:'10/05/2026',approved:true},
-  {id:'e3',ticketId:'T005',addedBy:'u4',category:'Parts',description:'Drain snake tool rental',amount:500,date:'26/05/2026',approved:false},
-  {id:'e4',ticketId:'T008',addedBy:'u5',category:'Parts',description:'Start capacitor 40uF',amount:350,date:'27/05/2026',approved:false},
-  {id:'e5',ticketId:'T009',addedBy:'u3',category:'Parts',description:'AC gas refill R32',amount:1800,date:'05/05/2026',approved:true},
-  {id:'e6',ticketId:'T009',addedBy:'u3',category:'Labour',description:'AC technician 1 day',amount:800,date:'05/05/2026',approved:true},
-  {id:'e7',ticketId:'T010',addedBy:'u4',category:'Parts',description:'Dishwasher door seal',amount:620,date:'04/05/2026',approved:true},
-];
+let tickets = [];
+let expenses = [];
 // VENDORS
-let vendors = [
-  {id:'v1',name:'Electricals Co.',phone:'+91 98200 00001',email:'',specialty:'Electrical',address:'Mumbai',gstin:'',notes:'',active:true},
-  {id:'v2',name:'Plumbing Co.',phone:'+91 98200 00002',email:'',specialty:'Plumbing',address:'Mumbai',gstin:'',notes:'',active:true},
-  {id:'v3',name:'Gas Services Ltd.',phone:'+91 98200 00003',email:'',specialty:'Gas & Appliances',address:'Mumbai',gstin:'',notes:'',active:true},
-  {id:'v4',name:'Cool Air Services',phone:'+91 98200 00004',email:'',specialty:'HVAC / AC',address:'Mumbai',gstin:'',notes:'',active:true},
-  {id:'v5',name:'AquaCare Solutions',phone:'+91 98200 00005',email:'',specialty:'Water Systems',address:'Mumbai',gstin:'',notes:'',active:true},
-];
+let vendors = [];
 
 // MATERIALS per ticket
-let materials = [
-  {id:'m1',ticketId:'T001',addedBy:'u3',name:'Copper wire 4mm',quantity:50,unit:'metres',unitCost:45,totalCost:2250,vendorId:'v1',notes:'',createdAt:'10/05/2026'},
-  {id:'m2',ticketId:'T001',addedBy:'u3',name:'Wire connectors',quantity:20,unit:'nos',unitCost:5,totalCost:100,vendorId:'v1',notes:'',createdAt:'10/05/2026'},
-];
+let materials = [];
+let estimates = []; // {id, ticketId, addedBy, items:[{name,qty,unit,unitCost}], totalCost, status:'pending'|'approved'|'rejected', approvedBy, notes, createdAt}
 
 // TICKET ATTACHMENTS
 let attachments = [];
@@ -293,24 +245,9 @@ let attachments = [];
 // TECH CHECK-INS
 let checkins = [];
 
-let amcRecords = [
-  {id:'a1',vendor:'Cool Air Services',equipment:'AC Units — All MH outlets',locationIds:['l1','l2','l3','l4'],category:'HVAC / AC',startDate:'01/06/2025',endDate:'31/05/2027',amount:85000,coverage:'Quarterly servicing + emergency callouts',contact:'+91 98200 00004',notes:'Covers all AC at MH locations',status:'active'},
-  {id:'a2',vendor:'AquaCare Solutions',equipment:'Water Purifiers — All locations',locationIds:['l1','l2','l3','l4','l5','l6'],category:'Water Systems',startDate:'01/01/2026',endDate:'31/12/2026',amount:42000,coverage:'Bi-annual filter change + emergency',contact:'+91 98200 00005',notes:''},
-  {id:'a3',vendor:'Gas Safe India',equipment:'Gas lines & regulators — MH',locationIds:['l1','l2','l3'],category:'Gas & Appliances',startDate:'01/03/2026',endDate:'28/02/2027',amount:36000,coverage:'Annual inspection + emergency response',contact:'+91 98200 00006',notes:'FSSAI compliance certificate included'},
-  {id:'a4',vendor:'Elec-Pro Services',equipment:'Electrical panels & wiring',locationIds:['l1','l2'],category:'Electrical',startDate:'15/04/2025',endDate:'14/04/2026',amount:28000,coverage:'Annual inspection + 2 callouts',contact:'+91 98200 00007',notes:'EXPIRED — renewal pending'},
-];
-let recurringSchedules = [
-  {id:'r1',title:'AC servicing',locationIds:['l1','l2','l3','l4'],freq:'6 months',category:'HVAC / AC',priority:'Medium',next:'01/11/2026',on:true},
-  {id:'r2',title:'Water filter servicing',locationIds:['l1','l2','l3','l4','l5','l6'],freq:'3 months',category:'Water Systems',priority:'Medium',next:'01/09/2026',on:true},
-  {id:'r3',title:'Gas burner servicing',locationIds:['l1','l2','l3'],freq:'6 months',category:'Gas & Appliances',priority:'High',next:'01/11/2026',on:true},
-];
-let auditLog = [
-  {t:'27/05/2026 10:00',a:'Expense added',d:'T008 — Capacitor ₹350 (Vikram Singh)',c:'w'},
-  {t:'27/05/2026 09:00',a:'Ticket raised',d:'T006 Cold room — Mumbai CK',c:'p'},
-  {t:'05/05/2026 16:00',a:'Ticket resolved',d:'T009 AC not cooling — Chowpatty',c:'g'},
-  {t:'04/05/2026 14:00',a:'Ticket resolved',d:'T010 Dishwasher leaking — Mumbai CK',c:'g'},
-  {t:'10/05/2026 14:00',a:'Ticket assigned',d:'T001 to Arjun Mehta',c:'b'},
-];
+let amcRecords = [];
+let recurringSchedules = [];
+let auditLog = [];
 
 const TODAY = new Date('2026-05-29');
 let session = null, currentPage = '', NID = 20;
@@ -319,9 +256,9 @@ function getLoc(id){return locations.find(l=>l.id===id)||{name:'Unknown',type:'o
 function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
 function getUser(id){return users.find(u=>u.id===id);}
 function getTechs(stateId){return stateId?users.filter(u=>u.role==='technician'&&(!u.stateId||u.stateId===stateId)):users.filter(u=>u.role==='technician');}
-function locLabel(l){return l.name+(l.type==='central_kitchen'?' (CK)':'');}
-function roleClass(r){return{admin:'r-admin',manager:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin'}[r]||'';}
-function roleLabel(r){return{admin:'Admin',manager:'Manager',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin'}[r]||r;}
+function locLabel(l){return (l.city?l.city+' — ':'')+l.name+(l.type==='central_kitchen'?' (CK)':'');}
+function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin'}[r]||'';}
+function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin'}[r]||r;}
 function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
 function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',technician:'#065f46',outlet:'#92400e'}[r]||'#888';}
 function fc(n){return'₹'+Number(n).toLocaleString('en-IN');}
@@ -330,10 +267,10 @@ function dAgo(s){if(!s)return 0;const[d,m,y]=s.split('/');return Math.floor((TOD
 function isESC(t){return isOD(t)&&t.priority==='High'&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
 function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'/'+String(n.getMonth()+1).padStart(2,'0')+'/'+n.getFullYear()+' '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
-function sbadge(t){if(isESC(t))return'<span class="badge b-esc">⚠ Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
+function sbadge(t){if(isESC(t))return'<span class="badge b-esc">⚠ Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done','On Hold':'b-med'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
 function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
 function visT(){
-  if(['admin','manager','superadmin'].includes(session.role)) return tickets;
+  if(['admin','manager','supervisor','superadmin'].includes(session.role)) return tickets;
   if(session.role==='technician') return tickets.filter(t=>
     t.assignedTo===session.id ||
     (!t.assignedTo && !['Resolved','Closed'].includes(t.status))
@@ -360,13 +297,7 @@ function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.clas
 // ============================================================
 // AUTH & NAV
 // ============================================================
-const ROLE_HINTS={
-  admin:'admin@mtos.in / admin123',
-  manager:'manager@mtos.in / manager123',
-  technician:'tech1@mtos.in / tech123  (Maharashtra)\ntech3@mtos.in / tech123  (Delhi)',
-  outlet:'bandra@mtos.in / outlet123\nmumbaick@mtos.in / outlet123\ncp@mtos.in / outlet123',
-};
-function pickRole(r){document.querySelectorAll('.role-btn').forEach(b=>b.classList.toggle('selected',b.dataset.role===r));document.getElementById('demo-hint').textContent=ROLE_HINTS[r]||'';}
+function pickRole(r){}  // role selection removed — clean login
 function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const pass=document.getElementById('login-pass').value.trim();
@@ -377,7 +308,7 @@ function doLogin(){
   document.getElementById('app').style.display='flex';
   document.getElementById('sb-name').textContent=u.name;
   document.getElementById('sb-role').innerHTML=roleBadge(u.role);
-  let locStr='All locations';
+  let locStr='Locations';
   if(u.locationId){const l=getLoc(u.locationId);locStr=getState(l.stateId).name+' › '+l.name;}
   else if(u.stateId){locStr=getState(u.stateId).name+' region';}
   document.getElementById('sb-loc').textContent=locStr;
@@ -389,22 +320,27 @@ const NAV={
   admin:[
     {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'🏠',l:'Locations'},{id:'users',i:'👤',l:'Users & roles'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'recurring',i:'↺',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'📋',l:'All tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'raise',i:'＋',l:'Raise ticket'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},{id:'notifications',i:'✉',l:'Notifications'},{id:'recurring',i:'↺',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'📊',l:'Reports'},{id:'log',i:'🕐',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
   ],
   technician:[
     {id:'my-tasks',i:'🔧',l:'My tasks'},
     {id:'raise',i:'＋',l:'Raise ticket'},
-    {id:'tickets',i:'📋',l:'All tickets'},
+    {id:'tickets',i:'📋',l:'Tickets'},
     {id:'my-expenses',i:'💰',l:'My expenses'},
     {id:'profile',i:'👤',l:'My profile'},
+  ],
+  supervisor:[
+    {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
+    {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'assign',i:'👤',l:'Assign tickets'},{id:'expenses',i:'💰',l:'Expenses'},{id:'notifications',i:'✉',l:'Notifications'},
+    {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
   ],
   outlet:[{id:'raise',i:'＋',l:'Raise issue'},{id:'my-tickets',i:'📋',l:'My tickets'},{id:'profile',i:'👤',l:'My profile'}],
 };
@@ -439,7 +375,7 @@ function ticketCard(t,compact=false){
     <div class="card-meta">
       <span>📍 ${state.name} › ${loc.name}${loc.type==='central_kitchen'?' <span class="badge b-ck" style="font-size:10px;padding:1px 5px">CK</span>':''}</span>
       <span>📁 ${t.category}</span>
-      ${assignee?`<span>🔧 ${assignee.name}</span>`:'<span style="color:#dc2626">No technician</span>'}
+      ${assignee?`<span>🔧 ${assignee.name}</span>`:'<span style="color:#dc2626">To be assigned</span>'}
       ${t.dueDate?`<span>📅 ${t.dueDate}${isOD(t)?' (+'+dAgo(t.dueDate)+'d)':''}</span>`:''}
       ${expTotal>0?`<span style="color:#059669;font-weight:600">💰 ${fc(expTotal)}</span>`:''}
     </div>
@@ -449,7 +385,7 @@ function ticketCard(t,compact=false){
 }
 function ticketActions(t){
   let a=`<button class="btn sm" onclick="openTicket('${t.id}')">👁 View</button>`;
-  if(['admin','manager'].includes(session.role)){
+  if(['admin','manager','supervisor'].includes(session.role)){
     a+=`<button class="btn sm primary" onclick="openAssignModal('${t.id}')">👤 ${t.assignedTo?'Reassign':'Assign'}</button>`;
     if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
     a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expenses</button>`;
@@ -462,13 +398,16 @@ function ticketActions(t){
       a+=`<button class="btn sm primary" onclick="assignToSelf('${t.id}')">✋ Assign to me</button>`;
     }
     if(t.assignedTo===session.id){
-      if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
+      if(!['Resolved','Closed','On Hold'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">✓ Resolve</button>`;
       a+=`<button class="btn sm primary" onclick="openTicket('${t.id}')">💬 Update</button>`;
+      a+=`<button class="btn sm" onclick="openEstimateModal('${t.id}')">📝 Estimate</button>`;
       a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expense</button>`;
       a+=`<button class="btn sm" onclick="openMaterialsModal('${t.id}')">🔩 Materials</button>`;
       a+=`<button class="btn sm" onclick="openAttachmentsModal('${t.id}')">📷 Photos</button>`;
-      if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm warning" onclick="techCheckIn('${t.id}','on_way')">🚗 On my way</button>`;
-      if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm warning" onclick="techCheckIn('${t.id}','arrived')">📍 Arrived</button>`;
+      if(!['Resolved','Closed','On Hold'].includes(t.status))a+=`<button class="btn sm warning" onclick="techCheckIn('${t.id}','on_way')">🚗 On my way</button>`;
+      if(!['Resolved','Closed','On Hold'].includes(t.status))a+=`<button class="btn sm warning" onclick="techCheckIn('${t.id}','arrived')">📍 Arrived</button>`;
+      if(!['Resolved','Closed','On Hold'].includes(t.status))a+=`<button class="btn sm danger" onclick="openOnHoldModal('${t.id}')">⏸ On Hold</button>`;
+      if(t.status==='On Hold')a+=`<button class="btn sm success" onclick="resumeTicket('${t.id}')">▶ Resume</button>`;
     }
   }
   if(session.role==='outlet')a+=`<button class="btn sm" onclick="openTicket('${t.id}')">💬 View</button>`;
@@ -513,7 +452,7 @@ function renderDashboard(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
       <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${session.name}</div></div>
-      ${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
+      ${['admin','manager','supervisor'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
     </div>
     ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention to View AMC</div>`:''}
     <div class="metrics">
@@ -541,13 +480,13 @@ function renderDashboard(){
 function renderTickets(){
   const vis=visT();
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">All tickets</div><div class="page-sub">${vis.length} tickets</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">Tickets</div><div class="page-sub">${vis.length} tickets</div></div></div>
     <div style="display:flex;gap:7px;margin-bottom:1rem;flex-wrap:wrap">
-      <select id="tf-st" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All states</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All locations</option>${locations.map(l=>`<option value="${l.id}">${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('')}</select>
-      <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select>
-      <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All statuses</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
-      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select>
+      <select id="tf-st" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">States</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
+      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${locations.map(l=>`<option value="${l.id}">${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('')}</select>
+      <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select>
+      <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
+      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Priority</option><option>High</option><option>Medium</option><option>Low</option></select>
     </div>
     <div id="tlist">${vis.map(t=>ticketCard(t)).join('')||'<div class="empty">No tickets</div>'}</div>`;
 }
@@ -573,8 +512,8 @@ function openTicket(id){
     <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:1rem">${t.desc||'No description.'}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:1rem">
       <div><span style="color:#aaa">Location:</span> <strong>${state.name} › ${loc.name}</strong></div>
-      <div><span style="color:#aaa">Raised by:</span> <strong>${raiser?raiser.name:'-'}</strong></div>
-      <div><span style="color:#aaa">Assigned to:</span> <strong>${assignee?assignee.name:'Unassigned'}</strong></div>
+      <div><span style="color:#aaa">Raised by:</span> <strong>${t.raised_by_name||t.raisedByName||(raiser?raiser.name:'-')}</strong></div>
+      <div><span style="color:#aaa">Assigned to:</span> <strong>${assignee?assignee.name:'To be assigned'}</strong></div>
       <div><span style="color:#aaa">Due date:</span> <strong>${t.dueDate||'Not set'}</strong></div>
     </div>
     ${expTotal>0?`<div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px;display:flex;align-items:center;justify-content:space-between"><span>💰 <strong>Expenses:</strong> ${fc(expTotal)} (${expCount} entries)</span><button class="btn sm" onclick="openExpModal('${id}')">View expenses</button></div>`:''}
@@ -618,10 +557,10 @@ function renderAssign(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div class="page-title">Assign tickets</div></div>
     <div class="tab-btns">
-      <button class="tab-btn active" onclick="showT2('au','aa',this)">Unassigned (${unass.length})</button>
+      <button class="tab-btn active" onclick="showT2('au','aa',this)">To be assigned (${unass.length})</button>
       <button class="tab-btn" onclick="showT2('aa','au',this)">Active assigned (${active.length})</button>
     </div>
-    <div id="au">${unass.length?unass.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ All tickets assigned</div>'}</div>
+    <div id="au">${unass.length?unass.map(t=>ticketCard(t)).join(''):'<div class="empty">✓ Tickets assigned</div>'}</div>
     <div id="aa" style="display:none">${active.length?active.map(t=>ticketCard(t)).join(''):'<div class="empty">None</div>'}</div>`;
 }
 function openAssignModal(id){
@@ -669,15 +608,15 @@ function renderExpenses(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Expenses</div><div class="page-sub">All ticket costs</div></div></div>
     <div class="metrics">
-      <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total logged</div><div class="mv g" style="font-size:20px">${fc(total)}</div></div>
+      <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total expenses</div><div class="mv g" style="font-size:20px">${fc(total)}</div></div>
       <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Pending approval</div><div class="mv w" style="font-size:20px">${fc(pendTotal)}</div></div>
-      <div class="met"><div class="met-bar" style="background:#2563eb"></div><div class="ml">Total entries</div><div class="mv b">${expenses.length}</div></div>
-      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Pending entries</div><div class="mv w">${pend.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#2563eb"></div><div class="ml">Total records</div><div class="mv b">${expenses.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Pending records</div><div class="mv w">${pend.length}</div></div>
     </div>
     <div class="tab-btns">
       <button class="tab-btn active" onclick="showExpTab('ep','ea','ea2',this)">Pending (${pend.length})</button>
       <button class="tab-btn" onclick="showExpTab('ea','ep','ea2',this)">Approved (${appr.length})</button>
-      <button class="tab-btn" onclick="showExpTab('ea2','ep','ea',this)">All expenses</button>
+      <button class="tab-btn" onclick="showExpTab('ea2','ep','ea',this)">Expenses</button>
     </div>
     <div id="ep">${expTable(pend,true)}</div>
     <div id="ea" style="display:none">${expTable(appr,false)}</div>
@@ -688,7 +627,7 @@ function expTable(list,showApprove){
   if(!list.length)return'<div class="empty">No expenses here</div>';
   const grandTotal=list.reduce((s,e)=>s+Number(e.amount),0);
   return`<div class="tbl-wrap"><table>
-    <thead><tr><th>Ticket</th><th>Location</th><th>Type</th><th>Description</th><th>Amount</th><th>Date</th><th>By</th><th>Status</th>${showApprove?'<th>Action</th>':''}</tr></thead>
+    <thead><tr><th>Ticket</th><th>Location</th><th>Type</th><th>Description</th><th>Amount</th><th>Date</th><th>By</th><th>Approval</th><th>Payment</th>${showApprove?'<th>Action</th>':''}</tr></thead>
     <tbody>${list.map(e=>{
       const t=tickets.find(x=>x.id===e.ticketId)||{id:e.ticketId,title:'',locationId:''};
       const loc=getLoc(t.locationId),by=getUser(e.addedBy);
@@ -701,13 +640,27 @@ function expTable(list,showApprove){
         <td style="font-size:12px;color:#888">${e.date}</td>
         <td style="font-size:12px">${by?by.name:'—'}</td>
         <td>${e.approved?'<span class="badge b-done">Approved</span>':'<span class="badge b-med">Pending</span>'}</td>
-        ${showApprove?`<td><div style="display:flex;gap:4px">${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}')">✓</button>`:''}<button class="btn sm danger" onclick="deleteExp('${e.id}')">🗑</button></div></td>`:''}
+        <td>${e.payment_status==='paid'?'<span class="badge b-done">Paid</span>':e.payment_status==='pending_payment'?'<span class="badge b-med">Pending payment</span>':'<span class="badge b-grey">Not paid</span>'}</td>
+        ${showApprove?`<td><div style="display:flex;gap:4px">
+          ${!e.approved?`<button class="btn sm success" onclick="approveExp('${e.id}')">✓ Approve</button>`:''}
+          ${e.approved&&e.payment_status!=='paid'?`<button class="btn sm" onclick="markExpPaid('${e.id}')" style="color:#059669;border-color:#6ee7b7">💵 Mark paid</button>`:''}
+          <button class="btn sm danger" onclick="deleteExp('${e.id}')">🗑</button>
+        </div></td>`:''}
       </tr>`;
     }).join('')}
     <tr class="tfoot-row"><td colspan="4">Total</td><td style="color:#059669">${fc(grandTotal)}</td><td colspan="${showApprove?4:3}"></td></tr>
     </tbody></table></div>`;
 }
 function approveExp(id){const e=expenses.find(x=>x.id===id);if(e){e.approved=true;LOG('Expense approved',`${e.ticketId} — ${e.description} ${fc(e.amount)}`,'g');}renderExpenses();}
+async function markExpPaid(id){
+  const e=expenses.find(x=>x.id===id);if(!e)return;
+  if(!confirm('Mark this expense as paid?'))return;
+  e.payment_status='paid';
+  if(isLive){await dbUpdate('expenses',id,{payment_status:'paid'});await loadLiveData();}
+  LOG('Expense marked paid',`${e.ticketId} — ${fc(e.amount)} by ${session.name}`,'g');
+  renderExpenses();
+  showToast('✓ Marked as paid');
+}
 function deleteExp(id){if(!confirm('Delete this expense?'))return;expenses=expenses.filter(e=>e.id!==id);renderExpenses();}
 function openExpModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
@@ -787,7 +740,9 @@ function amcCard(a){
       <div class="badges">${statusBadge} <span class="badge b-grey">${a.category}</span></div>
     </div>
     <div class="card-meta">
-      <span>📅 ${a.startDate} to ${a.endDate}</span>
+      <span>📅 ${a.startDate} → ${a.endDate}</span>
+      ${days>0&&days<=60?`<span style="color:${days<=7?'#dc2626':'#d97706'};font-weight:600">⏰ ${days} day${days===1?'':'s'} left</span>`:''}
+      ${days<0?'<span style="color:#dc2626;font-weight:600">⚠ Expired '+Math.abs(days)+' days ago</span>':''}
       <span style="font-weight:600;color:#059669">💰 ${fc(a.amount)}/year</span>
       <span>📞 ${a.contact}</span>
     </div>
@@ -956,12 +911,12 @@ function customReportForm(){
       <div class="fg"><label>To date</label><input type="date" id="cr-t"></div>
     </div>
     <div class="frow">
-      <div class="fg"><label>State</label><select id="cr-s"><option value="">All states</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
-      <div class="fg"><label>Location type</label><select id="cr-ty"><option value="">All types</option><option value="outlet">Outlets only</option><option value="central_kitchen">Central Kitchens only</option></select></div>
+      <div class="fg"><label>State</label><select id="cr-s"><option value="">States</option>${states.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
+      <div class="fg"><label>Location type</label><select id="cr-ty"><option value="">Types</option><option value="outlet">Outlets only</option><option value="central_kitchen">Central Kitchens only</option></select></div>
     </div>
     <div class="frow">
-      <div class="fg"><label>Category</label><select id="cr-c"><option value="">All categories</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-      <div class="fg"><label>Priority</label><select id="cr-p"><option value="">All priorities</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="fg"><label>Category</label><select id="cr-c"><option value="">Category</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="fg"><label>Priority</label><select id="cr-p"><option value="">Priority</option><option>High</option><option>Medium</option><option>Low</option></select></div>
     </div>
     <button class="btn primary" onclick="runCustomReport()">▶ Generate</button>
     <div id="cr-out" style="margin-top:1.5rem"></div>
@@ -1068,7 +1023,7 @@ function locListHTML(){
             <div style="display:flex;align-items:center;gap:10px">
               <span style="font-size:20px">${l.type==='central_kitchen'?'🍳':'🏪'}</span>
               <div><div style="font-weight:600;font-size:13px">${l.name}</div>
-              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':'Outlet'} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
+              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':'Outlet'}${l.city?' · '+l.city:''} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
             </div>
             <div style="display:flex;gap:5px">
               <button class="btn sm" onclick="openEditLocation('${l.id}')">✏</button>
@@ -1088,7 +1043,8 @@ function openAddLocation(pre){
   document.getElementById('m-title').textContent='Add location';
   document.getElementById('m-body').innerHTML=`
     <div class="frow"><div class="fg"><label>State</label><select id="ls">${states.map(s=>`<option value="${s.id}"${s.id===pre?' selected':''}>${s.name}</option>`).join('')}</select></div><div class="fg"><label>Type</label><select id="lt"><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select></div></div>
-    <div class="fg"><label>Name</label><input type="text" id="ln" placeholder="e.g. Andheri, Lajpat Nagar CK..."></div>
+    <div class="fg"><label>Location name</label><input type="text" id="ln" placeholder="e.g. Linking Road, Sector 18..."></div>
+    <div class="fg"><label>City</label><input type="text" id="lc" placeholder="e.g. Mumbai, Pune, Delhi..."></div>
     <div style="background:#f4f3ef;border-radius:8px;padding:10px;font-size:12px;color:#666;margin-bottom:12px">💡 After adding, go to <strong>Users & Roles</strong> to create a login for this location.</div>
     <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveLocation()">Add location</button></div>`;
   openModal();
@@ -1099,11 +1055,18 @@ function openEditLocation(id){
   document.getElementById('m-title').textContent='Edit location';
   document.getElementById('m-body').innerHTML=`
     <div class="frow"><div class="fg"><label>State</label><select id="ls">${states.map(s=>`<option value="${s.id}"${s.id===l.stateId?' selected':''}>${s.name}</option>`).join('')}</select></div><div class="fg"><label>Type</label><select id="lt"><option value="outlet"${l.type==='outlet'?' selected':''}>Outlet</option><option value="central_kitchen"${l.type==='central_kitchen'?' selected':''}>Central Kitchen</option></select></div></div>
-    <div class="fg"><label>Name</label><input type="text" id="ln" value="${l.name}"></div>
+    <div class="fg"><label>Location name</label><input type="text" id="ln" value="${l.name}"></div>
+    <div class="fg"><label>City</label><input type="text" id="lc" value="${l.city||''}"></div>
     <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="updateLoc('${id}')">Save</button></div>`;
   openModal();
 }
-function updateLoc(id){const i=locations.findIndex(l=>l.id===id);locations[i]={...locations[i],name:document.getElementById('ln').value.trim(),type:document.getElementById('lt').value,stateId:document.getElementById('ls').value};closeModal();renderLocations();}
+async function updateLoc(id){
+  const i=locations.findIndex(l=>l.id===id);
+  const updates={name:document.getElementById('ln').value.trim(),type:document.getElementById('lt').value,stateId:document.getElementById('ls').value,city:document.getElementById('lc')?.value?.trim()||''};
+  if(isLive){await dbUpdate('locations',id,{...updates,state_id:updates.stateId});await loadLiveData();}
+  else locations[i]={...locations[i],...updates};
+  closeModal();renderLocations();
+}
 function deleteLocation(id){const open=tickets.filter(t=>t.locationId===id&&!['Resolved','Closed'].includes(t.status)).length;if(open){alert(`${open} open tickets. Resolve them first.`);return;}if(!confirm('Delete?'))return;locations=locations.filter(l=>l.id!==id);users=users.map(u=>u.locationId===id?{...u,locationId:null}:u);renderLocations();}
 
 // ============================================================
@@ -1126,7 +1089,7 @@ function userTable(list){
 function userFormHTML(u){
   const sOpts=`<option value="">— None —</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
   const lOpts=`<option value="">— None —</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
-  return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
+  return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
   <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
   <div class="fg"><label>WhatsApp number <span style="color:#888;font-weight:400">(with country code, e.g. +919876543210)</span></label><input type="text" id="uwa" value="${u.whatsapp||''}" placeholder="+91XXXXXXXXXX"></div>
@@ -1735,7 +1698,7 @@ Tech: ${session.name}
 // ============================================================
 const SUPER_NAV=[
   {s:'Super Admin — Hidden'},{id:'superadmin',i:'🔐',l:'Control panel'},
-  {s:'Everything'},{id:'dashboard',i:'⊞',l:'Dashboard'},{id:'tickets',i:'📋',l:'All tickets'},{id:'users',i:'👤',l:'All users'},{id:'expenses',i:'💰',l:'All expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC'},{id:'log',i:'🕐',l:'Audit log'},{id:'reports',i:'📊',l:'Reports'},{id:'locations',i:'🏠',l:'Locations'},
+  {s:'Everything'},{id:'dashboard',i:'⊞',l:'Dashboard'},{id:'tickets',i:'📋',l:'Tickets'},{id:'users',i:'👤',l:'Users'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC'},{id:'log',i:'🕐',l:'Audit log'},{id:'reports',i:'📊',l:'Reports'},{id:'locations',i:'🏠',l:'Locations'},
 ];
 
 function renderSuperAdmin(){
@@ -1753,7 +1716,7 @@ function renderSuperAdmin(){
 
     <div class="two-col">
       <div>
-        <div class="section-hdr"><span class="section-title">All users & last activity</span></div>
+        <div class="section-hdr"><span class="section-title">Users & last activity</span></div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Name</th><th>Role</th><th>Telegram</th><th>WhatsApp</th></tr></thead>
           <tbody>${users.filter(u=>u.role!=='superadmin').map(u=>`<tr>
@@ -1790,12 +1753,17 @@ function renderSuperAdmin(){
     </div>`;
 }
 
-function resetTickets(){if(!confirm('Delete ALL tickets? This cannot be undone.'))return;tickets=[];materials=[];attachments=[];checkins=[];LOG('SUPER: All tickets cleared','by '+session.name,'r');refreshPage();}
-function resetExpenses(){if(!confirm('Delete ALL expenses?'))return;expenses=[];LOG('SUPER: All expenses cleared','by '+session.name,'r');refreshPage();}
+function resetTickets(){if(!confirm('Delete ALL tickets? This cannot be undone.'))return;tickets=[];materials=[];attachments=[];checkins=[];if(isLive){supaClient.from('tickets').delete().neq('id','x').then(()=>{});supaClient.from('ticket_comments').delete().neq('id','x').then(()=>{});supaClient.from('expenses').delete().neq('id','x').then(()=>{});supaClient.from('materials').delete().neq('id','x').then(()=>{});supaClient.from('ticket_attachments').delete().neq('id','x').then(()=>{});}LOG('SUPER: Tickets cleared','by '+session.name,'r');refreshPage();}
+function resetExpenses(){if(!confirm('Delete ALL expenses?'))return;expenses=[];LOG('SUPER: Expenses cleared','by '+session.name,'r');refreshPage();}
 function resetAll(){
-  if(!confirm('FULL RESET — delete all tickets, expenses, materials and attachments? Users and locations kept.'))return;
-  if(!confirm('Are you absolutely sure? This cannot be undone.'))return;
+  if(!confirm('FULL RESET — delete all tickets, expenses, materials, attachments and audit log? Users and locations kept.'))return;
+  if(!confirm('FINAL WARNING: Are you absolutely sure?'))return;
   tickets=[];expenses=[];materials=[];attachments=[];checkins=[];auditLog=[];
+  if(isLive){
+    ['tickets','ticket_comments','expenses','materials','ticket_attachments','audit_log','tech_checkins'].forEach(t=>{
+      supaClient.from(t).delete().neq('id','x').then(()=>{});
+    });
+  }
   LOG('SUPER: Full reset performed','by '+session.name,'r');
   alert('Reset complete.');refreshPage();
 }
@@ -1806,6 +1774,223 @@ function exportAllData(){
   const a=document.createElement('a');a.href=url;a.download='maintenanceos_export_'+Date.now()+'.json';a.click();
   URL.revokeObjectURL(url);
   showToast('✓ Data exported');
+}
+
+
+
+// ============================================================
+// ON HOLD — tech puts ticket on hold with reason
+// ============================================================
+function openOnHoldModal(ticketId){
+  const t=tickets.find(x=>x.id===ticketId);
+  document.getElementById('m-title').textContent='Put ticket on hold';
+  document.getElementById('m-body').innerHTML=`
+    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:12px;margin-bottom:1rem;font-size:13px">
+      ⚠ This ticket will be marked <strong>On Hold</strong> and your manager/supervisor will be notified. You must provide a reason.
+    </div>
+    <p style="font-size:13px;color:#666;margin-bottom:1rem"><strong>${t?t.title:ticketId}</strong></p>
+    <div class="fg"><label>Reason for hold <span style="color:#dc2626">*</span></label>
+      <select id="hold-reason-select" onchange="toggleHoldReason()" style="width:100%;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;margin-bottom:8px">
+        <option value="">Select a reason...</option>
+        <option value="Waiting for parts">Waiting for parts / materials</option>
+        <option value="Waiting for vendor">Waiting for vendor availability</option>
+        <option value="Pending estimate approval">Pending estimate approval</option>
+        <option value="Access not available">Access not available at location</option>
+        <option value="Other">Other (specify below)</option>
+      </select>
+      <textarea id="hold-reason" placeholder="Add more details..." style="width:100%;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;min-height:80px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn danger" onclick="confirmOnHold('${ticketId}')">⏸ Confirm hold</button>
+    </div>`;
+  openModal();
+}
+function toggleHoldReason(){
+  const sel=document.getElementById('hold-reason-select').value;
+  if(sel&&sel!=='Other') document.getElementById('hold-reason').value=sel;
+}
+async function confirmOnHold(ticketId){
+  const sel=document.getElementById('hold-reason-select').value;
+  const detail=document.getElementById('hold-reason').value.trim();
+  if(!sel){alert('Please select a reason');return;}
+  const reason=sel==='Other'?detail:sel+(detail?' — '+detail:'');
+  if(!reason){alert('Please provide a reason');return;}
+  const t=tickets.find(x=>x.id===ticketId);if(!t)return;
+  t.status='On Hold';
+  t.comments.push({user:session.id,text:'⏸ Put on hold: '+reason,time:nowTs()});
+  if(isLive){
+    await dbUpdate('tickets',ticketId,{status:'On Hold',updated_at:new Date().toISOString()});
+    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:'⏸ Put on hold: '+reason});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket on hold',detail:ticketId+' — '+reason,user_id:session.id,color:'w'});
+    await loadLiveData();
+  }
+  // Notify manager and supervisor
+  const loc=getLoc(t.locationId||t.location_id);const state=getState(loc.stateId||loc.state_id);
+  const msg=`⏸ <b>Ticket On Hold</b>
+
+${ticketId} — ${t.title}
+${state.name} › ${loc.name}
+Tech: ${session.name}
+
+Reason: ${reason}
+
+Please review and advise.`;
+  await tgNotifyRole('manager',msg);
+  await tgNotifyRole('supervisor',msg);
+  LOG('Ticket on hold',ticketId+' — '+reason,'w');
+  closeModal();refreshPage();
+  showToast('Ticket put on hold — manager notified');
+}
+async function resumeTicket(ticketId){
+  if(!confirm('Resume this ticket?'))return;
+  const t=tickets.find(x=>x.id===ticketId);if(!t)return;
+  t.status='In Progress';
+  if(isLive){
+    await dbUpdate('tickets',ticketId,{status:'In Progress',updated_at:new Date().toISOString()});
+    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:'▶ Ticket resumed by '+session.name});
+    await loadLiveData();
+  }
+  LOG('Ticket resumed',ticketId,'b');
+  refreshPage();showToast('Ticket resumed');
+}
+
+// ============================================================
+// ESTIMATES — tech submits estimate, manager approves
+// ============================================================
+function openEstimateModal(ticketId){
+  const t=tickets.find(x=>x.id===ticketId);
+  const tEst=estimates.filter(e=>e.ticketId===ticketId);
+  const latestEst=tEst[tEst.length-1];
+  document.getElementById('m-title').textContent='Estimate — '+ticketId;
+  document.getElementById('m-body').innerHTML=`
+    <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''}</p>
+
+    ${tEst.length?`<div style="margin-bottom:1rem">
+      ${tEst.map(est=>`<div class="card" style="margin-bottom:8px;padding:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:600">Estimate #${est.id.slice(-4)}</span>
+          <span class="badge ${est.status==='approved'?'b-done':est.status==='rejected'?'b-ov':'b-med'}">${est.status==='approved'?'Approved':est.status==='rejected'?'Rejected':'Pending approval'}</span>
+        </div>
+        ${est.items.map(i=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f4f3ef"><span>${i.name} (${i.qty} ${i.unit})</span><span style="font-weight:600">${fc(i.qty*i.unitCost)}</span></div>`).join('')}
+        <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-top:8px"><span>Total</span><span style="color:#059669">${fc(est.totalCost)}</span></div>
+        ${est.notes?`<div style="font-size:12px;color:#888;margin-top:6px">${est.notes}</div>`:''}
+        ${est.status==='pending'&&['admin','manager','supervisor'].includes(session.role)?`<div style="display:flex;gap:6px;margin-top:10px">
+          <button class="btn sm success" onclick="approveEstimate('${est.id}','${ticketId}')">✓ Approve estimate</button>
+          <button class="btn sm danger" onclick="rejectEstimate('${est.id}','${ticketId}')">✗ Reject</button>
+        </div>`:''}
+        ${est.status==='approved'&&session.role==='technician'?`<button class="btn sm primary" onclick="convertEstimateToExpense('${est.id}','${ticketId}')" style="margin-top:8px">💰 Convert to expense</button>`:''}
+      </div>`).join('')}
+    </div>`:'<p style="color:#aaa;font-size:13px;margin-bottom:1rem">No estimates yet.</p>'}
+
+    ${session.role==='technician'&&t?.assignedTo===session.id?`
+    <div style="border-top:1px solid #e8e8e4;padding-top:1rem">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px">New estimate</div>
+      <div id="est-items">
+        <div class="est-item frow3" style="margin-bottom:8px">
+          <div class="fg" style="margin-bottom:0"><input type="text" class="ei-name" placeholder="Item name"></div>
+          <div class="fg" style="margin-bottom:0"><input type="number" class="ei-qty" placeholder="Qty" value="1" min="0.1" step="0.1"></div>
+          <div class="fg" style="margin-bottom:0"><input type="number" class="ei-cost" placeholder="Unit cost ₹"></div>
+        </div>
+      </div>
+      <button class="btn sm" onclick="addEstimateItem()" style="margin-bottom:10px">＋ Add item</button>
+      <div class="fg"><label>Notes for manager</label><textarea id="est-notes" placeholder="Any special instructions or context..."></textarea></div>
+      <div style="display:flex;gap:7px;justify-content:flex-end">
+        <button class="btn" onclick="closeModal()">Cancel</button>
+        <button class="btn primary" onclick="submitEstimate('${ticketId}')">📝 Submit estimate for approval</button>
+      </div>
+    </div>`:`<div style="display:flex;justify-content:flex-end"><button class="btn" onclick="closeModal()">Close</button></div>`}`;
+  openModal();
+}
+
+function addEstimateItem(){
+  const container=document.getElementById('est-items');
+  const div=document.createElement('div');
+  div.className='est-item frow3';div.style.marginBottom='8px';
+  div.innerHTML=`<div class="fg" style="margin-bottom:0"><input type="text" class="ei-name" placeholder="Item name"></div><div class="fg" style="margin-bottom:0"><input type="number" class="ei-qty" placeholder="Qty" value="1" min="0.1" step="0.1"></div><div class="fg" style="margin-bottom:0"><input type="number" class="ei-cost" placeholder="Unit cost ₹"></div>`;
+  container.appendChild(div);
+}
+
+async function submitEstimate(ticketId){
+  const itemEls=document.querySelectorAll('#est-items .est-item');
+  const items=[];
+  itemEls.forEach(el=>{
+    const name=el.querySelector('.ei-name')?.value?.trim();
+    const qty=parseFloat(el.querySelector('.ei-qty')?.value)||1;
+    const cost=parseFloat(el.querySelector('.ei-cost')?.value)||0;
+    if(name)items.push({name,qty,unit:'nos',unitCost:cost});
+  });
+  if(!items.length){alert('Add at least one item');return;}
+  const totalCost=items.reduce((s,i)=>s+i.qty*i.unitCost,0);
+  const notes=document.getElementById('est-notes')?.value?.trim();
+  const est={id:'est'+Date.now(),ticketId,addedBy:session.id,items,totalCost,status:'pending',notes,createdAt:nowTs()};
+  estimates.push(est);
+  if(isLive){
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Estimate submitted',detail:ticketId+' — '+fc(totalCost)+' by '+session.name,user_id:session.id,color:'b'});
+  }
+  // Notify manager
+  const t=tickets.find(x=>x.id===ticketId);
+  const msg=`📝 <b>Estimate Submitted — Needs Approval</b>
+
+Ticket: ${ticketId} — ${t?t.title:''}
+Total: ${fc(totalCost)}
+By: ${session.name}
+
+${items.map(i=>i.name+' × '+i.qty+' = '+fc(i.qty*i.unitCost)).join('
+')}
+
+Please approve in MaintenanceOS.`;
+  await tgNotifyRole('manager',msg);await tgNotifyRole('supervisor',msg);
+  LOG('Estimate submitted',ticketId+' '+fc(totalCost),'b');
+  closeModal();showToast('✓ Estimate submitted for approval');refreshPage();
+}
+
+async function approveEstimate(estId,ticketId){
+  const est=estimates.find(x=>x.id===estId);if(!est)return;
+  est.status='approved';est.approvedBy=session.id;
+  LOG('Estimate approved',ticketId+' '+fc(est.totalCost),'g');
+  // Notify tech
+  const tech=getUser(est.addedBy);
+  if(tech)await tgNotifyUser(tech.id,`✅ <b>Estimate Approved</b>
+
+Ticket: ${ticketId}
+Total: ${fc(est.totalCost)}
+Approved by: ${session.name}
+
+You can now proceed with the work and convert to expense.`);
+  closeModal();openEstimateModal(ticketId);showToast('✓ Estimate approved');
+}
+
+async function rejectEstimate(estId,ticketId){
+  const reason=prompt('Reason for rejection:');if(reason===null)return;
+  const est=estimates.find(x=>x.id===estId);if(!est)return;
+  est.status='rejected';est.rejectedReason=reason;
+  LOG('Estimate rejected',ticketId,'r');
+  const tech=getUser(est.addedBy);
+  if(tech)await tgNotifyUser(tech.id,`❌ <b>Estimate Rejected</b>
+
+Ticket: ${ticketId}
+Reason: ${reason}
+By: ${session.name}
+
+Please revise and resubmit.`);
+  closeModal();openEstimateModal(ticketId);showToast('Estimate rejected');
+}
+
+async function convertEstimateToExpense(estId,ticketId){
+  const est=estimates.find(x=>x.id===estId);
+  if(!est||est.status!=='approved'){alert('Estimate must be approved first');return;}
+  if(!confirm('Convert this approved estimate to an expense?'))return;
+  // Create one expense entry per item
+  for(const item of est.items){
+    const row={id:'e'+Date.now()+Math.random().toString(36).slice(2,4),ticketId,ticket_id:ticketId,addedBy:session.id,added_by:session.id,category:'Parts',description:item.name+' × '+item.qty,amount:item.qty*item.unitCost,date:nowTs().split(' ')[0],approved:true,payment_status:'pending_payment'};
+    if(isLive)await dbInsert('expenses',{id:row.id,ticket_id:ticketId,added_by:session.id,category:'Parts',description:row.description,amount:row.amount,date:row.date,approved:true,payment_status:'pending_payment'});
+    else expenses.push(row);
+  }
+  est.status='converted';
+  if(isLive)await loadLiveData();
+  LOG('Estimate converted to expense',ticketId+' '+fc(est.totalCost),'g');
+  closeModal();showToast('✓ Estimate converted to expense');refreshPage();
 }
 
 
@@ -1845,7 +2030,7 @@ function renderNotifications(){
   let h='';
   if(esc.length){h+=`<p style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠ Escalated</p>`;esc.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`*ESCALATED TICKET*\n\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority} · Due: ${t.dueDate} (${dAgo(t.dueDate)}d overdue)\n${tech?'Assigned: '+tech.name:'No technician assigned'}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-esc','Escalated');});}
   if(od.length){h+=`<p style="font-size:13px;font-weight:700;color:#d97706;margin:1rem 0 8px">⏰ Overdue</p>`;od.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`Hi${tech?' '+tech.name:''},\n\nFollow-up: ${t.id} — *${t.title}*\n${state.name} › ${loc.name}\nDue: ${t.dueDate} (${dAgo(t.dueDate)} days overdue)\n\nPlease update.\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-ov','Overdue');});}
-  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','Unassigned');});}
+  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} — ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n— MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','To be assigned');});}
   if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n— MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
   if(!h)h='<div class="empty">✓ All clear — no notifications needed</div>';
   document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications</div></div></div>${h}`;
@@ -1902,10 +2087,11 @@ function renderRaise(){
     <div class="page-hdr"><div><div class="page-title">Raise a ticket</div><div class="page-sub">${subTitle}</div></div></div>
     <div style="max-width:560px"><div class="card">
       ${canPickLocation ? `<div class="fg"><label>Location</label><select id="ri-loc"><option value="">Select location...</option>${locOptions}</select></div>` : ''}
+      <div class="fg"><label>Your name <span style="color:#dc2626;font-weight:600">* required</span></label><input type="text" id="ri-name" placeholder="Enter your full name" style="border-color:#e8e8e4"></div>
       <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
       <div class="frow">
         <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label>Priority</label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+        <div class="fg"><label>Priority level <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
       </div>
       <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
       <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
@@ -2140,13 +2326,13 @@ window.doLogin = async function() {
     document.getElementById('app').style.display='flex';
     document.getElementById('sb-name').textContent=session.name;
     document.getElementById('sb-role').innerHTML=roleBadge(session.role);
-    let locStr='All locations';
+    let locStr='Locations';
     if(session.locationId){const l=getLoc(session.locationId);locStr=getState(l.stateId||l.state_id).name+' › '+l.name;}
     else if(session.stateId){locStr=getState(session.stateId).name+' region';}
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
     buildNav();
-    navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin'}[session.role]||'dashboard');
+    navTo({admin:'locations',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin'}[session.role]||'dashboard');
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
     setTimeout(showInstallBanner, 5000);
@@ -2160,7 +2346,14 @@ window.doLogin = async function() {
 
 // Override save operations to write to Supabase
 window.submitTicket = async function() {
+  const raisedByName=document.getElementById('ri-name')?.value?.trim();
   const title=document.getElementById('ri-t')?.value?.trim();
+  if(!raisedByName){
+    document.getElementById('ri-name').style.borderColor='#dc2626';
+    alert('Please enter your name before submitting');
+    document.getElementById('ri-name').focus();
+    return;
+  }
   if(!title){alert('Enter a title');return;}
 
   // Determine location
@@ -2175,7 +2368,7 @@ window.submitTicket = async function() {
   const raw=document.getElementById('ri-dd')?.value;
   let dd='';if(raw){const[y,m,d]=raw.split('-');dd=d+'/'+m+'/'+y;}
   const id='T'+Date.now().toString().slice(-6);
-  const row={id,location_id:locationId,state_id:loc.stateId||loc.state_id,category:document.getElementById('ri-c')?.value,title,description:document.getElementById('ri-d')?.value,priority:document.getElementById('ri-p')?.value,status:'Open',raised_by:session.id,due_date:dd};
+  const row={id,location_id:locationId,state_id:loc.stateId||loc.state_id,category:document.getElementById('ri-c')?.value,title,description:document.getElementById('ri-d')?.value,priority:document.getElementById('ri-p')?.value,status:'Open',raised_by:session.id,raised_by_name:raisedByName,due_date:dd};
 
   if(isLive){
     await dbInsert('tickets',row);
