@@ -1936,8 +1936,7 @@ Ticket: ${ticketId} - ${t?t.title:''}
 Total: ${fc(totalCost)}
 By: ${session.name}
 
-${items.map(i=>i.name+'  '+i.qty+' = '+fc(i.qty*i.unitCost)).join('
-')}
+${items.map(i=>i.name+' x'+i.qty+' = '+fc(i.qty*i.unitCost)).join(', ')}
 
 Please approve in MaintenanceOS.`;
   await tgNotifyRole('manager',msg);await tgNotifyRole('supervisor',msg);
