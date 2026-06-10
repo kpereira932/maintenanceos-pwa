@@ -256,7 +256,7 @@ function getLoc(id){return locations.find(l=>l.id===id)||{name:'Unknown',type:'o
 function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
 function getUser(id){return users.find(u=>u.id===id);}
 function getTechs(stateId){return stateId?users.filter(u=>u.role==='technician'&&(!u.stateId||u.stateId===stateId)):users.filter(u=>u.role==='technician');}
-function locLabel(l){return (l.city?l.city+' — ':'')+l.name+(l.type==='central_kitchen'?' (CK)':'');}
+function locLabel(l){return (l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':'');}
 function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin'}[r]||'';}
 function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin'}[r]||r;}
 function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
@@ -665,7 +665,7 @@ function deleteExp(id){if(!confirm('Delete this expense?'))return;expenses=expen
 function openExpModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
   const te=ticketExp(ticketId),total=te.reduce((s,e)=>s+Number(e.amount),0);
-  document.getElementById('m-title').textContent='Expenses — '+ticketId;
+  document.getElementById('m-title').textContent='Expenses - '+ticketId;
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · Total: <strong style="color:#059669">${fc(total)}</strong></p>
     ${te.length?`<div style="margin-bottom:1rem">${te.map(e=>`
@@ -1049,7 +1049,7 @@ function openAddLocation(pre){
     <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveLocation()">Add location</button></div>`;
   openModal();
 }
-function saveLocation(){const n=document.getElementById('ln').value.trim();if(!n)return;const sid=document.getElementById('ls').value,type=document.getElementById('lt').value;locations.push({id:'l'+Date.now(),stateId:sid,name:n,type});LOG('Location added',n+' ('+type+') — '+getState(sid).name,'p');closeModal();renderLocations();}
+function saveLocation(){const n=document.getElementById('ln').value.trim();if(!n)return;const sid=document.getElementById('ls').value,type=document.getElementById('lt').value;locations.push({id:'l'+Date.now(),stateId:sid,name:n,type});LOG('Location added',n+' ('+type+') - '+getState(sid).name,'p');closeModal();renderLocations();}
 function openEditLocation(id){
   const l=locations.find(x=>x.id===id);
   document.getElementById('m-title').textContent='Edit location';
@@ -1266,7 +1266,7 @@ async function checkTelegramAuto() {
     const username = latest?.message?.from?.first_name || '';
     if (chatId) {
       document.getElementById('tg-id-input').value = chatId;
-      showToast('✓ Found your Chat ID: ' + chatId + ' — click Save to confirm');
+      showToast('✓ Found your Chat ID: ' + chatId + ' - click Save to confirm');
     } else {
       showToast('Could not detect. Please paste your Chat ID manually.');
     }
@@ -1514,7 +1514,7 @@ function openMaterialsModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
   const mats=ticketMaterials(ticketId);
   const total=ticketMaterialTotal(ticketId);
-  document.getElementById('m-title').textContent='Materials — '+ticketId;
+  document.getElementById('m-title').textContent='Materials - '+ticketId;
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · Materials total: <strong style="color:#059669">${fc(total)}</strong></p>
     ${mats.length?`<div style="margin-bottom:1rem">
@@ -1555,7 +1555,7 @@ async function addMaterial(ticketId){
   const row={id:'m'+Date.now(),ticketId,ticket_id:ticketId,addedBy:session.id,added_by:session.id,name,quantity:qty,unit:document.getElementById('mu').value,unitCost:cost,unit_cost:cost,totalCost:qty*cost,total_cost:qty*cost,vendorId:document.getElementById('mv').value||null,vendor_id:document.getElementById('mv').value||null,notes:document.getElementById('mno').value,createdAt:nowTs()};
   if(isLive){await dbInsert('materials',{id:row.id,ticket_id:ticketId,added_by:session.id,name,quantity:qty,unit:row.unit,unit_cost:cost,vendor_id:row.vendor_id,notes:row.notes});await loadLiveData();showToast('✓ Material added');}
   else materials.push(row);
-  LOG('Material added',ticketId+' — '+name+' x'+qty,'w');
+  LOG('Material added',ticketId+' - '+name+' x'+qty,'w');
   openMaterialsModal(ticketId);
 }
 async function deleteMaterial(id,ticketId){
@@ -1571,7 +1571,7 @@ async function deleteMaterial(id,ticketId){
 function openAttachmentsModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
   const atts=attachments.filter(a=>a.ticketId===ticketId);
-  document.getElementById('m-title').textContent='Photos & videos — '+ticketId;
+  document.getElementById('m-title').textContent='Photos & videos - '+ticketId;
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''} · ${atts.length} attachment${atts.length!==1?'s':''}</p>
     ${atts.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:1rem">
@@ -1814,7 +1814,7 @@ async function confirmOnHold(ticketId){
   const sel=document.getElementById('hold-reason-select').value;
   const detail=document.getElementById('hold-reason').value.trim();
   if(!sel){alert('Please select a reason');return;}
-  const reason=sel==='Other'?detail:sel+(detail?' — '+detail:'');
+  const reason=sel==='Other'?detail:sel+(detail?' - '+detail:'');
   if(!reason){alert('Please provide a reason');return;}
   const t=tickets.find(x=>x.id===ticketId);if(!t)return;
   t.status='On Hold';
@@ -1822,7 +1822,7 @@ async function confirmOnHold(ticketId){
   if(isLive){
     await dbUpdate('tickets',ticketId,{status:'On Hold',updated_at:new Date().toISOString()});
     await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:'⏸ Put on hold: '+reason});
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket on hold',detail:ticketId+' — '+reason,user_id:session.id,color:'w'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket on hold',detail:ticketId+' - '+reason,user_id:session.id,color:'w'});
     await loadLiveData();
   }
   // Notify manager and supervisor
@@ -1838,7 +1838,7 @@ Reason: ${reason}
 Please review and advise.`;
   await tgNotifyRole('manager',msg);
   await tgNotifyRole('supervisor',msg);
-  LOG('Ticket on hold',ticketId+' — '+reason,'w');
+  LOG('Ticket on hold',ticketId+' - '+reason,'w');
   closeModal();refreshPage();
   showToast('Ticket put on hold — manager notified');
 }
@@ -1862,7 +1862,7 @@ function openEstimateModal(ticketId){
   const t=tickets.find(x=>x.id===ticketId);
   const tEst=estimates.filter(e=>e.ticketId===ticketId);
   const latestEst=tEst[tEst.length-1];
-  document.getElementById('m-title').textContent='Estimate — '+ticketId;
+  document.getElementById('m-title').textContent='Estimate - '+ticketId;
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${t?t.title:''}</p>
 
@@ -1926,7 +1926,7 @@ async function submitEstimate(ticketId){
   const est={id:'est'+Date.now(),ticketId,addedBy:session.id,items,totalCost,status:'pending',notes,createdAt:nowTs()};
   estimates.push(est);
   if(isLive){
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Estimate submitted',detail:ticketId+' — '+fc(totalCost)+' by '+session.name,user_id:session.id,color:'b'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Estimate submitted',detail:ticketId+' - '+fc(totalCost)+' by '+session.name,user_id:session.id,color:'b'});
   }
   // Notify manager
   const t=tickets.find(x=>x.id===ticketId);
@@ -2009,7 +2009,7 @@ function renderRecurring(){
     }).join('')||'<div class="empty">No recurring schedules</div>'}</div>`;
 }
 function toggleR(id,v){const r=recurringSchedules.find(x=>x.id===id);if(r)r.on=v;}
-function genNow(id){const r=recurringSchedules.find(x=>x.id===id);if(!r)return;const ts=nowTs();r.locationIds.forEach(lid=>{const loc=getLoc(lid);tickets.unshift({id:'T'+String(tickets.length+1).padStart(3,'0'),locationId:lid,stateId:loc.stateId,category:r.category,title:r.title,desc:'Auto-generated.',priority:r.priority,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:r.next,comments:[]});});LOG('Recurring generated',r.title+' — '+r.locationIds.length+' tickets','b');alert('Created '+r.locationIds.length+' tickets for: '+r.title);renderRecurring();}
+function genNow(id){const r=recurringSchedules.find(x=>x.id===id);if(!r)return;const ts=nowTs();r.locationIds.forEach(lid=>{const loc=getLoc(lid);tickets.unshift({id:'T'+String(tickets.length+1).padStart(3,'0'),locationId:lid,stateId:loc.stateId,category:r.category,title:r.title,desc:'Auto-generated.',priority:r.priority,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:r.next,comments:[]});});LOG('Recurring generated',r.title+' - '+r.locationIds.length+' tickets','b');alert('Created '+r.locationIds.length+' tickets for: '+r.title);renderRecurring();}
 function delR(id){if(confirm('Remove?')){recurringSchedules=recurringSchedules.filter(x=>x.id!==id);renderRecurring();}}
 function openAddRecurring(){
   document.getElementById('m-title').textContent='New recurring schedule';
@@ -2106,7 +2106,7 @@ function submitTicket(){
   const raw=document.getElementById('ri-dd').value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=`${d}/${m}/${y}`;}
   const ts=nowTs(),id='T'+String(tickets.length+1).padStart(3,'0'),loc=getLoc(session.locationId);
   tickets.unshift({id,locationId:session.locationId,stateId:loc.stateId,category:document.getElementById('ri-c').value,title,desc:document.getElementById('ri-d').value,priority:document.getElementById('ri-p').value,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:dd,comments:[]});
-  LOG('Ticket raised',id+' '+title+' — '+loc.name,'p');alert('Issue '+id+' submitted!');navTo('my-tickets');
+  LOG('Ticket raised',id+' '+title+' - '+loc.name,'p');alert('Issue '+id+' submitted!');navTo('my-tickets');
 }
 function renderMyTickets(){
   const mine=tickets.filter(t=>t.raisedBy===session.id);
@@ -2372,7 +2372,7 @@ window.submitTicket = async function() {
 
   if(isLive){
     await dbInsert('tickets',row);
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' — '+loc.name,user_id:session.id,color:'p'});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' - '+loc.name,user_id:session.id,color:'p'});
     await loadLiveData();
     showToast('✓ Ticket '+id+' submitted!');
     // Telegram notification
