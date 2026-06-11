@@ -406,7 +406,27 @@ const NAV={
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   outlet:[{id:'raise',i:'',l:'Raise issue'},{id:'my-tickets',i:'',l:'My tickets'},{id:'profile',i:'',l:'My profile'}],
+  founder:[
+    {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},
+    {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
+    {s:'Account'},{id:'profile',i:'',l:'My profile'},
+  ],
 };
+const NAV2 = {};
+NAV2['design-manager'] = [
+  {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
+  {s:'Design'},{id:'design-lists',i:'',l:'Site visit lists'},{id:'design-tickets',i:'',l:'Design tickets'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'recurring',i:'',l:'Recurring tasks'},{id:'locations',i:'',l:'Locations'},
+  {s:'Account'},{id:'profile',i:'',l:'My profile'},
+];
+NAV2['design-poc'] = [
+  {s:'Design'},{id:'design-raise',i:'',l:'New site visit'},{id:'design-my-lists',i:'',l:'My lists'},{id:'design-tickets',i:'',l:'Design tickets'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'recurring',i:'',l:'Recurring tasks'},
+  {s:'Account'},{id:'profile',i:'',l:'My profile'},
+];
 function buildNav(){
   const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||[]);
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
