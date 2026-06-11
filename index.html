@@ -1869,7 +1869,7 @@ function renderSuperAdmin(){
       <div>
         <div class="section-hdr"><span class="section-title">Users & last activity</span></div>
         <div class="tbl-wrap"><table>
-          <thead><tr><th>Name</th><th>Role</th><th>Telegram</th><th>WhatsApp</th></tr></thead>
+          <thead><tr><th>Name</th><th>Role</th><th>State</th><th>Telegram</th><th>WhatsApp</th></tr></thead>
           <tbody>${users.filter(u=>u.role!=='superadmin').map(u=>`<tr>
             <td><strong>${u.name}</strong><div style="font-size:11px;color:#aaa">${u.email}</div></td>
             <td>${roleBadge(u.role)}</td>
