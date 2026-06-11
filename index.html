@@ -12,6 +12,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
 <title>MaintenanceOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -47,8 +48,10 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .r-manager{background:rgba(196,133,36,.2);color:#F5DFA8}
 .r-tech{background:rgba(200,144,10,.2);color:#F5DFA8}
 .r-outlet{background:rgba(185,28,28,.2);color:#fca5a5}
+.r-founder{background:rgba(196,133,36,.35);color:#F5DFA8}
+.r-design{background:rgba(107,114,128,.3);color:#D1D5DB}
 .sidebar-nav{flex:1;padding:.5rem 0}
-.nav-section{font-size:9px;color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:1.5px;padding:14px 1.5rem 4px;font-weight:700}
+.nav-section{font-size:9px;color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:2px;padding:16px 1.5rem 5px;font-weight:400;border-top:1px solid rgba(255,255,255,.05);margin-top:4px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.5rem;font-size:13px;color:rgba(255,255,255,.5);cursor:pointer;border-left:3px solid transparent;transition:all .12s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .nav-item:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.05)}
 .nav-item.active{color:#fff;background:rgba(196,133,36,.15);border-left-color:#F5DFA8}
@@ -261,6 +264,7 @@ tr:hover td{background:var(--cream)}
 let states = [];
 let locations = [];
 const CATEGORIES = ['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Furniture','Cleaning','Kitchen Equipment','Other'];
+const PRIORITIES = ['Urgent','Important','High','Medium','Low'];
 let users = [
   {id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'},
 ];
@@ -271,7 +275,8 @@ let vendors = [];
 
 // MATERIALS per ticket
 let materials = [];
-let estimates = []; // {id, ticketId, addedBy, items:[{name,qty,unit,unitCost}], totalCost, status:'pending'|'approved'|'rejected', approvedBy, notes, createdAt}
+let estimates = [];
+let designLists = []; // {id, pocId, locationId, visitDate, items:[{id,desc,category,priority,photo,status:'pending'|'approved'|'rejected',rejectReason}], status:'draft'|'submitted'|'reviewed', submittedAt, reviewedAt, reviewedBy} // {id, ticketId, addedBy, items:[{name,qty,unit,unitCost}], totalCost, status:'pending'|'approved'|'rejected', approvedBy, notes, createdAt}
 
 // TICKET ATTACHMENTS
 let attachments = [];
@@ -291,18 +296,23 @@ function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
 function getUser(id){return users.find(u=>u.id===id);}
 function getTechs(stateId){return stateId?users.filter(u=>u.role==='technician'&&(!u.stateId||u.stateId===stateId)):users.filter(u=>u.role==='technician');}
 function locLabel(l){return (l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':'');}
-function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin'}[r]||'';}
-function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin'}[r]||r;}
+function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin',founder:'r-founder','design-manager':'r-design','design-poc':'r-design'}[r]||'';}
+function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin',founder:'Founder','design-manager':'Design Manager','design-poc':'Design POC'}[r]||r;}
 function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
-function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',technician:'#065f46',outlet:'#92400e'}[r]||'#888';}
+function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',supervisor:'#0369a1',technician:'#065f46',outlet:'#92400e',founder:'#C48524','design-manager':'#6B7280','design-poc':'#6B7280'}[r]||'#888';}
 function fc(n){return''+Number(n).toLocaleString('en-IN');}
 function isOD(t){if(['Resolved','Closed'].includes(t.status))return false;if(!t.dueDate)return false;const[d,m,y]=t.dueDate.split('/');return new Date(+y,+m-1,+d)<TODAY;}
 function dAgo(s){if(!s)return 0;const[d,m,y]=s.split('/');return Math.floor((TODAY-new Date(+y,+m-1,+d))/86400000);}
-function isESC(t){return isOD(t)&&t.priority==='High'&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
+function isESC(t){return isOD(t)&&['Urgent','Important','High'].includes(t.priority)&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
 function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'/'+String(n.getMonth()+1).padStart(2,'0')+'/'+n.getFullYear()+' '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
+function priOrder(p){return{Urgent:0,Important:1,High:2,Medium:3,Low:4}[p]??3;}
+function sortByUrgency(arr){return [...arr].sort((a,b)=>{if(isESC(a)&&!isESC(b))return -1;if(!isESC(a)&&isESC(b))return 1;if(isOD(a)&&!isOD(b))return -1;if(!isOD(a)&&isOD(b))return 1;return priOrder(a.priority)-priOrder(b.priority);});}
 function sbadge(t){if(isESC(t))return'<span class="badge b-esc"> Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done','On Hold':'b-med'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
-function pbadge(p){return`<span class="badge ${p==='High'?'b-high':p==='Low'?'b-low':'b-med'}">${p}</span>`;}
+function pbadge(p){
+  const cls={Urgent:'b-esc',Important:'b-high',High:'b-high',Medium:'b-med',Low:'b-low'}[p]||'b-med';
+  return`<span class="badge ${cls}">${p}</span>`;
+}
 // Get locations visible to current user based on state/city scope
 function visibleLocationIds(){
   if(['superadmin','admin'].includes(session.role)) return locations.map(l=>l.id);
@@ -318,7 +328,7 @@ function visibleLocationIds(){
 function visT(){
   if(session.role==='superadmin') return tickets;
   const visLocs = visibleLocationIds();
-  if(['admin','manager','supervisor'].includes(session.role)){
+  if(['admin','manager','supervisor','founder','design-manager'].includes(session.role)){
     return tickets.filter(t=>visLocs.includes(t.locationId||t.location_id));
   }
   if(session.role==='technician'){
@@ -407,7 +417,7 @@ function navTo(p){
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
-  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin};
+  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists};
   if(map[p])map[p]();
 }
 
@@ -469,13 +479,23 @@ function ticketActions(t){
 // ============================================================
 // DASHBOARD
 // ============================================================
+
+function toggleExpSummary(){
+  const d=document.getElementById('exp-summary-detail');
+  const btn=document.getElementById('exp-toggle-btn');
+  if(!d)return;
+  const isOpen=d.style.display!=='none';
+  d.style.display=isOpen?'none':'block';
+  if(btn)btn.textContent=isOpen?'More':'Less';
+}
 function renderDashboard(){
-  const all=visT();
+  const all=sortByUrgency(visT());
   const esc=all.filter(isESC).length,od=all.filter(t=>isOD(t)&&!isESC(t)).length;
   const op=all.filter(t=>t.status==='Open').length,ip=all.filter(t=>t.status==='In Progress').length;
   const res=all.filter(t=>t.status==='Resolved').length;
-  const unass=all.filter(t=>t.status==='Open'&&!t.assignedTo).length;
+  const unass=all.filter(t=>['Open','In Progress'].includes(t.status)&&!t.assignedTo&&!t.assigned_to).length;
   const totalExp=expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const pendExp=expenses.filter(e=>!e.approved).reduce((s,e)=>s+Number(e.amount),0);
   const amcAlert=amcRecords.filter(a=>amcSt(a)!=='active').length;
 
   let stateCards='';
@@ -508,13 +528,31 @@ function renderDashboard(){
     </div>
     ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention to View AMC</div>`:''}
     <div class="metrics">
-      <div class="met"><div class="met-bar" style="background:#dc2626"></div><div class="ml">Escalated</div><div class="mv r">${esc}</div></div>
-      <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Overdue</div><div class="mv w">${od}</div></div>
-      <div class="met"><div class="met-bar" style="background:#2563eb"></div><div class="ml">Open</div><div class="mv b">${op}</div></div>
-      <div class="met"><div class="met-bar" style="background:#7c3aed"></div><div class="ml">Unassigned</div><div class="mv p">${unass}</div></div>
-      <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Resolved</div><div class="mv g">${res}</div></div>
-      ${['admin','manager'].includes(session.role)?`<div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total expenses</div><div class="mv g" style="font-size:18px">${fc(totalExp)}</div></div>`:''}
+      <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="met-bar" style="background:var(--red)"></div><div class="ml">Escalated</div><div class="mv r">${esc}</div></div>
+      <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">Overdue</div><div class="mv w">${od}</div></div>
+      <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="met-bar" style="background:var(--blue)"></div><div class="ml">Open</div><div class="mv b">${op}</div></div>
+      <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="met-bar" style="background:var(--purple)"></div><div class="ml">To be assigned</div><div class="mv p">${unass}</div></div>
+      <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">In progress</div><div class="mv g">${ip}</div></div>
     </div>
+    ${['admin','manager','supervisor','founder'].includes(session.role)?`
+    <div class="card" style="margin-bottom:1.5rem;border-left:4px solid var(--amber)">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleExpSummary()">
+        <div>
+          <div style="font-weight:700;font-size:14px;color:var(--charcoal)">Expenses overview</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Total: <strong style="color:var(--green)">${fc(totalExp)}</strong> &nbsp;|&nbsp; Pending approval: <strong style="color:var(--amber)">${fc(pendExp)}</strong></div>
+        </div>
+        <button class="btn sm" id="exp-toggle-btn">More</button>
+      </div>
+      <div id="exp-summary-detail" style="display:none;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--tan)">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1rem">
+          <div class="met"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">Total logged</div><div class="mv g" style="font-size:18px">${fc(totalExp)}</div></div>
+          <div class="met"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">Pending approval</div><div class="mv w" style="font-size:18px">${fc(pendExp)}</div></div>
+          <div class="met"><div class="met-bar" style="background:var(--blue)"></div><div class="ml">Total records</div><div class="mv b">${expenses.length}</div></div>
+          <div class="met"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">Pending records</div><div class="mv w">${expenses.filter(e=>!e.approved).length}</div></div>
+        </div>
+        <button class="btn primary sm" onclick="navTo('expenses')">View all expenses</button>
+      </div>
+    </div>`:''}
     ${stateCards}
     <div class="two-col">
       <div><div class="section-hdr"><span class="section-title">Needs attention</span></div>
@@ -538,7 +576,7 @@ function renderTickets(){
       <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')}</select>
       <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select>
       <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
-      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Priority</option><option>High</option><option>Medium</option><option>Low</option></select>
+      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Priority</option><option>Urgent</option><option>Important</option><option>High</option><option>Medium</option><option>Low</option></select>
     </div>
     <div id="tlist">${vis.map(t=>ticketCard(t)).join('')||'<div class="empty">No tickets</div>'}</div>`;
 }
@@ -582,8 +620,9 @@ function openTicket(id){
     <div style="display:flex;gap:7px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap">
       <button class="btn" onclick="closeModal()">Close</button>
       <button class="btn primary" onclick="addComment('${id}')">Post</button>
-      ${['admin','manager'].includes(session.role)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
-      ${session.role==='technician'&&t.assignedTo===session.id&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+      ${['admin','manager','supervisor'].includes(session.role)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+      ${session.role==='technician'&&(t.assignedTo===session.id||t.assigned_to===session.id)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+      ${session.role==='founder'?`<button class="btn warning" onclick="openFounderConcern('${id}')">Raise concern</button>`:''}
     </div>`;
   openModal();
 }
@@ -968,7 +1007,7 @@ function customReportForm(){
     </div>
     <div class="frow">
       <div class="fg"><label>Category</label><select id="cr-c"><option value="">Category</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-      <div class="fg"><label>Priority</label><select id="cr-p"><option value="">Priority</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="fg"><label>Priority</label><select id="cr-p"><option value="">Priority</option><option>Urgent</option><option>Important</option><option>High</option><option>Medium</option><option>Low</option></select></div>
     </div>
     <button class="btn primary" onclick="runCustomReport()">▶ Generate</button>
     <div id="cr-out" style="margin-top:1.5rem"></div>
@@ -1141,7 +1180,7 @@ function userTable(list){
 function userFormHTML(u){
   const sOpts=`<option value="">- None -</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
   const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
-  return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
+  return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet','founder','design-manager','design-poc'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
   <div class="fg" id="ucf" style="${['admin','superadmin','outlet'].includes(u.role)?'display:none':''}"><label>City scope <span style="color:#888;font-weight:400">(restrict to one city — leave blank for whole state)</span></label><input type="text" id="ucity" value="${u.cityName||u.city_name||''}" placeholder="e.g. Mumbai, Pune, Delhi..."></div>
   <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
@@ -2053,6 +2092,298 @@ async function convertEstimateToExpense(estId,ticketId){
 }
 
 
+
+// ============================================================
+// DESIGN TEAM WORKFLOW
+// ============================================================
+
+function renderDesignRaise(){
+  const myLocs = visibleLocationIds().map(id=>getLoc(id));
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">New Site Visit</div><div class="page-sub">Create a checklist for your outlet visit</div></div></div>
+    <div style="max-width:640px">
+      <div class="card">
+        <div class="frow">
+          <div class="fg"><label>Outlet / Location</label>
+            <select id="dl-loc"><option value="">Select location...</option>${myLocs.map(l=>`<option value="${l.id}">${(l.city||'')} - ${l.name}</option>`).join('')}</select>
+          </div>
+          <div class="fg"><label>Visit date</label><input type="date" id="dl-date" value="${new Date().toISOString().split('T')[0]}"></div>
+        </div>
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--green)">Checklist items</div>
+        <div id="dl-items"></div>
+        <button class="btn sm" onclick="addDesignItem()" style="margin-bottom:1rem">+ Add item</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn" onclick="saveDesignDraft()">Save draft</button>
+          <button class="btn primary" onclick="submitDesignList()">Submit to Design Manager</button>
+        </div>
+      </div>
+    </div>`;
+  addDesignItem();
+}
+
+function addDesignItem(){
+  const container=document.getElementById('dl-items');
+  const idx=container.children.length+1;
+  const div=document.createElement('div');
+  div.className='card';
+  div.style.cssText='margin-bottom:10px;background:var(--cream);border:1px solid var(--tan)';
+  div.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-weight:600;font-size:12px;color:var(--text-muted)">Item ${idx}</div>
+      <button class="btn sm danger" onclick="this.closest('.card').remove()">Remove</button>
+    </div>
+    <div class="fg"><label>Description</label><input type="text" class="di-desc" placeholder="Describe the issue or work needed..."></div>
+    <div class="frow">
+      <div class="fg"><label>Category</label><select class="di-cat">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="fg"><label>Priority</label><select class="di-pri"><option>Urgent</option><option>Important</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    </div>
+    <div class="fg"><label>Photo <span style="color:var(--red);font-weight:600">* required</span></label>
+      <input type="file" class="di-photo" accept="image/*,video/*" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit">
+    </div>`;
+  container.appendChild(div);
+}
+
+function getDesignItems(){
+  const items=[];
+  document.querySelectorAll('#dl-items .card').forEach((el,i)=>{
+    const desc=el.querySelector('.di-desc')?.value?.trim();
+    const cat=el.querySelector('.di-cat')?.value;
+    const pri=el.querySelector('.di-pri')?.value;
+    const photoFile=el.querySelector('.di-photo')?.files?.[0];
+    if(desc) items.push({id:'di'+Date.now()+i,desc,category:cat,priority:pri,photoFile,status:'pending'});
+  });
+  return items;
+}
+
+async function saveDesignDraft(){
+  const locId=document.getElementById('dl-loc')?.value;
+  const date=document.getElementById('dl-date')?.value;
+  if(!locId){alert('Select a location');return;}
+  const items=getDesignItems();
+  if(!items.length){alert('Add at least one item');return;}
+  const list={id:'dl'+Date.now(),pocId:session.id,locationId:locId,visitDate:date,items:items.map(i=>({...i,photoFile:undefined})),status:'draft',createdAt:nowTs()};
+  designLists.push(list);
+  showToast('Draft saved');
+  navTo('design-my-lists');
+}
+
+async function submitDesignList(){
+  const locId=document.getElementById('dl-loc')?.value;
+  const date=document.getElementById('dl-date')?.value;
+  if(!locId){alert('Select a location');return;}
+  const items=getDesignItems();
+  if(!items.length){alert('Add at least one item');return;}
+  // Check all items have photos
+  const missingPhoto=items.some(i=>!i.photoFile);
+  if(missingPhoto){alert('Every item needs a photo before submitting');return;}
+  const list={id:'dl'+Date.now(),pocId:session.id,locationId:locId,visitDate:date,items:items.map(i=>({...i,photoFile:undefined,photoUrl:''})),status:'submitted',submittedAt:nowTs(),createdAt:nowTs()};
+  designLists.push(list);
+  LOG('Design list submitted',locId+' by '+session.name,'p');
+  // Notify design managers
+  const loc=getLoc(locId);
+  const msg=`New site visit list submitted for review\n\nLocation: ${(loc.city||'')} - ${loc.name}\nItems: ${items.length}\nSubmitted by: ${session.name}\nDate: ${date}\n\nPlease review in MaintenanceOS.`;
+  await tgNotifyRole('design-manager',msg,null,locId);
+  showToast('List submitted to Design Manager');
+  navTo('design-my-lists');
+}
+
+function renderDesignMyLists(){
+  const mine=designLists.filter(l=>l.pocId===session.id);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">My Lists</div><div class="page-sub">${mine.length} site visit lists</div></div>
+      <button class="btn primary" onclick="navTo('design-raise')">+ New site visit</button>
+    </div>
+    ${mine.length?mine.map(l=>{
+      const loc=getLoc(l.locationId);
+      const approved=l.items.filter(i=>i.status==='approved').length;
+      const rejected=l.items.filter(i=>i.status==='rejected').length;
+      const pending=l.items.filter(i=>i.status==='pending').length;
+      const stBadge=l.status==='draft'?'<span class="badge b-grey">Draft</span>':l.status==='submitted'?'<span class="badge b-med">Pending review</span>':l.status==='reviewed'?'<span class="badge b-done">Reviewed</span>':'';
+      return`<div class="card" onclick="openDesignList('${l.id}')" style="cursor:pointer">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
+          <div><div style="font-weight:700">${(loc.city||'')} ${loc.name}</div><div style="font-size:12px;color:var(--text-muted)">${l.visitDate} · ${l.items.length} items</div></div>
+          ${stBadge}
+        </div>
+        <div style="display:flex;gap:10px;font-size:12px">
+          ${approved?`<span style="color:var(--green-mid);font-weight:600">${approved} approved</span>`:''}
+          ${rejected?`<span style="color:var(--red);font-weight:600">${rejected} rejected</span>`:''}
+          ${pending?`<span style="color:var(--text-muted)">${pending} pending</span>`:''}
+        </div>
+      </div>`;
+    }).join(''):'<div class="empty">No lists yet.<br>Start by creating a new site visit.</div>'}`;
+}
+
+function renderDesignLists(){
+  // Design Manager view
+  const pending=designLists.filter(l=>l.status==='submitted');
+  const reviewed=designLists.filter(l=>l.status==='reviewed');
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Site Visit Lists</div><div class="page-sub">${pending.length} pending review</div></div></div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showT2('dl-pend','dl-rev',this)">Pending review (${pending.length})</button>
+      <button class="tab-btn" onclick="showT2('dl-rev','dl-pend',this)">Reviewed (${reviewed.length})</button>
+    </div>
+    <div id="dl-pend">${pending.length?pending.map(l=>designListCard(l,true)).join(''):'<div class="empty">No lists pending review</div>'}</div>
+    <div id="dl-rev" style="display:none">${reviewed.length?reviewed.map(l=>designListCard(l,false)).join(''):'<div class="empty">None reviewed yet</div>'}</div>`;
+}
+
+function designListCard(l,showReview){
+  const loc=getLoc(l.locationId);
+  const poc=getUser(l.pocId);
+  return`<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
+      <div>
+        <div style="font-weight:700">${(loc.city||'')} ${loc.name}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${l.visitDate} · By ${poc?poc.name:'Unknown'} · ${l.items.length} items</div>
+      </div>
+      <span class="badge ${l.status==='submitted'?'b-med':'b-done'}">${l.status==='submitted'?'Pending review':'Reviewed'}</span>
+    </div>
+    ${showReview?`<button class="btn primary" onclick="openDesignListReview('${l.id}')">Review list</button>`:
+    `<div style="font-size:12px;color:var(--text-muted)">${l.items.filter(i=>i.status==='approved').length} approved, ${l.items.filter(i=>i.status==='rejected').length} rejected</div>
+    <button class="btn sm" onclick="openDesignList('${l.id}')">View</button>`}
+  </div>`;
+}
+
+function openDesignList(id){
+  const l=designLists.find(x=>x.id===id);if(!l)return;
+  const loc=getLoc(l.locationId);
+  document.getElementById('m-title').textContent='Site visit — '+(loc.city||'')+' '+loc.name;
+  document.getElementById('m-body').innerHTML=`
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">${l.visitDate} · ${l.items.length} items · ${l.status}</div>
+    ${l.items.map(item=>`<div class="card" style="margin-bottom:8px;background:var(--cream)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between">
+        <div style="flex:1"><div style="font-weight:600">${item.desc}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${item.category} · ${pbadge(item.priority)}</div></div>
+        <span class="badge ${item.status==='approved'?'b-done':item.status==='rejected'?'b-ov':'b-grey'}">${item.status}</span>
+      </div>
+      ${item.rejectReason?`<div style="font-size:12px;color:var(--red);margin-top:6px">Rejected: ${item.rejectReason}</div>`:''}
+    </div>`).join('')}
+    <div style="display:flex;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Close</button></div>`;
+  openModal();
+}
+
+function openDesignListReview(id){
+  const l=designLists.find(x=>x.id===id);if(!l)return;
+  const loc=getLoc(l.locationId);
+  document.getElementById('m-title').textContent='Review — '+(loc.city||'')+' '+loc.name;
+  document.getElementById('m-body').innerHTML=`
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">${l.visitDate} · ${l.items.length} items to review</div>
+    <div id="review-items">
+    ${l.items.map((item,i)=>`<div class="card" style="margin-bottom:10px;background:var(--cream)" id="ritem-${i}">
+      <div style="font-weight:600;margin-bottom:4px">${item.desc}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">${item.category} · ${pbadge(item.priority)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn sm success" onclick="reviewItem('${id}',${i},'approved','')">Approve</button>
+        <button class="btn sm danger" onclick="promptRejectItem('${id}',${i})">Reject</button>
+      </div>
+      <div id="ri-status-${i}" style="margin-top:6px;font-size:12px"></div>
+    </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:1rem">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="finaliseDesignReview('${id}')">Finalise & convert approved items to tickets</button>
+    </div>`;
+  openModal();
+}
+
+function promptRejectItem(listId,idx){
+  const reason=prompt('Reason for rejecting this item:');
+  if(reason===null)return;
+  reviewItem(listId,idx,'rejected',reason);
+}
+
+function reviewItem(listId,idx,status,reason){
+  const l=designLists.find(x=>x.id===listId);if(!l)return;
+  l.items[idx].status=status;
+  l.items[idx].rejectReason=reason||'';
+  const el=document.getElementById('ri-status-'+idx);
+  if(el) el.innerHTML=status==='approved'?'<span style="color:var(--green-mid);font-weight:600">Approved</span>':'<span style="color:var(--red);font-weight:600">Rejected: '+reason+'</span>';
+}
+
+async function finaliseDesignReview(listId){
+  const l=designLists.find(x=>x.id===listId);if(!l)return;
+  const approved=l.items.filter(i=>i.status==='approved');
+  if(!approved.length){alert('Approve at least one item before finalising');return;}
+  if(!confirm(`Convert ${approved.length} approved items into maintenance tickets?`))return;
+
+  l.status='reviewed';l.reviewedAt=nowTs();l.reviewedBy=session.id;
+  const loc=getLoc(l.locationId);
+  const ts=nowTs();
+  const createdTickets=[];
+
+  for(const item of approved){
+    const tid='T'+Date.now().toString().slice(-6);
+    const row={id:tid,location_id:l.locationId,state_id:loc.stateId||loc.state_id,category:item.category,title:item.desc,description:'From design team site visit — '+l.visitDate,priority:item.priority,status:'Open',raised_by:session.id,raised_by_name:'Design Team - '+session.name,due_date:''};
+    if(isLive){
+      await dbInsert('tickets',row);
+    } else {
+      tickets.unshift({...row,locationId:l.locationId,stateId:loc.stateId,raisedBy:session.id,raisedByName:'Design Team - '+session.name,assignedTo:null,dueDate:'',desc:row.description,comments:[],createdAt:ts,updatedAt:ts});
+    }
+    createdTickets.push(tid);
+  }
+
+  if(isLive){
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Design tickets created',detail:createdTickets.length+' tickets from '+loc.name,user_id:session.id,color:'p'});
+    await loadLiveData();
+  }
+
+  // Notify all maintenance staff
+  const notifMsg=`New tickets from Design Team\n\nLocation: ${(loc.city||'')} ${loc.name}\n${createdTickets.length} tickets created from site visit on ${l.visitDate}\nApproved by: ${session.name}\n\nPlease assign to technicians.`;
+  await tgNotifyRole('manager',notifMsg,null,l.locationId);
+  await tgNotifyRole('supervisor',notifMsg,null,l.locationId);
+  await tgNotifyRole('admin',notifMsg,null,l.locationId);
+  await tgNotifyRole('technician',notifMsg,null,l.locationId);
+  await tgNotifyRole('founder',notifMsg,null,l.locationId);
+
+  LOG('Design list finalised',createdTickets.length+' tickets created — '+loc.name,'g');
+  closeModal();
+  showToast(createdTickets.length+' tickets created and sent to maintenance queue');
+  renderDesignLists();
+}
+
+// ============================================================
+// FOUNDER — concern flag on any ticket
+// ============================================================
+function openFounderConcern(ticketId){
+  document.getElementById('m-title').textContent='Raise a concern';
+  document.getElementById('m-body').innerHTML=`
+    <div style="background:var(--amber-pale);border:1px solid var(--amber-light);border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px">
+      This concern will be highlighted on the ticket and all assigned staff will be notified.
+    </div>
+    <div class="fg"><label>Your concern</label><textarea id="concern-text" placeholder="Describe your concern or instruction..." style="min-height:100px"></textarea></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="submitFounderConcern('${ticketId}')">Raise concern</button>
+    </div>`;
+  openModal();
+}
+
+async function submitFounderConcern(ticketId){
+  const text=document.getElementById('concern-text')?.value?.trim();
+  if(!text){alert('Please enter your concern');return;}
+  const concern='FOUNDER CONCERN: '+text;
+  const t=tickets.find(x=>x.id===ticketId);
+  if(isLive){
+    await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,text:concern});
+    await dbUpdate('tickets',ticketId,{updated_at:new Date().toISOString()});
+    await loadLiveData();
+  } else {
+    if(t) t.comments.push({user:session.id,text:concern,time:nowTs()});
+  }
+  // Notify everyone on the ticket
+  const loc=t?getLoc(t.locationId||t.location_id):{name:''};
+  const msg=`FOUNDER CONCERN on Ticket ${ticketId}\n${t?t.title:''}\n${loc.name}\n\n${text}\n\nPlease address immediately.`;
+  await tgNotifyRole('manager',msg,null,t?.locationId||t?.location_id);
+  await tgNotifyRole('supervisor',msg,null,t?.locationId||t?.location_id);
+  await tgNotifyRole('admin',msg,null,t?.locationId||t?.location_id);
+  if(t?.assignedTo||t?.assigned_to) await tgNotifyUser(t.assignedTo||t.assigned_to,msg);
+  LOG('Founder concern raised',ticketId,'w');
+  closeModal();
+  showToast('Concern raised — team notified');
+  refreshPage();
+}
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -2075,7 +2406,7 @@ function openAddRecurring(){
   document.getElementById('m-body').innerHTML=`
     <div class="fg"><label>Task name</label><input type="text" id="rt" placeholder="e.g. AC servicing"></div>
     <div class="frow"><div class="fg"><label>Category</label><select id="rc">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Frequency</label><select id="rf"><option>1 month</option><option>3 months</option><option selected>6 months</option><option>1 year</option></select></div></div>
-    <div class="fg"><label>Priority</label><select id="rp"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <div class="fg"><label>Priority</label><select id="rp"><option>Urgent</option><option>Important</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
     <div class="fg"><label>Locations</label><div style="max-height:150px;overflow-y:auto;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px">${states.map(s=>`<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;margin:5px 0 3px">${s.name}</div>${locations.filter(l=>l.stateId===s.id).map(l=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0"><input type="checkbox" value="${l.id}" checked> ${locLabel(l)}</label>`).join('')}`).join('')}</div></div>
     <div class="fg"><label>Next due date</label><input type="date" id="rd"></div>
     <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveR()">Save</button></div>`;
@@ -2151,7 +2482,7 @@ function renderRaise(){
       <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
       <div class="frow">
         <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label>Priority level <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+        <div class="fg"><label>Priority level <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>Urgent</option><option>Important</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
       </div>
       <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
       <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
@@ -2393,7 +2724,7 @@ window.doLogin = async function() {
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
     buildNav();
-    navTo({admin:'locations',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin'}[session.role]||'dashboard');
+    navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'design-lists','design-poc':'design-raise'}[session.role]||'dashboard');
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
     setTimeout(showInstallBanner, 5000);
