@@ -1216,8 +1216,9 @@ function deleteLocation(id){const open=tickets.filter(t=>t.locationId===id&&!['R
 // USERS
 // ============================================================
 function renderUsers(){
+  const visibleUsers = users.filter(u=>u.role!=='superadmin');
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${users.length} users</div></div><button class="btn primary" onclick="openAddUser()">＋ Add user</button></div>
+    <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${visibleUsers.length} users</div></div><button class="btn primary" onclick="openAddUser()">+ Add user</button></div>
     <div class="tab-btns">${['All','Admin','Manager','Supervisor','Technician','Outlet / CK','Founder','Design Manager','Design POC'].map((r,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="filterUsers('${r}',this)">${r}</button>`).join('')}</div>
     <div id="utbl">${userTable(visibleUsers)}</div>`;
 }
