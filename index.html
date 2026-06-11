@@ -1852,6 +1852,44 @@ const SUPER_NAV=[
   {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
 ];
 
+
+async function refreshSuperUsers(){
+  const container = document.getElementById('super-users-tbl');
+  if(!container) return;
+  if(!isLive){
+    renderSuperUsersTable(users);
+    return;
+  }
+  container.innerHTML = '<div style="padding:1rem;color:var(--text-muted);font-size:13px">Loading...</div>';
+  try {
+    const { data, error } = await supaClient.from('users').select('*').order('name');
+    if(error) throw error;
+    // Update local users array too
+    users = data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id,cityName:u.city_name}));
+    renderSuperUsersTable(users);
+  } catch(e) {
+    container.innerHTML = '<div style="padding:1rem;color:var(--red);font-size:13px">Error loading users: '+e.message+'<br><br>You may need to disable RLS on the users table in Supabase.</div>';
+  }
+}
+
+function renderSuperUsersTable(list){
+  const container = document.getElementById('super-users-tbl');
+  if(!container) return;
+  const filtered = list.filter(u=>u.role!=='superadmin');
+  container.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>City</th><th>Telegram</th><th>WhatsApp</th></tr></thead>
+    <tbody>${filtered.map(u=>`<tr>
+      <td><strong>${u.name}</strong></td>
+      <td style="font-size:12px;color:var(--text-muted)">${u.email}</td>
+      <td>${roleBadge(u.role)}</td>
+      <td style="font-size:12px">${u.stateId||u.state_id?getState(u.stateId||u.state_id).name:'All'}</td>
+      <td style="font-size:12px">${u.cityName||u.city_name||'-'}</td>
+      <td>${u.telegram_id?'<span class="badge b-done">Yes</span>':'<span class="badge b-grey">No</span>'}</td>
+      <td>${u.whatsapp?'<span class="badge b-done">Yes</span>':'<span class="badge b-grey">No</span>'}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
 function renderSuperAdmin(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title" style="color:#dc2626">🔐 Super Admin Panel</div><div class="page-sub">Full system access - visible only to you</div></div></div>
@@ -1902,6 +1940,8 @@ function renderSuperAdmin(){
         <button class="btn" onclick="exportAllData()">📤 Export all data</button>
       </div>
     </div>`;
+  // Auto-load fresh user data
+  setTimeout(refreshSuperUsers, 100);
 }
 
 function resetTickets(){if(!confirm('Delete ALL tickets? This cannot be undone.'))return;tickets=[];materials=[];attachments=[];checkins=[];if(isLive){supaClient.from('tickets').delete().neq('id','x').then(()=>{});supaClient.from('ticket_comments').delete().neq('id','x').then(()=>{});supaClient.from('expenses').delete().neq('id','x').then(()=>{});supaClient.from('materials').delete().neq('id','x').then(()=>{});supaClient.from('ticket_attachments').delete().neq('id','x').then(()=>{});}LOG('SUPER: Tickets cleared','by '+session.name,'r');refreshPage();}
