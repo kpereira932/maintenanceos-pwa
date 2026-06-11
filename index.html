@@ -428,7 +428,7 @@ NAV2['design-poc'] = [
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 function buildNav(){
-  const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||[]);
+  const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||NAV2[session.role]||[]);
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
     if(i.s)return`<div class="nav-section">${i.s}</div>`;
     return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}');closeSidebar()"><span class="ni">${i.i}</span>${i.l}</div>`;
