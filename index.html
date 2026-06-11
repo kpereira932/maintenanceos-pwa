@@ -2370,7 +2370,7 @@ function designListCard(l,showReview){
 function openDesignList(id){
   const l=designLists.find(x=>x.id===id);if(!l)return;
   const loc=getLoc(l.locationId);
-  document.getElementById('m-title').textContent='Site visit — '+(loc.city||'')+' '+loc.name;
+  document.getElementById('m-title').textContent='Site visit - '+(loc.city||'')+' '+loc.name;
   document.getElementById('m-body').innerHTML=`
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">${l.visitDate} · ${l.items.length} items · ${l.status}</div>
     ${l.items.map(item=>`<div class="card" style="margin-bottom:8px;background:var(--cream)">
@@ -2388,7 +2388,7 @@ function openDesignList(id){
 function openDesignListReview(id){
   const l=designLists.find(x=>x.id===id);if(!l)return;
   const loc=getLoc(l.locationId);
-  document.getElementById('m-title').textContent='Review — '+(loc.city||'')+' '+loc.name;
+  document.getElementById('m-title').textContent='Review - '+(loc.city||'')+' '+loc.name;
   document.getElementById('m-body').innerHTML=`
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">${l.visitDate} · ${l.items.length} items to review</div>
     <div id="review-items">
@@ -2443,7 +2443,7 @@ async function finaliseDesignReview(listId){
 
   for(const item of approved){
     const tid='T'+Date.now().toString().slice(-6);
-    const row={id:tid,location_id:l.locationId,state_id:loc.stateId||loc.state_id,category:item.category,title:item.desc,description:'From design team site visit — '+l.visitDate,priority:item.priority,status:'Open',raised_by:session.id,raised_by_name:'Design Team - '+session.name,due_date:''};
+    const row={id:tid,location_id:l.locationId,state_id:loc.stateId||loc.state_id,category:item.category,title:item.desc,description:'From design team site visit - '+l.visitDate,priority:item.priority,status:'Open',raised_by:session.id,raised_by_name:'Design Team - '+session.name,due_date:''};
     if(isLive){
       await dbInsert('tickets',row);
     } else {
@@ -2465,7 +2465,7 @@ async function finaliseDesignReview(listId){
   await tgNotifyRole('technician',notifMsg,null,l.locationId);
   await tgNotifyRole('founder',notifMsg,null,l.locationId);
 
-  LOG('Design list finalised',createdTickets.length+' tickets created — '+loc.name,'g');
+  LOG('Design list finalised',createdTickets.length+' tickets created - '+loc.name,'g');
   closeModal();
   showToast(createdTickets.length+' tickets created and sent to maintenance queue');
   renderDesignLists();
@@ -2509,7 +2509,7 @@ async function submitFounderConcern(ticketId){
   if(t?.assignedTo||t?.assigned_to) await tgNotifyUser(t.assignedTo||t.assigned_to,msg);
   LOG('Founder concern raised',ticketId,'w');
   closeModal();
-  showToast('Concern raised — team notified');
+  showToast('Concern raised - team notified');
   refreshPage();
 }
 
@@ -2570,7 +2570,7 @@ function renderDesignTable(list){
           const loc=getLoc(t.locationId||t.location_id||'');
           const assignee=t.assignedTo||t.assigned_to?getUser(t.assignedTo||t.assigned_to):null;
           const lastComment=t.comments&&t.comments.length?t.comments[t.comments.length-1]:null;
-          const statusColor={Open:'var(--amber)',In Progress:'var(--blue)',Resolved:'var(--green-mid)','On Hold':'var(--text-muted)',Closed:'var(--text-muted)'}[t.status]||'var(--text-muted)';
+          const statusColor={Open:'var(--amber)','In Progress':'var(--blue)',Resolved:'var(--green-mid)','On Hold':'var(--text-muted)',Closed:'var(--text-muted)'}[t.status]||'var(--text-muted)';
           const rowBg=i%2===0?'var(--warm-white)':'var(--cream)';
           return`<tr style="background:${rowBg};border-bottom:1px solid var(--tan)" onclick="openTicket('${t.id}')" class="dt-row">
             <td style="padding:10px 12px;cursor:pointer">
