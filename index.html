@@ -2269,8 +2269,14 @@ async function saveDesignDraft(){
   if(!locId){alert('Select a location');return;}
   const items=getDesignItems();
   if(!items.length){alert('Add at least one item');return;}
-  const list={id:'dl'+Date.now(),pocId:session.id,locationId:locId,visitDate:date,items:items.map(i=>({...i,photoFile:undefined})),status:'draft',createdAt:nowTs()};
-  designLists.push(list);
+  const draftId='dl'+Date.now();
+  const draftItems=items.map(i=>({...i,photoFile:undefined}));
+  if(isLive){
+    await dbInsert('design_lists',{id:draftId,poc_id:session.id,location_id:locId,visit_date:date,items:draftItems,status:'draft'});
+    await loadLiveData();
+  } else {
+    designLists.push({id:draftId,pocId:session.id,locationId:locId,visitDate:date,items:draftItems,status:'draft',createdAt:nowTs()});
+  }
   showToast('Draft saved');
   navTo('design-my-lists');
 }
@@ -2284,8 +2290,15 @@ async function submitDesignList(){
   // Check all items have photos
   const missingPhoto=items.some(i=>!i.photoFile);
   if(missingPhoto){alert('Every item needs a photo before submitting');return;}
-  const list={id:'dl'+Date.now(),pocId:session.id,locationId:locId,visitDate:date,items:items.map(i=>({...i,photoFile:undefined,photoUrl:''})),status:'submitted',submittedAt:nowTs(),createdAt:nowTs()};
-  designLists.push(list);
+  const listId='dl'+Date.now();
+  const listItems=items.map(i=>({...i,photoFile:undefined,photoUrl:'',status:'pending'}));
+  const list={id:listId,pocId:session.id,locationId:locId,visitDate:date,items:listItems,status:'submitted',submittedAt:nowTs(),createdAt:nowTs()};
+  if(isLive){
+    await dbInsert('design_lists',{id:listId,poc_id:session.id,location_id:locId,visit_date:date,items:listItems,status:'submitted',submitted_at:new Date().toISOString()});
+    await loadLiveData();
+  } else {
+    designLists.push(list);
+  }
   LOG('Design list submitted',locId+' by '+session.name,'p');
   // Notify design managers
   const loc=getLoc(locId);
@@ -2401,10 +2414,14 @@ function promptRejectItem(listId,idx){
   reviewItem(listId,idx,'rejected',reason);
 }
 
-function reviewItem(listId,idx,status,reason){
+async function reviewItem(listId,idx,status,reason){
   const l=designLists.find(x=>x.id===listId);if(!l)return;
   l.items[idx].status=status;
   l.items[idx].rejectReason=reason||'';
+  // Save updated items to Supabase immediately
+  if(isLive){
+    await dbUpdate('design_lists',listId,{items:l.items});
+  }
   const el=document.getElementById('ri-status-'+idx);
   if(el) el.innerHTML=status==='approved'?'<span style="color:var(--green-mid);font-weight:600">Approved</span>':'<span style="color:var(--red);font-weight:600">Rejected: '+reason+'</span>';
 }
@@ -2416,6 +2433,9 @@ async function finaliseDesignReview(listId){
   if(!confirm(`Convert ${approved.length} approved items into maintenance tickets?`))return;
 
   l.status='reviewed';l.reviewedAt=nowTs();l.reviewedBy=session.id;
+  if(isLive){
+    await dbUpdate('design_lists',listId,{status:'reviewed',items:l.items,reviewed_at:new Date().toISOString(),reviewed_by:session.id});
+  }
   const loc=getLoc(l.locationId);
   const ts=nowTs();
   const createdTickets=[];
@@ -2794,6 +2814,9 @@ async function loadLiveData() {
     if (mt.data) materials = mt.data.map(m=>({...m,ticketId:m.ticket_id,addedBy:m.added_by,unitCost:m.unit_cost,totalCost:m.total_cost,vendorId:m.vendor_id}));
     if (att.data) attachments = att.data.map(a=>({...a,ticketId:a.ticket_id,uploadedBy:a.uploaded_by,fileName:a.file_name,fileUrl:a.file_url,fileType:a.file_type}));
     if (ci.data) checkins = ci.data.map(c=>({...c,ticketId:c.ticket_id,techId:c.tech_id}));
+    // Load design lists
+    const dl = await supaClient.from('design_lists').select('*').order('created_at',{ascending:false});
+    if (dl.data) designLists = dl.data.map(d=>({...d,pocId:d.poc_id,locationId:d.location_id,visitDate:d.visit_date,items:d.items||[]}));
     showToast('Live data loaded');
   } catch(e) {
     console.error('loadLiveData error',e);
