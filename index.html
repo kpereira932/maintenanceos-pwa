@@ -315,7 +315,7 @@ function pbadge(p){
 }
 // Get locations visible to current user based on state/city scope
 function visibleLocationIds(){
-  if(['superadmin','admin'].includes(session.role)) return locations.map(l=>l.id);
+  if(['superadmin','admin','founder'].includes(session.role)) return locations.map(l=>l.id);
   if(session.locationId) return [session.locationId]; // outlet/specific location
   if(session.cityId){
     // city-scoped: show all locations in that city
@@ -327,8 +327,9 @@ function visibleLocationIds(){
 
 function visT(){
   if(session.role==='superadmin') return tickets;
+  if(session.role==='founder') return tickets; // founder sees everything
   const visLocs = visibleLocationIds();
-  if(['admin','manager','supervisor','founder','design-manager'].includes(session.role)){
+  if(['admin','manager','supervisor','design-manager'].includes(session.role)){
     return tickets.filter(t=>visLocs.includes(t.locationId||t.location_id));
   }
   if(session.role==='technician'){
@@ -417,7 +418,7 @@ function navTo(p){
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
-  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists};
+  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists,'design-tickets':renderDesignTickets};
   if(map[p])map[p]();
 }
 
@@ -2512,6 +2513,113 @@ async function submitFounderConcern(ticketId){
   refreshPage();
 }
 
+
+// ============================================================
+// DESIGN TICKETS — spreadsheet style matching Mansi's sheet
+// ============================================================
+function renderDesignTickets(){
+  const vis = sortByUrgency(visT());
+  const canEdit = ['design-manager','admin','manager','founder'].includes(session.role);
+
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr">
+      <div><div class="page-title">Design Tickets</div>
+      <div class="page-sub">${vis.length} tickets</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn primary" onclick="navTo('raise')">+ Raise ticket</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1rem;display:flex;gap:8px;flex-wrap:wrap">
+      <select id="dt-status" onchange="applyDesignFilter()" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--tan);border-radius:4px;background:var(--warm-white)">
+        <option value="">All statuses</option>
+        <option>Open</option>
+        <option>In Progress</option>
+        <option>On Hold</option>
+        <option>Resolved</option>
+      </select>
+      <select id="dt-loc" onchange="applyDesignFilter()" style="font-size:12px;padding:6px 10px;border:1.5px solid var(--tan);border-radius:4px;background:var(--warm-white)">
+        <option value="">All locations</option>
+        ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
+      </select>
+    </div>
+
+    <div id="dt-table-wrap">
+      ${renderDesignTable(vis)}
+    </div>`;
+}
+
+function renderDesignTable(list){
+  if(!list.length) return '<div class="empty">No tickets found</div>';
+  return`<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;background:var(--warm-white);border-radius:4px;border:1px solid var(--tan);overflow:hidden">
+      <thead>
+        <tr style="background:var(--cream)">
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:200px">Issue</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:130px">Assigned to</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:100px">Location</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:100px">Start date</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:100px">End date</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:110px">Status</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;min-width:200px">Comments</th>
+          <th style="padding:10px 12px;text-align:left;border-bottom:2px solid var(--tan);font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map((t,i)=>{
+          const loc=getLoc(t.locationId||t.location_id||'');
+          const assignee=t.assignedTo||t.assigned_to?getUser(t.assignedTo||t.assigned_to):null;
+          const lastComment=t.comments&&t.comments.length?t.comments[t.comments.length-1]:null;
+          const statusColor={Open:'var(--amber)',In Progress:'var(--blue)',Resolved:'var(--green-mid)','On Hold':'var(--text-muted)',Closed:'var(--text-muted)'}[t.status]||'var(--text-muted)';
+          const rowBg=i%2===0?'var(--warm-white)':'var(--cream)';
+          return`<tr style="background:${rowBg};border-bottom:1px solid var(--tan)" onclick="openTicket('${t.id}')" class="dt-row">
+            <td style="padding:10px 12px;cursor:pointer">
+              <div style="font-weight:600;color:var(--charcoal);margin-bottom:2px">${t.title}</div>
+              <div style="font-size:11px;color:var(--amber);font-weight:600">${t.id} · ${pbadge(t.priority)}</div>
+            </td>
+            <td style="padding:10px 12px;color:${assignee?'var(--green-mid)':'var(--red)'};font-weight:500">
+              ${assignee?assignee.name:'To be assigned'}
+            </td>
+            <td style="padding:10px 12px;font-size:12px;color:var(--text-muted)">
+              ${loc.city?loc.city+' - ':''}${loc.name}
+            </td>
+            <td style="padding:10px 12px;font-size:12px;color:var(--text-muted)">
+              ${t.createdAt?t.createdAt.split(' ')[0]:t.created_at?t.created_at.slice(0,10):'-'}
+            </td>
+            <td style="padding:10px 12px;font-size:12px;color:var(--text-muted)">
+              ${t.dueDate||t.due_date||'-'}
+            </td>
+            <td style="padding:10px 12px">
+              <span style="font-size:11px;font-weight:700;color:${statusColor};text-transform:uppercase;letter-spacing:.3px">${t.status}</span>
+            </td>
+            <td style="padding:10px 12px;font-size:12px;color:var(--text-muted);max-width:200px">
+              ${lastComment?`<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${lastComment.text}</div><div style="font-size:10px;color:var(--tan-dark);margin-top:2px">${lastComment.time||''}</div>`:'<span style="color:var(--tan-dark)">No comments</span>'}
+            </td>
+            <td style="padding:10px 12px" onclick="event.stopPropagation()">
+              <div style="display:flex;gap:4px">
+                <button class="btn sm primary" onclick="openTicket('${t.id}')">View</button>
+                ${['design-manager','admin','manager','founder','supervisor'].includes(session.role)?`<button class="btn sm" onclick="openAssignModal('${t.id}')">Assign</button>`:''}
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  </div>
+  <style>.dt-row:hover td{background:var(--amber-pale)!important;}</style>`;
+}
+
+function applyDesignFilter(){
+  const status=document.getElementById('dt-status')?.value;
+  const locId=document.getElementById('dt-loc')?.value;
+  let f=sortByUrgency(visT());
+  if(status) f=f.filter(t=>t.status===status);
+  if(locId) f=f.filter(t=>(t.locationId||t.location_id)===locId);
+  const wrap=document.getElementById('dt-table-wrap');
+  if(wrap) wrap.innerHTML=renderDesignTable(f);
+}
+
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -2591,7 +2699,7 @@ function showMTTab(show,h1,h2,btn){
 function renderRaise(){
   // For outlet: fixed to their location
   // For manager/admin/technician: can pick any location
-  const canPickLocation = ['admin','manager','technician'].includes(session.role);
+  const canPickLocation = ['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role);
   const visLocs = canPickLocation ? visibleLocationIds() : [];
   const locOptions = canPickLocation
     ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')
@@ -2761,6 +2869,13 @@ function startRealtime() {
       showToast(' New comment on ticket ' + payload.new.ticket_id);
       setTimeout(() => refreshPage(), 300);
     })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'design_lists' }, payload => {
+      if(['design-manager','founder','admin'].includes(session?.role)){
+        showToast('Design list updated');
+        setTimeout(() => { if(currentPage==='design-lists') renderDesignLists(); }, 300);
+      }
+      setTimeout(() => loadLiveData(), 500);
+    })
     .subscribe();
 }
 
@@ -2855,7 +2970,7 @@ window.doLogin = async function() {
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
     buildNav();
-    navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'design-lists','design-poc':'design-raise'}[session.role]||'dashboard');
+    navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
     setTimeout(showInstallBanner, 5000);
@@ -2889,7 +3004,7 @@ window.submitTicket = async function() {
 
   // Determine location
   let locationId = session.locationId; // outlet uses their own
-  if(['admin','manager','technician'].includes(session.role)){
+  if(['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role)){
     const locEl = document.getElementById('ri-loc');
     locationId = locEl ? locEl.value : null;
     if(!locationId){alert('Please select a location');return;}
@@ -2915,7 +3030,8 @@ window.submitTicket = async function() {
     alert('Ticket '+id+' submitted!');
   }
   // Redirect based on role
-  if(['admin','manager'].includes(session.role)) navTo('tickets');
+  if(['admin','manager','founder'].includes(session.role)) navTo('tickets');
+  else if(['design-manager','design-poc'].includes(session.role)) navTo('design-tickets');
   else navTo('my-tasks');
 };
 
