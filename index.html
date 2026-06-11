@@ -1218,10 +1218,25 @@ function deleteLocation(id){const open=tickets.filter(t=>t.locationId===id&&!['R
 function renderUsers(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${users.length} users</div></div><button class="btn primary" onclick="openAddUser()">＋ Add user</button></div>
-    <div class="tab-btns">${['All','Admin','Manager','Technician','Outlet / CK'].map((r,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="filterUsers('${r}',this)">${r}</button>`).join('')}</div>
-    <div id="utbl">${userTable(users)}</div>`;
+    <div class="tab-btns">${['All','Admin','Manager','Supervisor','Technician','Outlet / CK','Founder','Design Manager','Design POC'].map((r,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="filterUsers('${r}',this)">${r}</button>`).join('')}</div>
+    <div id="utbl">${userTable(visibleUsers)}</div>`;
 }
-function filterUsers(role,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const f=role==='All'?users:users.filter(u=>roleLabel(u.role).toLowerCase()===role.toLowerCase()||u.role===role.toLowerCase());document.getElementById('utbl').innerHTML=userTable(f);}
+function filterUsers(role,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  let f;
+  if(role==='All'){
+    f=users.filter(u=>u.role!=='superadmin');
+  } else {
+    const roleLower=role.toLowerCase().replace(/ \/ /g,'/').replace(/ /g,'-');
+    f=users.filter(u=>u.role!=='superadmin'&&(
+      roleLabel(u.role).toLowerCase()===role.toLowerCase()||
+      u.role===roleLower||
+      u.role===role.toLowerCase()
+    ));
+  }
+  document.getElementById('utbl').innerHTML=userTable(f);
+}
 function userTable(list){
   if(!list.length)return'<div class="empty">No users</div>';
   return`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead><tbody>${list.map(u=>{
