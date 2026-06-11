@@ -634,16 +634,47 @@ function openTicket(id){
       ${t.comments.map(c=>{const u=getUser(c.user);return`<div class="tl-item active"><strong>${u?u.name:c.user}:</strong> ${c.text} <span style="color:#aaa">· ${c.time}</span></div>`;}).join('')}
       ${['Resolved','Closed'].includes(t.status)?'<div class="tl-item done" style="color:#059669;font-weight:600">Ticket resolved</div>':''}
     </div>
-    <div style="margin-top:1rem">
-      <label style="font-size:12px;font-weight:600;color:#555;display:block;margin-bottom:4px">Add comment</label>
-      <textarea id="cmt-${id}" style="width:100%;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;min-height:60px" placeholder="Type your update..."></textarea>
+
+    <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Actions</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${['admin','manager','supervisor','founder'].includes(session.role)?`
+          <button class="btn sm primary" onclick="openAssignModal('${id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
+          ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+          ${ticketExp(id).length>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${ticketExp(id).length})</button>`:''}
+          ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
+          <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
+        `:''}
+        ${session.role==='technician'?`
+          ${(t.assignedTo===session.id||t.assigned_to===session.id)?`
+            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+            <button class="btn sm" onclick="openEstimateModal('${id}')">Estimate</button>
+            ${estimates.some(e=>e.ticketId===id&&e.status==='approved')?`<button class="btn sm" onclick="openExpModal('${id}')">Expense</button>`:''}
+            ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
+            <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
+            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm warning" onclick="techCheckIn('${id}','on_way')">On my way</button>`:''}
+            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm warning" onclick="techCheckIn('${id}','arrived')">Arrived</button>`:''}
+            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm danger" onclick="openOnHoldModal('${id}')">On Hold</button>`:''}
+            ${t.status==='On Hold'?`<button class="btn sm success" onclick="resumeTicket('${id}')">Resume</button>`:''}
+          `:`<button class="btn sm primary" onclick="assignToSelf('${id}')">Take ticket</button>`}
+        `:''}
+        ${session.role==='supervisor'?`
+          <button class="btn sm primary" onclick="openAssignModal('${id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
+          ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+          ${ticketExp(id).length>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${ticketExp(id).length})</button>`:''}
+          ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
+          <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
+        `:''}
+        ${session.role==='founder'?`<button class="btn sm warning" onclick="openFounderConcern('${id}')">Raise concern</button>`:''}
+      </div>
     </div>
-    <div style="display:flex;gap:7px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap">
-      <button class="btn" onclick="closeModal()">Close</button>
-      <button class="btn primary" onclick="addComment('${id}')">Post</button>
-      ${['admin','manager','supervisor'].includes(session.role)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
-      ${session.role==='technician'&&(t.assignedTo===session.id||t.assigned_to===session.id)&&!['Resolved','Closed'].includes(t.status)?`<button class="btn success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
-      ${session.role==='founder'?`<button class="btn warning" onclick="openFounderConcern('${id}')">Raise concern</button>`:''}
+    <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:4px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Add comment</label>
+      <textarea id="cmt-${id}" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:9px 11px;font-size:13px;font-family:inherit;min-height:70px;background:var(--warm-white)" placeholder="Type your update..."></textarea>
+      <div style="display:flex;gap:7px;margin-top:8px;justify-content:flex-end">
+        <button class="btn" onclick="closeModal()">Close</button>
+        <button class="btn primary" onclick="addComment('${id}')">Post comment</button>
+      </div>
     </div>`;
   openModal();
 }
