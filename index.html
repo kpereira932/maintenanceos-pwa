@@ -197,7 +197,7 @@ tr:hover td{background:var(--cream)}
 <div class="auth-wrap" id="auth-screen">
   <div class="auth-card">
     <div style="text-align:center;margin-bottom:2rem">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px">Benne</div>
+      <div style="font-family:'Lora',Georgia,serif;font-size:12px;font-weight:400;color:var(--charcoal);letter-spacing:0;text-transform:lowercase;margin-bottom:8px">benne</div>
       <div class="auth-logo" style="font-size:28px;font-weight:700;color:#C48524">MaintenanceOS</div>
       <div style="width:40px;height:2px;background:#C48524;margin:12px auto 0;border-radius:2px"></div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:10px;letter-spacing:.5px">Maintenance management platform</div>
@@ -427,6 +427,8 @@ NAV2['design-poc'] = [
   {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'recurring',i:'',l:'Recurring tasks'},
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
+// Merge NAV2 into NAV so all roles work with one lookup
+Object.assign(NAV, NAV2);
 function buildNav(){
   const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||NAV2[session.role]||[]);
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
@@ -1271,6 +1273,7 @@ function userFormHTML(u){
   const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
   return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet','founder','design-manager','design-poc'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
+  ${u.user_code?`<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">User ID: <strong style="color:var(--amber)">${u.user_code}</strong></div>`:''}
   <div class="fg" id="ucf" style="${['admin','superadmin','outlet'].includes(u.role)?'display:none':''}"><label>City scope <span style="color:#888;font-weight:400">(restrict to one city — leave blank for whole state)</span></label><input type="text" id="ucity" value="${u.cityName||u.city_name||''}" placeholder="e.g. Mumbai, Pune, Delhi..."></div>
   <div class="fg"><label>Password</label><input type="text" id="up" value="${u.pass||''}" placeholder="Leave blank to keep current"></div>
   <div class="fg"><label>WhatsApp number <span style="color:#888;font-weight:400">(with country code, e.g. +919876543210)</span></label><input type="text" id="uwa" value="${u.whatsapp||''}" placeholder="+91XXXXXXXXXX"></div>
@@ -2640,6 +2643,63 @@ function applyDesignFilter(){
 }
 
 
+
+// ============================================================
+// USER CODE GENERATION
+// BNM = Benne Maintenance (staff), BNP = Benne Property (outlet/CK)
+// ============================================================
+function generateUserCode(role){
+  const isOutlet = role === 'outlet';
+  const prefix = isOutlet ? 'BNP' : 'BNM';
+  const existing = users.filter(u => u.user_code && u.user_code.startsWith(prefix));
+  const nums = existing.map(u => parseInt(u.user_code.replace(prefix,''))).filter(n=>!isNaN(n));
+  const next = nums.length > 0 ? Math.max(...nums) + 1 : (isOutlet ? 1 : 100);
+  return prefix + String(next).padStart(3,'0');
+}
+
+async function assignMissingUserCodes(){
+  // Assign codes to users who don't have one yet
+  const staffUsers = users.filter(u => !u.user_code && u.role !== 'superadmin');
+  if(!staffUsers.length) return;
+  
+  // Sort by created_at so codes are assigned in order
+  const outlets = staffUsers.filter(u => u.role === 'outlet');
+  const staff = staffUsers.filter(u => u.role !== 'outlet');
+  
+  let bnpNum = 1;
+  let bnmNum = 100;
+  
+  // Find existing max numbers
+  users.forEach(u => {
+    if(u.user_code){
+      if(u.user_code.startsWith('BNP')){
+        const n = parseInt(u.user_code.replace('BNP',''));
+        if(!isNaN(n) && n >= bnpNum) bnpNum = n + 1;
+      } else if(u.user_code.startsWith('BNM')){
+        const n = parseInt(u.user_code.replace('BNM',''));
+        if(!isNaN(n) && n >= bnmNum) bnmNum = n + 1;
+      }
+    }
+  });
+  
+  for(const u of outlets){
+    const code = 'BNP' + String(bnpNum).padStart(3,'0');
+    bnpNum++;
+    if(isLive) await dbUpdate('users', u.id, {user_code: code});
+    else { const i = users.findIndex(x=>x.id===u.id); if(i>-1) users[i].user_code = code; }
+  }
+  
+  for(const u of staff){
+    const code = 'BNM' + String(bnmNum).padStart(3,'0');
+    bnmNum++;
+    if(isLive) await dbUpdate('users', u.id, {user_code: code});
+    else { const i = users.findIndex(x=>x.id===u.id); if(i>-1) users[i].user_code = code; }
+  }
+  
+  if(isLive) await loadLiveData();
+  showToast('User IDs assigned to all users');
+}
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -2734,7 +2794,14 @@ function renderRaise(){
     <div class="page-hdr"><div><div class="page-title">Raise a ticket</div><div class="page-sub">${subTitle}</div></div></div>
     <div style="max-width:560px"><div class="card">
       ${canPickLocation ? `<div class="fg"><label>Location</label><select id="ri-loc"><option value="">Select location...</option>${locOptions}</select></div>` : ''}
-      <div class="fg"><label>Your name <span style="color:#dc2626;font-weight:600">* required</span></label><input type="text" id="ri-name" placeholder="Enter your full name" style="border-color:#e8e8e4"></div>
+      <div class="fg"><label>Raised by <span style="color:#dc2626;font-weight:600">*</span></label>
+        <input type="text" id="ri-name" 
+          value="${['outlet','central_kitchen'].includes(session.role)?'':session.name||''}"
+          placeholder="${['outlet','central_kitchen'].includes(session.role)?'Enter your full name':session.name||'Your name'}"
+          ${['outlet','central_kitchen'].includes(session.role)?'':'readonly'}
+          style="border-color:var(--tan);${['outlet','central_kitchen'].includes(session.role)?'':'background:var(--cream);color:var(--text-muted);cursor:not-allowed'}">
+        ${!['outlet','central_kitchen'].includes(session.role)?'<div style="font-size:11px;color:var(--text-muted);margin-top:3px">Auto-filled from your account</div>':''}
+      </div>
       <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
       <div class="frow">
         <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
@@ -2938,7 +3005,7 @@ async function loadLiveData() {
     ]);
     if (st.data) states = st.data;
     if (lo.data) locations = lo.data.map(l=>({...l,stateId:l.state_id}));
-    if (us.data) users = us.data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id,cityName:u.city_name}));
+    if (us.data) users = us.data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id,cityName:u.city_name,user_code:u.user_code}));
     if (ti.data) tickets = ti.data.map(t=>({...t,locationId:t.location_id,stateId:t.state_id,raisedBy:t.raised_by,assignedTo:t.assigned_to,dueDate:t.due_date,desc:t.description,comments:[]}));
     if (cm.data) cm.data.forEach(c=>{ const t=tickets.find(x=>x.id===c.ticket_id); if(t) t.comments.push({user:c.user_id,text:c.text,time:c.created_at?.slice(0,16).replace('T',' ')}); });
     if (ex.data) expenses = ex.data.map(e=>({...e,ticketId:e.ticket_id,addedBy:e.added_by}));
@@ -2979,7 +3046,7 @@ window.doLogin = async function() {
         return;
       }
     }
-    session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName};
+    session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName, user_code: userData.user_code};
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     document.getElementById('sb-name').textContent=session.name;
@@ -2989,6 +3056,8 @@ window.doLogin = async function() {
     else if(session.stateId){locStr=getState(session.stateId).name+' region';}
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
+    // Auto-assign user codes to anyone missing one
+    setTimeout(assignMissingUserCodes, 2000);
     buildNav();
     navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
     // Ask for notification permission after login
@@ -3162,7 +3231,8 @@ window.saveNewUser = async function() {
   if(!name||!email){alert('Name and email required');return;}
   const role=document.getElementById('ur')?.value;
   const cityName=document.getElementById('ucity')?.value?.trim()||null;
-  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,telegram_id:document.getElementById('utg')?.value?.trim()||null,city_name:cityName,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
+  const newCode = generateUserCode(role);
+  const row={id:'u'+Date.now(),name,email,pass:document.getElementById('up')?.value||'pass123',role,state_id:document.getElementById('us')?.value||null,location_id:role==='outlet'?document.getElementById('ul')?.value||null:null,specialty:role==='technician'?document.getElementById('usp')?.value:null,whatsapp:document.getElementById('uwa')?.value?.trim()||null,telegram_id:document.getElementById('utg')?.value?.trim()||null,city_name:cityName,user_code:newCode,avatar:name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()};
   if(isLive){
     await dbInsert('users',row);
     await loadLiveData();
