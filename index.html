@@ -222,6 +222,7 @@ tr:hover td{background:var(--cream)}
 
 <!-- APP -->
 <div class="app" id="app" style="display:none">
+  <button id="float-refresh" onclick="refreshPage()" style="background:var(--amber);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.2);display:none;align-items:center;justify-content:center">&#8635;</button>
   <!-- Mobile top bar -->
   <div class="mobile-topbar">
     <button class="hamburger" onclick="toggleSidebar()" id="hamburger-btn">
@@ -407,7 +408,7 @@ const NAV={
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
@@ -420,13 +421,13 @@ const NAV={
   ],
   supervisor:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'notifications',i:'',l:'Notifications'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'notifications',i:'',l:'Notifications'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   outlet:[{id:'my-tickets',i:'',l:'My tickets'},{id:'profile',i:'',l:'My profile'}],
   founder:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},
     {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
     {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
@@ -437,7 +438,7 @@ const NAV2 = {};
 NAV2['design-manager'] = [
   {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
   {s:'Design'},{id:'design-lists',i:'',l:'Site visit lists'},{id:'design-tickets',i:'',l:'Design tickets'},
-  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'recurring',i:'',l:'Recurring tasks'},{id:'locations',i:'',l:'Locations'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'recurring',i:'',l:'Recurring tasks'},{id:'locations',i:'',l:'Locations'},
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 NAV2['design-poc'] = [
@@ -586,7 +587,7 @@ function renderDashboard(){
   }
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
-      <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${session.name}</div></div>
+      <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${session.name}<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       ${['admin','manager','supervisor'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
     </div>
     ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention to View AMC</div>`:''}
@@ -791,7 +792,7 @@ function renderExpenses(){
   const total=expenses.reduce((s,e)=>s+Number(e.amount),0);
   const pendTotal=pend.reduce((s,e)=>s+Number(e.amount),0);
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Expenses</div><div class="page-sub">All ticket costs</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">Expenses</div><div class="page-sub">All ticket costs<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
     <div class="metrics">
       <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total expenses</div><div class="mv g" style="font-size:20px">${fc(total)}</div></div>
       <div class="met"><div class="met-bar" style="background:#d97706"></div><div class="ml">Pending approval</div><div class="mv w" style="font-size:20px">${fc(pendTotal)}</div></div>
@@ -884,7 +885,7 @@ function renderMyExpenses(){
   const mine=expenses.filter(e=>e.addedBy===session.id);
   const total=mine.reduce((s,e)=>s+Number(e.amount),0);
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">My expenses</div><div class="page-sub">Total logged: ${fc(total)}</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">My expenses</div><div class="page-sub">Total logged: ${fc(total)}<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
     ${expTable(mine,false)||'<div class="empty">No expenses logged yet.</div>'}`;
 }
 
@@ -898,7 +899,7 @@ function renderAMC(){
   const totalVal=amcRecords.reduce((s,a)=>s+Number(a.amount),0);
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
-      <div><div class="page-title">AMC Tracker</div><div class="page-sub">Annual Maintenance Contracts</div></div>
+      <div><div class="page-title">AMC Tracker</div><div class="page-sub">Annual Maintenance Contracts<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       ${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddAMC()">＋ Add AMC</button>`:''}
     </div>
     <div class="metrics">
@@ -986,7 +987,7 @@ function sendAMCReminder(id){
 // ============================================================
 function renderReports(){
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Reports</div><div class="page-sub">Monthly summaries and custom reports</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">Reports</div><div class="page-sub">Monthly summaries and custom reports<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
     <div class="tab-btns">
       <button class="tab-btn active" onclick="showRepTab('rm','rc','re',this)">Monthly report</button>
       <button class="tab-btn" onclick="showRepTab('rc','rm','re',this)">Custom report</button>
@@ -1183,7 +1184,7 @@ function sendRepEmail(){const em=document.getElementById('se').value;if(!em){ale
 function renderLocations(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
-      <div><div class="page-title">Locations</div><div class="page-sub">States · Outlets · Central Kitchens</div></div>
+      <div><div class="page-title">Locations</div><div class="page-sub">States · Outlets · Central Kitchens<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       <div style="display:flex;gap:8px"><button class="btn" onclick="openAddState()">＋ Add state</button><button class="btn primary" onclick="openAddLocation()">＋ Add location</button></div>
     </div>
     <div id="loc-list">${locListHTML()}</div>`;
@@ -1260,7 +1261,7 @@ function deleteLocation(id){const open=tickets.filter(t=>t.locationId===id&&!['R
 function renderUsers(){
   const visibleUsers = users.filter(u=>u.role!=='superadmin');
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${visibleUsers.length} users</div></div><button class="btn primary" onclick="openAddUser()">+ Add user</button></div>
+    <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${visibleUsers.length} users<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div><button class="btn primary" onclick="openAddUser()">+ Add user</button></div>
     <div class="tab-btns">${['All','Admin','Manager','Supervisor','Technician','Outlet / CK','Founder','Design Manager','Design POC'].map((r,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="filterUsers('${r}',this)">${r}</button>`).join('')}</div>
     <div id="utbl">${userTable(visibleUsers)}</div>`;
 }
@@ -1354,7 +1355,7 @@ function renderProfile() {
   const botUrl = 'https://t.me/BennemaintenanceOSBot?start=' + session.id;
 
   document.getElementById('main-content').innerHTML = `
-    <div class="page-hdr"><div><div class="page-title">My profile</div><div class="page-sub">${session.name}</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">My profile</div><div class="page-sub">${session.name}<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
     <div style="max-width:560px">
 
       <div class="card" style="margin-bottom:1rem">
@@ -1495,7 +1496,7 @@ function renderVendors(){
   const inactive=vendors.filter(v=>!v.active);
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
-      <div><div class="page-title">Vendors</div><div class="page-sub">${vendors.length} vendors · ${active.length} active</div></div>
+      <div><div class="page-title">Vendors</div><div class="page-sub">${vendors.length} vendors · ${active.length} active<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn" onclick="downloadVendorTemplate()">&#11015; Download template</button>
         <button class="btn primary" onclick="openImportVendors()">&#128229; Import from Excel / CSV</button>
@@ -1951,7 +1952,7 @@ function renderSuperUsersTable(list){
 
 function renderSuperAdmin(){
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title" style="color:#dc2626">🔐 Super Admin Panel</div><div class="page-sub">Full system access - visible only to you</div></div></div>
+    <div class="page-hdr"><div><div class="page-title" style="color:#dc2626">🔐 Super Admin Panel</div><div class="page-sub">Full system access - visible only to you<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.5rem">
       <div class="met" style="cursor:pointer" onclick="navTo('tickets')"><div class="ml">Total tickets</div><div class="mv b">${tickets.length}</div></div>
@@ -2355,7 +2356,7 @@ function renderDesignMyLists(){
   const mine=designLists.filter(l=>l.pocId===session.id);
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
-      <div><div class="page-title">My Lists</div><div class="page-sub">${mine.length} site visit lists</div></div>
+      <div><div class="page-title">My Lists</div><div class="page-sub">${mine.length} site visit lists<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       <button class="btn primary" onclick="navTo('design-raise')">+ New site visit</button>
     </div>
     ${mine.length?mine.map(l=>{
@@ -2383,7 +2384,7 @@ function renderDesignLists(){
   const pending=designLists.filter(l=>l.status==='submitted');
   const reviewed=designLists.filter(l=>l.status==='reviewed');
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Site Visit Lists</div><div class="page-sub">${pending.length} pending review</div></div></div>
+    <div class="page-hdr"><div><div class="page-title">Site Visit Lists</div><div class="page-sub">${pending.length} pending review<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
     <div class="tab-btns">
       <button class="tab-btn active" onclick="showT2('dl-pend','dl-rev',this)">Pending review (${pending.length})</button>
       <button class="tab-btn" onclick="showT2('dl-rev','dl-pend',this)">Reviewed (${reviewed.length})</button>
@@ -2566,7 +2567,7 @@ function renderDesignTickets(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr">
       <div><div class="page-title">Design Tickets</div>
-      <div class="page-sub">${vis.length} tickets</div></div>
+      <div class="page-sub">${vis.length} tickets<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       <div style="display:flex;gap:8px">
         <button class="btn primary" onclick="navTo('raise')">+ Raise ticket</button>
       </div>
@@ -2765,7 +2766,7 @@ function openRaiseTicketModal(){
 
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
+    <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
     <div>${recurringSchedules.map(r=>{
       const locs=r.locationIds.map(id=>getLoc(id));
       const byS={};locs.forEach(l=>{const s=getState(l.stateId).name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
@@ -2802,7 +2803,7 @@ function renderNotifications(){
   if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','To be assigned');});}
   if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n- MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
   if(!h)h='<div class="empty">OK All clear - no notifications needed</div>';
-  document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications</div></div></div>${h}`;
+  document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>${h}`;
 }
 function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
 
