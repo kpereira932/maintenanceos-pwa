@@ -159,6 +159,8 @@ tr:hover td{background:var(--cream)}
 @media(max-width:768px){.sidebar{width:100%;position:relative;height:auto}.main{margin-left:0}.two-col,.frow,.frow3{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
 
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes flash-assign{0%,100%{background:var(--amber);box-shadow:0 0 0 0 rgba(196,133,36,.7)}50%{background:var(--amber-dark);box-shadow:0 0 0 6px rgba(196,133,36,0)}}
+.btn-flash{animation:flash-assign 1.5s infinite;color:#fff!important;border-color:transparent!important;}
 .sync-bar{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e8e8e4;border-radius:10px;padding:8px 14px;margin-bottom:1.25rem;font-size:12px}
 #toast{position:fixed;bottom:24px;right:24px;background:#A06B18;color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);opacity:0;transition:opacity .3s;max-width:320px;pointer-events:none}
 /* iOS safe area */
@@ -168,7 +170,7 @@ tr:hover td{background:var(--cream)}
 @media(max-width:768px){
   .sidebar{width:260px;z-index:1000;position:fixed;top:0;left:-260px;transition:left .25s ease;height:100vh}
   .sidebar.open{left:0;box-shadow:4px 0 20px rgba(0,0,0,.4)}
-  .main{margin-left:0;padding:1rem;padding-top:56px}
+  .main{margin-left:0;padding:1rem;padding-top:calc(56px + env(safe-area-inset-top))}
   .nav-item{padding:12px 1rem}
   .btn{padding:8px 12px}
   .metrics{grid-template-columns:repeat(2,1fr)}
@@ -264,7 +266,7 @@ tr:hover td{background:var(--cream)}
 let states = [];
 let locations = [];
 const CATEGORIES = ['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Furniture','Cleaning','Kitchen Equipment','Other'];
-const PRIORITIES = ['Urgent','Important','High','Medium','Low'];
+const PRIORITIES = ['High','Medium','Low'];
 let users = [
   {id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'},
 ];
@@ -294,7 +296,22 @@ let session = null, currentPage = '', NID = 20;
 function getLoc(id){return locations.find(l=>l.id===id)||{name:'Unknown',type:'outlet',stateId:null};}
 function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
 function getUser(id){return users.find(u=>u.id===id);}
-function getTechs(stateId){return stateId?users.filter(u=>u.role==='technician'&&(!u.stateId||u.stateId===stateId)):users.filter(u=>u.role==='technician');}
+function getTechs(stateId){
+  const allTechs = users.filter(u=>u.role==='technician');
+  if(!stateId) return allTechs;
+  return allTechs.filter(u=>{
+    const uState = u.stateId||u.state_id;
+    return !uState || uState===stateId;
+  });
+}
+function getSupervisors(stateId){
+  const allSups = users.filter(u=>u.role==='supervisor');
+  if(!stateId) return allSups;
+  return allSups.filter(u=>{
+    const uState = u.stateId||u.state_id;
+    return !uState || uState===stateId;
+  });
+}
 function locLabel(l){return (l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':'');}
 function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin',founder:'r-founder','design-manager':'r-design','design-poc':'r-design'}[r]||'';}
 function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin',founder:'Founder','design-manager':'Design Manager','design-poc':'Design POC'}[r]||r;}
@@ -303,15 +320,16 @@ function roleColor(r){return{admin:'#7c3aed',manager:'#0369a1',supervisor:'#0369
 function fc(n){return''+Number(n).toLocaleString('en-IN');}
 function isOD(t){if(['Resolved','Closed'].includes(t.status))return false;if(!t.dueDate)return false;const[d,m,y]=t.dueDate.split('/');return new Date(+y,+m-1,+d)<TODAY;}
 function dAgo(s){if(!s)return 0;const[d,m,y]=s.split('/');return Math.floor((TODAY-new Date(+y,+m-1,+d))/86400000);}
-function isESC(t){return isOD(t)&&['Urgent','Important','High'].includes(t.priority)&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
+function isESC(t){return isOD(t)&&t.priority==='High'&&!['Resolved','Closed'].includes(t.status)&&dAgo(t.dueDate)>=3;}
 function nowTs(){const n=new Date();return String(n.getDate()).padStart(2,'0')+'/'+String(n.getMonth()+1).padStart(2,'0')+'/'+n.getFullYear()+' '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 function LOG(a,d,c='b'){auditLog.unshift({t:nowTs(),a,d,c});}
 function priOrder(p){return{Urgent:0,Important:1,High:2,Medium:3,Low:4}[p]??3;}
 function sortByUrgency(arr){return [...arr].sort((a,b)=>{if(isESC(a)&&!isESC(b))return -1;if(!isESC(a)&&isESC(b))return 1;if(isOD(a)&&!isOD(b))return -1;if(!isOD(a)&&isOD(b))return 1;return priOrder(a.priority)-priOrder(b.priority);});}
 function sbadge(t){if(isESC(t))return'<span class="badge b-esc"> Escalated</span>';if(isOD(t))return'<span class="badge b-ov">Overdue</span>';const m={Open:'b-open','In Progress':'b-wip',Resolved:'b-done',Closed:'b-done','On Hold':'b-med'};return`<span class="badge ${m[t.status]||'b-open'}">${t.status}</span>`;}
 function pbadge(p){
-  const cls={Urgent:'b-esc',Important:'b-high',High:'b-high',Medium:'b-med',Low:'b-low'}[p]||'b-med';
-  return`<span class="badge ${cls}">${p}</span>`;
+  const cls={High:'b-high',Medium:'b-med',Low:'b-low'}[p]||'b-med';
+  const dot={High:'🔴',Medium:'🟡',Low:'🟢'}[p]||'';
+  return`<span class="badge ${cls}">${dot} ${p}</span>`;
 }
 // Get locations visible to current user based on state/city scope
 function visibleLocationIds(){
@@ -383,19 +401,19 @@ const NAV={
   admin:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   technician:[
     {id:'my-tasks',i:'',l:'My tasks'},
-    {id:'raise',i:'',l:'Raise ticket'},
+    
     {id:'tickets',i:'',l:'Tickets'},
     {id:'my-expenses',i:'',l:'My expenses'},
     {id:'profile',i:'',l:'My profile'},
@@ -405,10 +423,10 @@ const NAV={
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'notifications',i:'',l:'Notifications'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
-  outlet:[{id:'raise',i:'',l:'Raise issue'},{id:'my-tickets',i:'',l:'My tickets'},{id:'profile',i:'',l:'My profile'}],
+  outlet:[{id:'my-tickets',i:'',l:'My tickets'},{id:'profile',i:'',l:'My profile'}],
   founder:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},
     {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
     {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
@@ -419,12 +437,12 @@ const NAV2 = {};
 NAV2['design-manager'] = [
   {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
   {s:'Design'},{id:'design-lists',i:'',l:'Site visit lists'},{id:'design-tickets',i:'',l:'Design tickets'},
-  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'recurring',i:'',l:'Recurring tasks'},{id:'locations',i:'',l:'Locations'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'assign',i:'',l:'Assign tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'recurring',i:'',l:'Recurring tasks'},{id:'locations',i:'',l:'Locations'},
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 NAV2['design-poc'] = [
   {s:'Design'},{id:'design-raise',i:'',l:'New site visit'},{id:'design-my-lists',i:'',l:'My lists'},{id:'design-tickets',i:'',l:'Design tickets'},
-  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'raise',i:'',l:'Raise ticket'},{id:'recurring',i:'',l:'Recurring tasks'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'recurring',i:'',l:'Recurring tasks'},
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 // Merge NAV2 into NAV so all roles work with one lookup
@@ -465,24 +483,25 @@ function ticketCard(t,compact=false){
         <div style="font-size:13px;font-weight:600;color:var(--charcoal);line-height:1.3">${t.title}</div>
       </div>
     </div>
-    <div style="display:flex;gap:12px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;align-items:center;margin-bottom:8px">
+    <div style="display:flex;gap:8px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;align-items:center;margin-bottom:8px">
       <span>📍 ${state.name?state.name+' - ':''}${locName}</span>
+      <span style="background:var(--cream);border:1px solid var(--tan);padding:1px 7px;border-radius:3px;font-size:11px;font-weight:600">${t.category||t.category||''}</span>
       ${t.dueDate?`<span>📅 ${t.dueDate}${isOD(t)?' <span style="color:var(--red);font-weight:600">(+'+dAgo(t.dueDate)+'d)</span>':''}</span>`:''}
       ${assignee?`<span style="color:var(--green-mid);font-weight:600">🔧 ${assignee.name}</span>`:'<span style="color:var(--red);font-weight:500">To be assigned</span>'}
-      ${t.raised_by_name||t.raisedByName?`<span style="color:var(--text-muted)">Raised by: ${t.raised_by_name||t.raisedByName}</span>`:''}
+      ${t.raised_by_name||t.raisedByName?`<span style="color:var(--text-muted)">by ${t.raised_by_name||t.raisedByName}</span>`:''}
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center" onclick="event.stopPropagation()">
       ${isTechSup?`
-        ${(t.assignedTo===session.id||t.assigned_to===session.id)&&!['Resolved','Closed','On Hold'].includes(t.status)?`
+        ${(t.assignedTo===session.id||t.assigned_to===session.id||t.supervisor_id===session.id)&&!['Resolved','Closed','On Hold'].includes(t.status)?`
           <button class="btn sm warning" onclick="techCheckIn('${t.id}','on_way')">On my way</button>
-          <button class="btn sm" style="border-color:var(--tan)" onclick="techCheckIn('${t.id}','arrived')">Arrived</button>
+          <button class="btn sm success" onclick="event.stopPropagation();resolveTicket('${t.id}')">Resolve</button>
         `:''}
         ${!t.assignedTo&&!t.assigned_to&&!['Resolved','Closed'].includes(t.status)?`
           <button class="btn sm primary" onclick="assignToSelf('${t.id}')">Take ticket</button>
         `:''}
       `:`
         ${['admin','manager','supervisor','founder'].includes(session.role)?`
-          <button class="btn sm primary" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
+          <button class="btn sm primary${!t.assignedTo&&!t.assigned_to?' btn-flash':''}" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
           ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="event.stopPropagation();resolveTicket('${t.id}')">Resolve</button>`:''}
         `:''}
       `}
@@ -620,7 +639,7 @@ function renderTickets(){
       <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')}</select>
       <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option></select>
       <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
-      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Priority</option><option>Urgent</option><option>Important</option><option>High</option><option>Medium</option><option>Low</option></select>
+      <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Urgency</option><option>High</option><option>Medium</option><option>Low</option></select>
     </div>
     <div id="tlist">${vis.map(t=>ticketCard(t)).join('')||'<div class="empty">No tickets</div>'}</div>`;
 }
@@ -1082,7 +1101,7 @@ function customReportForm(){
     </div>
     <div class="frow">
       <div class="fg"><label>Category</label><select id="cr-c"><option value="">Category</option>${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-      <div class="fg"><label>Priority</label><select id="cr-p"><option value="">Priority</option><option>Urgent</option><option>Important</option><option>High</option><option>Medium</option><option>Low</option></select></div>
+      <div class="fg"><label>Urgency</label><select id="cr-p"><option value="">Urgency</option><option>High</option><option>Medium</option><option>Low</option></select></div>
     </div>
     <button class="btn primary" onclick="runCustomReport()">▶ Generate</button>
     <div id="cr-out" style="margin-top:1.5rem"></div>
@@ -2267,7 +2286,7 @@ function addDesignItem(){
     <div class="fg"><label>Description</label><input type="text" class="di-desc" placeholder="Describe the issue or work needed..."></div>
     <div class="frow">
       <div class="fg"><label>Category</label><select class="di-cat">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-      <div class="fg"><label>Priority</label><select class="di-pri"><option>Urgent</option><option>Important</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+      <div class="fg"><label>Urgency</label><select class="di-pri"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
     </div>
     <div class="fg"><label>Photo <span style="color:var(--red);font-weight:600">* required</span></label>
       <input type="file" class="di-photo" accept="image/*,video/*" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit">
@@ -2700,6 +2719,50 @@ async function assignMissingUserCodes(){
   showToast('User IDs assigned to all users');
 }
 
+
+function openRaiseTicketModal(){
+  // For outlet - use their own location, for others show location picker
+  const canPickLocation = !['outlet'].includes(session.role);
+  const visLocs = canPickLocation ? visibleLocationIds() : [];
+  const locOptions = visLocs.map(id=>{
+    const l=getLoc(id);const s=getState(l.stateId||l.state_id);
+    return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;
+  }).join('');
+
+  document.getElementById('m-title').textContent = 'Raise a ticket';
+  document.getElementById('m-body').innerHTML = `
+    ${canPickLocation?`<div class="fg"><label>Location</label><select id="ri-loc"><option value="">Select location...</option>${locOptions}</select></div>`:''}
+    <div class="fg"><label>Raised by <span style="color:var(--red)">*</span></label>
+      <input type="text" id="ri-name"
+        value="${['outlet'].includes(session.role)?'':session.name||''}"
+        placeholder="${['outlet'].includes(session.role)?'Enter your full name':session.name}"
+        ${['outlet'].includes(session.role)?'':'readonly'}
+        style="${['outlet'].includes(session.role)?'':'background:var(--cream);cursor:not-allowed'}">
+    </div>
+    <div class="fg"><label>Issue title <span style="color:var(--red)">*</span></label>
+      <input type="text" id="ri-t" placeholder="e.g. AC not cooling, gas leak...">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="fg"><label>Urgency <span style="color:var(--red)">*</span></label>
+        <select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Description</label>
+      <textarea id="ri-d" placeholder="Describe the problem. When did it start? Is it affecting operations?"></textarea>
+    </div>
+    <div class="fg"><label>Due date</label><input type="date" id="ri-dd"></div>
+    <div class="fg"><label>Photo / video <span style="color:var(--red)">* required</span></label>
+      <input type="file" id="raise-file" accept="image/*,video/*" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Take a photo or video of the issue</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="submitTicket()">Submit ticket</button>
+    </div>`;
+  openModal();
+}
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks</div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -2722,7 +2785,7 @@ function openAddRecurring(){
   document.getElementById('m-body').innerHTML=`
     <div class="fg"><label>Task name</label><input type="text" id="rt" placeholder="e.g. AC servicing"></div>
     <div class="frow"><div class="fg"><label>Category</label><select id="rc">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Frequency</label><select id="rf"><option>1 month</option><option>3 months</option><option selected>6 months</option><option>1 year</option></select></div></div>
-    <div class="fg"><label>Priority</label><select id="rp"><option>Urgent</option><option>Important</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <div class="fg"><label>Urgency</label><select id="rp"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
     <div class="fg"><label>Locations</label><div style="max-height:150px;overflow-y:auto;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px">${states.map(s=>`<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;margin:5px 0 3px">${s.name}</div>${locations.filter(l=>l.stateId===s.id).map(l=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0"><input type="checkbox" value="${l.id}" checked> ${locLabel(l)}</label>`).join('')}`).join('')}</div></div>
     <div class="fg"><label>Next due date</label><input type="date" id="rd"></div>
     <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveR()">Save</button></div>`;
@@ -2805,7 +2868,7 @@ function renderRaise(){
       <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
       <div class="frow">
         <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label>Priority level <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>Urgent</option><option>Important</option><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+        <div class="fg"><label>Urgency <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
       </div>
       <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
       <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
@@ -3077,6 +3140,7 @@ window.submitTicket = async function() {
   const title=document.getElementById('ri-t')?.value?.trim();
   const fileInput=document.getElementById('raise-file');
   const hasFile=fileInput&&fileInput.files&&fileInput.files.length>0;
+
   if(!raisedByName){
     document.getElementById('ri-name').style.borderColor='#dc2626';
     alert('Please enter your name before submitting');
@@ -3087,12 +3151,11 @@ window.submitTicket = async function() {
   if(!hasFile){
     document.getElementById('raise-file').style.borderColor='#dc2626';
     alert('Please attach a photo or video of the issue before submitting');
-    document.getElementById('raise-file').focus();
     return;
   }
 
   // Determine location
-  let locationId = session.locationId; // outlet uses their own
+  let locationId = session.locationId;
   if(['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role)){
     const locEl = document.getElementById('ri-loc');
     locationId = locEl ? locEl.value : null;
@@ -3105,23 +3168,52 @@ window.submitTicket = async function() {
   const id='T'+Date.now().toString().slice(-6);
   const row={id,location_id:locationId,state_id:loc.stateId||loc.state_id,category:document.getElementById('ri-c')?.value,title,description:document.getElementById('ri-d')?.value,priority:document.getElementById('ri-p')?.value,status:'Open',raised_by:session.id,raised_by_name:raisedByName,due_date:dd};
 
+  // STEP 1: Save ticket first (always)
   if(isLive){
-    await dbInsert('tickets',row);
+    const saved = await dbInsert('tickets',row);
+    if(!saved){alert('Error saving ticket. Please check your connection and try again.');return;}
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' - '+loc.name,user_id:session.id,color:'p'});
-    await loadLiveData();
-    showToast('Ticket '+id+' submitted!');
-    // Telegram notification
-    const _loc=getLoc(locationId), _state=getState(_loc.stateId||_loc.state_id);
-    tgOnTicketRaised({id,title,category:row.category,priority:row.priority,raised_by:session.id}, _loc.name, _state.name, session.name, locationId);
-  }else{
+  } else {
     tickets.unshift({...row,locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:dd,desc:row.description,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
     LOG('Ticket raised',id+' '+title,'p');
-    alert('Ticket '+id+' submitted!');
   }
-  // Redirect based on role
+
+  // STEP 2: Upload photo separately (non-blocking)
+  showToast('Ticket '+id+' saved! Uploading photo...');
+  if(hasFile && isLive && supaClient){
+    try{
+      const f=fileInput.files[0];
+      const attId='att'+Date.now();
+      const fileName=attId+'_'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const{error}=await supaClient.storage.from('ticket-attachments').upload(fileName,f,{cacheControl:'3600',upsert:false});
+      if(!error){
+        const{data:urlData}=supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
+        await dbInsert('ticket_attachments',{id:attId,ticket_id:id,uploaded_by:session.id,file_name:f.name,file_url:urlData.publicUrl,file_type:f.type,file_size:f.size,caption:'Raised with ticket'});
+        showToast('Ticket '+id+' submitted with photo!');
+      } else {
+        showToast('Ticket saved! Photo upload failed - add it from the ticket.');
+      }
+    } catch(e){
+      showToast('Ticket saved! Photo upload failed - add it from the ticket.');
+    }
+  } else if(hasFile){
+    // Local mode - store as base64
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      attachments.push({id:'att'+Date.now(),ticketId:id,uploadedBy:session.id,fileName:fileInput.files[0].name,fileUrl:ev.target.result,fileType:fileInput.files[0].type,caption:'Raised with ticket',createdAt:nowTs()});
+    };
+    reader.readAsDataURL(fileInput.files[0]);
+  }
+
+  // STEP 3: Notify and redirect
+  const _state=getState(loc.stateId||loc.state_id);
+  tgOnTicketRaised({id,title,category:row.category,priority:row.priority,raised_by:session.id}, loc.name, _state.name, raisedByName, locationId);
+
+  if(isLive) await loadLiveData();
+
   if(['admin','manager','founder'].includes(session.role)) navTo('tickets');
   else if(['design-manager','design-poc'].includes(session.role)) navTo('design-tickets');
-  else navTo('my-tasks');
+  else navTo('my-tickets');
 };
 
 window.addComment = async function(id) {
@@ -3147,6 +3239,57 @@ window.addComment = async function(id) {
 };
 
 window.resolveTicket = async function(id) {
+  // Show resolve modal requiring a photo
+  openResolveModal(id);
+};
+
+function openResolveModal(id){
+  const t=tickets.find(x=>x.id===id);if(!t)return;
+  document.getElementById('m-title').textContent='Resolve ticket';
+  document.getElementById('m-body').innerHTML=`
+    <div style="background:var(--cream);border-radius:8px;padding:12px;margin-bottom:1rem">
+      <div style="font-weight:600">${t.title}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${t.id} - ${t.category}</div>
+    </div>
+    <div class="fg">
+      <label>Resolution notes</label>
+      <textarea id="resolve-note" placeholder="What was done to fix the issue?"></textarea>
+    </div>
+    <div class="fg">
+      <label>Resolution photo <span style="color:var(--red)">* required</span></label>
+      <input type="file" id="resolve-photo" accept="image/*,video/*" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Take a photo showing the issue is resolved</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn success" onclick="confirmResolve('${id}')">Mark as resolved</button>
+    </div>`;
+  openModal();
+}
+
+async function confirmResolve(id){
+  const note=document.getElementById('resolve-note')?.value?.trim();
+  const photoFile=document.getElementById('resolve-photo')?.files?.[0];
+  if(!photoFile){alert('Please attach a resolution photo before resolving');return;}
+
+  // Upload resolution photo first
+  if(isLive && supaClient){
+    try{
+      const attId='att'+Date.now();
+      const fileName=attId+'_resolve_'+photoFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const{error}=await supaClient.storage.from('ticket-attachments').upload(fileName,photoFile,{cacheControl:'3600',upsert:false});
+      if(!error){
+        const{data:urlData}=supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
+        await dbInsert('ticket_attachments',{id:attId,ticket_id:id,uploaded_by:session.id,file_name:photoFile.name,file_url:urlData.publicUrl,file_type:photoFile.type,file_size:photoFile.size,caption:'Resolution photo'});
+      }
+    }catch(e){console.warn('Resolution photo upload failed',e);}
+  }
+
+  if(note){
+    if(isLive) await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:'Resolved: '+note});
+    else { const t=tickets.find(x=>x.id===id); if(t) t.comments.push({user:session.id,text:'Resolved: '+note,time:nowTs()}); }
+  }
+
   if(isLive){
     await dbUpdate('tickets',id,{status:'Resolved',updated_at:new Date().toISOString()});
     await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket resolved',detail:id,user_id:session.id,color:'g'});
@@ -3166,12 +3309,16 @@ window.resolveTicket = async function(id) {
 };
 
 window.confirmAssign = async function(id) {
-  const techId=document.getElementById('at-t')?.value;if(!techId){alert('Select a technician');return;}
+  const techId=document.getElementById('at-t')?.value||null;
+  const supId=document.getElementById('at-s')?.value||null;
+  if(!techId && !supId){alert('Please assign at least a technician or supervisor');return;}
   const raw=document.getElementById('at-d')?.value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=d+'/'+m+'/'+y;}
   const notes=document.getElementById('at-n')?.value;
   const tech=getUser(techId);
   if(isLive){
-    const upd={assigned_to:techId,status:'In Progress',updated_at:new Date().toISOString()};
+    const upd={status:'In Progress',updated_at:new Date().toISOString()};
+    if(techId) upd.assigned_to=techId;
+    if(supId) upd.supervisor_id=supId;
     if(dd)upd.due_date=dd;
     await dbUpdate('tickets',id,upd);
     if(notes)await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:'Assigned: '+notes});
@@ -3182,7 +3329,13 @@ window.confirmAssign = async function(id) {
     const _at=tickets.find(x=>x.id===id)||{};
     const _atLocId=_at.location_id||_at.locationId;
     const _aloc=getLoc(_atLocId), _astate=getState(_aloc.stateId||_aloc.state_id);
-    tgOnTicketAssigned({..._at,due_date:dd||_at.due_date}, techId, _aloc.name, _astate.name, _atLocId);
+    if(techId) tgOnTicketAssigned({..._at,due_date:dd||_at.due_date}, techId, _aloc.name, _astate.name, _atLocId);
+    if(supId){
+      const _sup=getUser(supId);
+      if(_sup && _sup.telegram_id){
+        await tgSend(_sup.telegram_id, 'Ticket assigned to you as Supervisor\n\n' + id + ' - ' + (_at.title||'') + '\n' + _astate.name + ' - ' + _aloc.name + '\n\nPlease oversee this task.');
+      }
+    }
   }else{
     const t=tickets.find(x=>x.id===id);
     t.assignedTo=techId;t.status='In Progress';
@@ -3457,8 +3610,27 @@ function notifyAMCExpiring(vendor, daysLeft) {
 // Check overdue/escalated on load and every 30 mins
 function startLocalChecks() {
   checkOverdueAndEscalated();
-  setInterval(checkOverdueAndEscalated, 30 * 60 * 1000); // every 30 min
+  setInterval(checkOverdueAndEscalated, 30 * 60 * 1000);
   checkAMCAlerts();
+  // Check unassigned tickets every 90 minutes
+  setInterval(checkUnassignedTickets, 90 * 60 * 1000);
+}
+
+async function checkUnassignedTickets(){
+  if(!session || !['admin','manager','supervisor','founder'].includes(session.role)) return;
+  const unassigned = tickets.filter(t=>
+    !t.assignedTo && !t.assigned_to &&
+    !['Resolved','Closed'].includes(t.status)
+  );
+  if(!unassigned.length) return;
+  const msg = unassigned.length + ' ticket' + (unassigned.length>1?'s':'') + ' still unassigned after 90 minutes. Please assign technicians.';
+  pushNotify('Unassigned tickets reminder', msg);
+  // Send Telegram to all managers
+  for(const t of unassigned){
+    const loc = getLoc(t.locationId||t.location_id);
+    const state = getState(loc.stateId||loc.state_id);
+    await tgNotifyRole('manager', 'Unassigned ticket reminder\n\n' + t.id + ' - ' + t.title + '\n' + state.name + ' - ' + loc.name + '\n\nPlease assign a technician.', null, t.locationId||t.location_id);
+  }
 }
 
 function checkOverdueAndEscalated() {
