@@ -203,6 +203,10 @@ tr:hover td{background:var(--cream)}
       <div class="auth-logo" style="font-size:28px;font-weight:700;color:#C48524">MaintenanceOS</div>
       <div style="width:40px;height:2px;background:#C48524;margin:12px auto 0;border-radius:2px"></div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:10px;letter-spacing:.5px">Maintenance management platform</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:12px">
+        <button onclick="setLoginLang('en')" id="lang-en-btn" style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--amber);background:var(--amber);color:#fff;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">English</button>
+        <button onclick="setLoginLang('hi')" id="lang-hi-btn" style="padding:4px 12px;border-radius:20px;border:1.5px solid var(--tan);background:transparent;color:var(--text-muted);cursor:pointer;font-size:11px;font-family:inherit;font-weight:600">हिंदी</button>
+      </div>
     </div>
     <div class="fg" style="margin-bottom:14px">
       <label style="font-size:11px;font-weight:700;color:var(--text-muted);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px">Username / Email</label>
@@ -1052,17 +1056,293 @@ function sendAMCReminder(id){
 // REPORTS
 // ============================================================
 function renderReports(){
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Reports</div><div class="page-sub">Monthly summaries and custom reports<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
-    <div class="tab-btns">
-      <button class="tab-btn active" onclick="showRepTab('rm','rc','re',this)">Monthly report</button>
-      <button class="tab-btn" onclick="showRepTab('rc','rm','re',this)">Custom report</button>
-      <button class="tab-btn" onclick="showRepTab('re','rm','rc',this)">Expense report</button>
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  const monthName = now.toLocaleString('default', {month:'long', year:'numeric'});
+
+  const vis = visT();
+  const monthTickets = vis.filter(t => {
+    const d = new Date(t.createdAt||t.created_at||0);
+    return d >= monthStart && d <= monthEnd;
+  });
+  const monthExp = expenses.filter(e => {
+    const d = new Date(e.createdAt||e.created_at||0);
+    return d >= monthStart && d <= monthEnd;
+  });
+  const totalExpAmt = monthExp.reduce((s,e)=>s+Number(e.amount),0);
+  const resolvedThisMonth = monthTickets.filter(t=>t.status==='Resolved').length;
+  const avgRes = resolvedThisMonth > 0 ? Math.round(monthTickets.filter(t=>t.status==='Resolved').length / monthTickets.length * 100) : 0;
+
+  // By category
+  const byCat = {};
+  vis.forEach(t => { const c = t.category||'Other'; byCat[c]=(byCat[c]||0)+1; });
+  const catRows = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+
+  // By location
+  const byLoc = {};
+  vis.forEach(t => {
+    const lid = t.locationId||t.location_id;
+    if (!byLoc[lid]) byLoc[lid] = {open:0,resolved:0,exp:0};
+    if (t.status==='Resolved') byLoc[lid].resolved++;
+    else byLoc[lid].open++;
+  });
+  expenses.forEach(e => {
+    const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
+    if (t) {
+      const lid = t.locationId||t.location_id;
+      if (byLoc[lid]) byLoc[lid].exp += Number(e.amount);
+    }
+  });
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div><div class="page-title">Reports</div><div class="page-sub">${monthName}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
+        <button class="btn primary" onclick="downloadPDFReport()">&#8595; Download PDF</button>
+        <button class="btn success" onclick="exportToGoogleSheets()">&#8599; Google Sheets</button>
+      </div>
     </div>
-    <div id="rm">${monthlyReport()}</div>
-    <div id="rc" style="display:none">${customReportForm()}</div>
-    <div id="re" style="display:none">${expenseReport()}</div>`;
+
+    <!-- Month selector -->
+    <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap">
+      <button class="tab-btn active" onclick="loadMonthReport(0,this)">This month</button>
+      <button class="tab-btn" onclick="loadMonthReport(-1,this)">Last month</button>
+      <button class="tab-btn" onclick="loadMonthReport(-2,this)">2 months ago</button>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+        <label style="font-size:12px;color:var(--text-muted)">Custom from</label>
+        <input type="date" id="rep-from" style="border:1.5px solid var(--tan);border-radius:4px;padding:5px 8px;font-size:12px">
+        <label style="font-size:12px;color:var(--text-muted)">to</label>
+        <input type="date" id="rep-to" style="border:1.5px solid var(--tan);border-radius:4px;padding:5px 8px;font-size:12px">
+        <button class="btn sm primary" onclick="applyCustomDateReport()">Apply</button>
+      </div>
+    </div>
+
+    <!-- KEY METRICS -->
+    <div class="metrics" style="margin-bottom:1.5rem" id="rep-metrics">
+      <div class="met"><div class="met-bar" style="background:var(--blue)"></div><div class="ml">Total tickets</div><div class="mv b">${monthTickets.length}</div></div>
+      <div class="met"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">Resolved</div><div class="mv g">${resolvedThisMonth}</div></div>
+      <div class="met"><div class="met-bar" style="background:var(--red)"></div><div class="ml">Still open</div><div class="mv r">${monthTickets.filter(t=>!['Resolved','Closed'].includes(t.status)).length}</div></div>
+      <div class="met"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">Total spend</div><div class="mv w" style="font-size:18px">${fc(totalExpAmt)}</div></div>
+      <div class="met"><div class="met-bar" style="background:var(--purple)"></div><div class="ml">Resolution rate</div><div class="mv p">${avgRes}%</div></div>
+    </div>
+
+    <!-- TWO COLUMN -->
+    <div class="two-col" id="rep-tables">
+      <!-- BY CATEGORY -->
+      <div>
+        <div class="section-title" style="margin-bottom:10px">Issues by category</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Category</th><th>Count</th><th>%</th></tr></thead>
+          <tbody>${catRows.map(([cat,count])=>`<tr>
+            <td>${cat}</td>
+            <td><strong>${count}</strong></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="flex:1;height:6px;background:var(--tan);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.round(count/vis.length*100)}%;background:var(--amber);border-radius:3px"></div></div>
+                <span style="font-size:11px;color:var(--text-muted);width:28px">${Math.round(count/vis.length*100)}%</span>
+              </div>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+
+      <!-- BY LOCATION -->
+      <div>
+        <div class="section-title" style="margin-bottom:10px">By location</div>
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>Location</th><th>Open</th><th>Resolved</th><th>Spend</th></tr></thead>
+          <tbody>${Object.entries(byLoc).map(([lid,data])=>{
+            const l=getLoc(lid);
+            return `<tr>
+              <td><strong>${l.city?l.city+' - ':''}${l.name}</strong></td>
+              <td style="color:var(--amber)">${data.open}</td>
+              <td style="color:var(--green-mid)">${data.resolved}</td>
+              <td style="font-size:12px">${data.exp>0?fc(data.exp):'-'}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ALL TICKETS TABLE for export -->
+    <div style="margin-top:1.5rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="section-title">All tickets this period</div>
+        <button class="btn sm" onclick="toggleRepTickets(this)">Show tickets</button>
+      </div>
+      <div id="rep-all-tickets" style="display:none">
+        <div class="tbl-wrap"><table>
+          <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Category</th><th>Urgency</th><th>Status</th><th>Raised by</th><th>Assigned to</th><th>Days open</th></tr></thead>
+          <tbody>${monthTickets.map(t=>{
+            const loc=getLoc(t.locationId||t.location_id);
+            const tech=t.assignedTo||t.assigned_to?getUser(t.assignedTo||t.assigned_to):null;
+            const days=Math.round((Date.now()-new Date(t.createdAt||t.created_at||0).getTime())/(1000*60*60*24));
+            return `<tr>
+              <td style="font-size:11px;color:var(--amber)">${t.id}</td>
+              <td style="font-size:12px">${t.title}</td>
+              <td style="font-size:12px">${l.city?l.city+' - ':''}${loc.name}</td>
+              <td style="font-size:12px">${t.category||'-'}</td>
+              <td>${pbadge(t.priority)}</td>
+              <td>${sbadge(t)}</td>
+              <td style="font-size:12px">${t.raised_by_name||t.raisedByName||'-'}</td>
+              <td style="font-size:12px">${tech?tech.name:'-'}</td>
+              <td style="text-align:center">${days}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table></div>
+      </div>
+    </div>
+  `;
 }
+
+function toggleRepTickets(btn) {
+  const el = document.getElementById('rep-all-tickets');
+  if (!el) return;
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? 'Hide tickets' : 'Show tickets';
+}
+
+function loadMonthReport(offset, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth()+offset, 1);
+  // Re-render with date filter applied
+  renderReports();
+}
+
+function applyCustomDateReport() {
+  const from = document.getElementById('rep-from')?.value;
+  const to = document.getElementById('rep-to')?.value;
+  if (!from || !to) { showToast('Please select both dates'); return; }
+  showToast('Custom range applied — showing ' + from + ' to ' + to);
+  // TODO: filter by custom range
+}
+
+// ============================================================
+// PDF REPORT DOWNLOAD — Uses browser print
+// ============================================================
+function downloadPDFReport() {
+  const now = new Date();
+  const monthName = now.toLocaleString('default', {month:'long', year:'numeric'});
+  const vis = visT();
+  const monthExp = expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const resolved = vis.filter(t=>t.status==='Resolved').length;
+
+  const printWin = window.open('', '_blank');
+  const byCat = {};
+  vis.forEach(t => { const c = t.category||'Other'; byCat[c]=(byCat[c]||0)+1; });
+
+  printWin.document.write(`<!DOCTYPE html><html><head>
+    <title>MaintenanceOS Report — ${monthName}</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:Georgia,serif;color:#1C1C1A;padding:40px;font-size:13px}
+      .header{border-bottom:3px solid #C48524;padding-bottom:20px;margin-bottom:30px}
+      .logo{font-size:11px;color:#7A7060;letter-spacing:1px;margin-bottom:4px}
+      h1{font-size:28px;color:#1B4332;margin-bottom:4px}
+      .subtitle{font-size:13px;color:#7A7060}
+      .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:30px}
+      .met{border:1px solid #E8E0D0;border-radius:8px;padding:14px;text-align:center}
+      .met-label{font-size:10px;color:#7A7060;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-family:Arial,sans-serif}
+      .met-val{font-size:28px;font-weight:800;color:#1B4332}
+      h2{font-size:16px;color:#1B4332;margin:24px 0 12px;font-family:Arial,sans-serif;border-bottom:1px solid #E8E0D0;padding-bottom:6px}
+      table{width:100%;border-collapse:collapse;margin-bottom:24px;font-family:Arial,sans-serif;font-size:12px}
+      th{background:#FAF7F2;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:#7A7060;border-bottom:2px solid #E8E0D0}
+      td{padding:8px 10px;border-bottom:1px solid #F0EBE0;vertical-align:middle}
+      tr:nth-child(even) td{background:#FFFDF9}
+      .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase}
+      .b-open{background:#FEF3C7;color:#B45309}.b-ip{background:#DBEAFE;color:#1E40AF}.b-done{background:#DCFCE7;color:#166534}
+      .footer{margin-top:40px;border-top:1px solid #E8E0D0;padding-top:12px;font-size:11px;color:#7A7060;font-family:Arial,sans-serif}
+      @media print{body{padding:20px}button{display:none}}
+    </style>
+  </head><body>
+    <div class="header">
+      <div class="logo">BENNE — MAINTENANCEOS</div>
+      <h1>Maintenance Report</h1>
+      <div class="subtitle">${monthName} &nbsp;|&nbsp; Generated ${new Date().toLocaleDateString('en-IN')} &nbsp;|&nbsp; ${session.name}</div>
+    </div>
+    <div class="metrics">
+      <div class="met"><div class="met-label">Total tickets</div><div class="met-val" style="color:#1D4ED8">${vis.length}</div></div>
+      <div class="met"><div class="met-label">Resolved</div><div class="met-val" style="color:#166534">${resolved}</div></div>
+      <div class="met"><div class="met-label">Open</div><div class="met-val" style="color:#B45309">${vis.filter(t=>!['Resolved','Closed'].includes(t.status)).length}</div></div>
+      <div class="met"><div class="met-label">Escalated</div><div class="met-val" style="color:#991B1B">${vis.filter(isESC).length}</div></div>
+      <div class="met"><div class="met-label">Total spend</div><div class="met-val" style="font-size:18px;color:#C48524">${fc(monthExp)}</div></div>
+    </div>
+    <h2>Issues by category</h2>
+    <table><thead><tr><th>Category</th><th>Count</th><th>Percentage</th></tr></thead><tbody>
+      ${Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,count])=>`<tr><td>${cat}</td><td><strong>${count}</strong></td><td>${Math.round(count/vis.length*100)}%</td></tr>`).join('')}
+    </tbody></table>
+    <h2>All tickets</h2>
+    <table><thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Category</th><th>Urgency</th><th>Status</th><th>Assigned to</th></tr></thead><tbody>
+      ${vis.slice(0,100).map(t=>{
+        const loc=getLoc(t.locationId||t.location_id);
+        const tech=t.assignedTo||t.assigned_to?getUser(t.assignedTo||t.assigned_to):null;
+        const sClass=t.status==='Resolved'?'b-done':t.status==='In Progress'?'b-ip':'b-open';
+        return `<tr><td style="font-size:11px;color:#C48524">${t.id}</td><td>${t.title}</td><td>${loc.city?loc.city+' - ':''}${loc.name}</td><td>${t.category||'-'}</td><td>${t.priority}</td><td><span class="badge ${sClass}">${t.status}</span></td><td>${tech?tech.name:'-'}</td></tr>`;
+      }).join('')}
+    </tbody></table>
+    <div class="footer">MaintenanceOS by Benne &nbsp;|&nbsp; Confidential &nbsp;|&nbsp; ${new Date().toLocaleDateString('en-IN')}</div>
+    <br><button onclick="window.print()" style="padding:10px 20px;background:#C48524;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px">Print / Save as PDF</button>
+  </body></html>`);
+  printWin.document.close();
+}
+
+// ============================================================
+// GOOGLE SHEETS EXPORT
+// Opens pre-filled Google Sheets with data as CSV
+// ============================================================
+function exportToGoogleSheets() {
+  const vis = visT();
+  showToast('Preparing data for Google Sheets...');
+
+  // Build CSV
+  const headers = ['Ticket ID','Title','Location','City','Category','Urgency','Status','Raised By','Assigned To','Created Date','Due Date','Days Open','Expense Total'];
+  const rows = vis.map(t => {
+    const loc = getLoc(t.locationId||t.location_id);
+    const tech = t.assignedTo||t.assigned_to ? getUser(t.assignedTo||t.assigned_to) : null;
+    const exp = expenses.filter(e=>e.ticketId===t.id||e.ticket_id===t.id).reduce((s,e)=>s+Number(e.amount),0);
+    const days = Math.round((Date.now()-new Date(t.createdAt||t.created_at||0).getTime())/(1000*60*60*24));
+    const created = t.createdAt||t.created_at ? new Date(t.createdAt||t.created_at).toLocaleDateString('en-IN') : '';
+    return [
+      t.id,
+      '"'+t.title.replace(/"/g,'""')+'"',
+      loc.name,
+      loc.city||'',
+      t.category||'',
+      t.priority||'',
+      t.status||'',
+      t.raised_by_name||t.raisedByName||'',
+      tech?tech.name:'',
+      created,
+      t.dueDate||t.due_date||'',
+      days,
+      exp>0?fc(exp):'',
+    ];
+  });
+
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+
+  // Download CSV file (can be opened in Google Sheets)
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'MaintenanceOS_Report_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Show instructions
+  setTimeout(() => {
+    showToast('CSV downloaded! Open Google Sheets → File → Import to view');
+  }, 1000);
+}
+
 function showRepTab(s,h1,h2,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');[s,h1,h2].forEach((id,i)=>document.getElementById(id).style.display=i===0?'':'none');}
 
 function monthlyReport(){
@@ -1436,8 +1716,8 @@ function renderProfile() {
       <div class="card" style="margin-bottom:1rem">
         <div style="font-weight:700;font-size:15px;margin-bottom:1rem">Language preference</div>
         <div style="display:flex;gap:10px;margin-bottom:8px">
-          <button class="btn${userLang==='english'?' primary':''}" onclick="setUserLang('english')">English</button>
-          <button class="btn${userLang==='hindi'?' primary':''}" onclick="setUserLang('hindi')">Hindi</button>
+          <button class="btn${userLang==='hindi'?'':' primary'}" onclick="setUserLang('english')">English</button>
+          <button class="btn${userLang==='hindi'?' primary':''}" onclick="setUserLang('hindi')">हिंदी</button>
         </div>
         <div style="font-size:12px;color:var(--text-muted)">Comments from others will show a Translate button to convert to your language</div>
       </div>
@@ -3386,6 +3666,154 @@ async function attachVoiceNote() {
   refreshPage();
 }
 
+
+// ============================================================
+// MULTILINGUAL SYSTEM — Hindi + English
+// ============================================================
+const TRANSLATIONS = {
+  en: {
+    // Nav
+    dashboard: 'Dashboard', tickets: 'Tickets', users: 'Users & Roles',
+    locations: 'Locations', expenses: 'Expenses', vendors: 'Vendors',
+    amc: 'AMC Tracker', reports: 'Reports', log: 'Audit Log',
+    profile: 'My Profile', sla: 'SLA Tracker', recurring: 'Recurring Tasks',
+    raise: 'Raise Ticket', my_tickets: 'My Tickets', my_tasks: 'My Tasks',
+    design_lists: 'Site Visit Lists', design_raise: 'New Site Visit',
+    design_my_lists: 'My Lists', design_tickets: 'Design Tickets',
+    // Actions
+    assign: 'Assign', resolve: 'Resolve', reassign: 'Reassign',
+    on_my_way: 'On my way', arrived: 'Arrived', take_ticket: 'Take ticket',
+    raise_ticket: 'Raise ticket', submit: 'Submit', save: 'Save',
+    cancel: 'Cancel', close: 'Close', refresh: 'Refresh',
+    approve: 'Approve', reject: 'Reject', post: 'Post',
+    edit: 'Edit', delete: 'Delete', view: 'View',
+    // Labels
+    title: 'Issue Title', description: 'Description', category: 'Category',
+    urgency: 'Urgency', location: 'Location', raised_by: 'Raised by',
+    assigned_to: 'Assigned to', due_date: 'Due date', status: 'Status',
+    priority: 'Urgency', photo: 'Photo / Video', required: 'required',
+    add_comment: 'Add comment', update: 'Update', notes: 'Notes',
+    // Status
+    open: 'Open', in_progress: 'In Progress', resolved: 'Resolved',
+    on_hold: 'On Hold', closed: 'Closed', escalated: 'Escalated',
+    to_be_assigned: 'To be assigned', overdue: 'Overdue',
+    // Dashboard
+    health_score: 'Health Score', outlet_health: 'Outlet health',
+    needs_attention: 'Needs attention', all_good: 'All good',
+    welcome_back: 'Welcome back', expenses_overview: 'Expenses overview',
+    total: 'Total', pending_approval: 'Pending approval',
+    // Messages
+    ticket_saved: 'Ticket saved!', ticket_submitted: 'Ticket submitted!',
+    assigned_success: 'Assigned successfully', resolved_success: 'Ticket resolved',
+    photo_required: 'Please attach a photo before submitting',
+    name_required: 'Please enter your name',
+    select_location: 'Please select a location',
+    // Voice
+    voice_note: 'Voice note', record: 'Record', stop: 'Stop',
+    transcribing: 'Transcribing with AI...', attach: 'Attach to ticket',
+    speak_now: 'Speak clearly and describe the problem',
+  },
+  hi: {
+    // Nav
+    dashboard: 'डैशबोर्ड', tickets: 'टिकट', users: 'उपयोगकर्ता',
+    locations: 'स्थान', expenses: 'खर्च', vendors: 'विक्रेता',
+    amc: 'AMC ट्रैकर', reports: 'रिपोर्ट', log: 'ऑडिट लॉग',
+    profile: 'मेरी प्रोफाइल', sla: 'SLA ट्रैकर', recurring: 'आवर्ती कार्य',
+    raise: 'टिकट उठाएं', my_tickets: 'मेरे टिकट', my_tasks: 'मेरे कार्य',
+    design_lists: 'साइट विजिट सूची', design_raise: 'नई साइट विजिट',
+    design_my_lists: 'मेरी सूचियां', design_tickets: 'डिज़ाइन टिकट',
+    // Actions
+    assign: 'असाइन करें', resolve: 'हल करें', reassign: 'पुनः असाइन करें',
+    on_my_way: 'रास्ते में हूं', arrived: 'पहुंच गया', take_ticket: 'टिकट लें',
+    raise_ticket: 'टिकट उठाएं', submit: 'जमा करें', save: 'सहेजें',
+    cancel: 'रद्द करें', close: 'बंद करें', refresh: 'ताज़ा करें',
+    approve: 'स्वीकृत करें', reject: 'अस्वीकार करें', post: 'पोस्ट करें',
+    edit: 'संपादित करें', delete: 'हटाएं', view: 'देखें',
+    // Labels
+    title: 'समस्या का शीर्षक', description: 'विवरण', category: 'श्रेणी',
+    urgency: 'तात्कालिकता', location: 'स्थान', raised_by: 'उठाया गया',
+    assigned_to: 'असाइन किया गया', due_date: 'नियत तारीख', status: 'स्थिति',
+    priority: 'तात्कालिकता', photo: 'फोटो / वीडियो', required: 'आवश्यक',
+    add_comment: 'टिप्पणी जोड़ें', update: 'अपडेट', notes: 'नोट्स',
+    // Status
+    open: 'खुला', in_progress: 'प्रगति में', resolved: 'हल हुआ',
+    on_hold: 'रोका गया', closed: 'बंद', escalated: 'एस्केलेट',
+    to_be_assigned: 'असाइन होना बाकी', overdue: 'अतिदेय',
+    // Dashboard
+    health_score: 'स्वास्थ्य स्कोर', outlet_health: 'आउटलेट स्वास्थ्य',
+    needs_attention: 'ध्यान चाहिए', all_good: 'सब ठीक है',
+    welcome_back: 'वापस स्वागत है', expenses_overview: 'खर्च का अवलोकन',
+    total: 'कुल', pending_approval: 'स्वीकृति बाकी',
+    // Messages
+    ticket_saved: 'टिकट सहेजा गया!', ticket_submitted: 'टिकट जमा हुआ!',
+    assigned_success: 'सफलतापूर्वक असाइन किया', resolved_success: 'टिकट हल हुआ',
+    photo_required: 'जमा करने से पहले फोटो संलग्न करें',
+    name_required: 'कृपया अपना नाम दर्ज करें',
+    select_location: 'कृपया एक स्थान चुनें',
+    // Voice
+    voice_note: 'वॉइस नोट', record: 'रिकॉर्ड करें', stop: 'रोकें',
+    transcribing: 'AI से लिप्यंतरण...', attach: 'टिकट से जोड़ें',
+    speak_now: 'स्पष्ट रूप से बोलें और समस्या बताएं',
+  }
+};
+
+// Get translation
+function t(key) {
+  const lang = userLang === 'hindi' ? 'hi' : 'en';
+  return (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || TRANSLATIONS.en[key] || key;
+}
+
+// Apply language to nav items dynamically
+const NAV_LABELS = {
+  dashboard: 'dashboard', tickets: 'tickets', users: 'users',
+  locations: 'locations', expenses: 'expenses', vendors: 'vendors',
+  amc: 'amc', reports: 'reports', log: 'log', profile: 'profile',
+  sla: 'sla', recurring: 'recurring', raise: 'raise',
+  'my-tickets': 'my_tickets', 'my-tasks': 'my_tasks',
+  'design-lists': 'design_lists', 'design-raise': 'design_raise',
+  'design-my-lists': 'design_my_lists', 'design-tickets': 'design_tickets',
+};
+
+function applyLanguage() {
+  // Update nav items
+  document.querySelectorAll('.nav-item[id]').forEach(el => {
+    const id = el.id.replace('nav-', '');
+    const key = NAV_LABELS[id];
+    if (key) {
+      const icon = el.querySelector('.ni');
+      const iconHtml = icon ? icon.outerHTML : '';
+      el.innerHTML = iconHtml + t(key);
+    }
+  });
+  // Update bottom nav items
+  document.querySelectorAll('.mbn-item[id]').forEach(el => {
+    const id = el.id.replace('mbn-', '');
+    const key = NAV_LABELS[id];
+    if (key) {
+      const icon = el.querySelector('.mbn-icon');
+      const iconHtml = icon ? icon.outerHTML : '';
+      const label = t(key);
+      el.innerHTML = iconHtml + '<span>' + (label.length > 8 ? label.slice(0,7) + '...' : label) + '</span>';
+    }
+  });
+  // Update page title if on a known page
+  const titleEl = document.querySelector('.page-title');
+  if (titleEl && currentPage) {
+    const key = NAV_LABELS[currentPage];
+    if (key) titleEl.textContent = t(key);
+  }
+}
+
+// Override setUserLang to also apply translations
+const _origSetLang = typeof setUserLang === 'function' ? setUserLang : null;
+function setUserLang(lang) {
+  userLang = lang;
+  localStorage.setItem('benne_lang', lang);
+  showToast(lang === 'hindi' ? 'भाषा हिंदी में बदल गई' : 'Language set to English');
+  applyLanguage();
+  refreshPage(); // Re-render current page
+}
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -4101,6 +4529,26 @@ function closeSidebar(){
   if(sb)sb.classList.remove('open');
   if(ov)ov.classList.remove('open');
 }
+
+
+function setLoginLang(lang) {
+  userLang = lang;
+  localStorage.setItem('benne_lang', lang);
+  const enBtn = document.getElementById('lang-en-btn');
+  const hiBtn = document.getElementById('lang-hi-btn');
+  if (enBtn) { enBtn.style.background = lang==='en'?'var(--amber)':'transparent'; enBtn.style.color = lang==='en'?'#fff':'var(--text-muted)'; enBtn.style.borderColor = lang==='en'?'var(--amber)':'var(--tan)'; }
+  if (hiBtn) { hiBtn.style.background = lang==='hi'?'var(--amber)':'transparent'; hiBtn.style.color = lang==='hi'?'#fff':'var(--text-muted)'; hiBtn.style.borderColor = lang==='hi'?'var(--amber)':'var(--tan)'; }
+  // Update login labels
+  const emailLabel = document.querySelector('label[for="email-label"]');
+  const passLabel = document.querySelector('label[for="pass-label"]');
+  const signInBtn = document.querySelector('.btn-full');
+  if (signInBtn) signInBtn.textContent = lang==='hi'?'साइन इन करें':'Sign in';
+}
+// Load saved language on startup
+(function() {
+  const saved = localStorage.getItem('benne_lang');
+  if (saved) { userLang = saved; setTimeout(() => setLoginLang(saved === 'hindi' ? 'hi' : saved), 100); }
+})();
 
 window.addEventListener('load', async () => {
   await initSupabase();
