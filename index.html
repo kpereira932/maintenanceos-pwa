@@ -233,6 +233,8 @@ tr:hover td{background:var(--cream)}
   </div>
   <!-- Sidebar overlay (dark bg when sidebar open) -->
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <!-- Mobile bottom navigation -->
+  <nav class="mobile-bottom-nav" id="mobile-bottom-nav"></nav>
   <div class="sidebar" id="main-sidebar">
     <div class="sidebar-logo">Benne &mdash; MaintenanceOS</div>
     <div class="sidebar-user">
@@ -314,6 +316,10 @@ function getSupervisors(stateId){
   });
 }
 function locLabel(l){return (l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':'');}
+function locDisplay(l){
+  // Returns "City - Name" or just "Name" if no city
+  return l.city ? l.city+' - '+l.name+(l.type==='central_kitchen'?' (CK)':'') : l.name+(l.type==='central_kitchen'?' (CK)':'');
+}
 function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin',founder:'r-founder','design-manager':'r-design','design-poc':'r-design'}[r]||'';}
 function roleLabel(r){return{admin:'Admin',manager:'Manager',supervisor:'Supervisor',technician:'Technician',outlet:'Outlet / CK',superadmin:'Super Admin',founder:'Founder','design-manager':'Design Manager','design-poc':'Design POC'}[r]||r;}
 function roleBadge(r){return`<span class="sb-role ${roleClass(r)}">${roleLabel(r)}</span>`;}
@@ -458,7 +464,9 @@ function buildNav(){
 function navTo(p){
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.mbn-item').forEach(n=>n.classList.remove('active'));
   const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
+  const mbn=document.getElementById('mbn-'+p);if(mbn)mbn.classList.add('active');
   const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists,'design-tickets':renderDesignTickets};
   if(map[p])map[p]();
 }
@@ -471,7 +479,7 @@ function ticketCard(t,compact=false){
   const state=getState(t.stateId||t.state_id||loc.stateId||loc.state_id||'');
   const assignee=t.assignedTo||t.assigned_to?getUser(t.assignedTo||t.assigned_to):null;
   const esc=isESC(t),od=isOD(t)&&!esc;
-  const locName=(loc.city?loc.city+' - ':'')+loc.name+(loc.type==='central_kitchen'?' (CK)':'');
+  const locName=locDisplay(loc);
   const isTechSup=['technician','supervisor'].includes(session.role);
 
   return`<div class="card${esc?' es':od?' ov':''}" style="cursor:pointer" onclick="openTicket('${t.id}')">
@@ -485,7 +493,7 @@ function ticketCard(t,compact=false){
       </div>
     </div>
     <div style="display:flex;gap:8px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;align-items:center;margin-bottom:8px">
-      <span>📍 ${state.name?state.name+' - ':''}${locName}</span>
+      <span>📍 ${locName}</span>
       <span style="background:var(--cream);border:1px solid var(--tan);padding:1px 7px;border-radius:3px;font-size:11px;font-weight:600">${t.category||t.category||''}</span>
       ${t.dueDate?`<span>📅 ${t.dueDate}${isOD(t)?' <span style="color:var(--red);font-weight:600">(+'+dAgo(t.dueDate)+'d)</span>':''}</span>`:''}
       ${assignee?`<span style="color:var(--green-mid);font-weight:600">🔧 ${assignee.name}</span>`:'<span style="color:var(--red);font-weight:500">To be assigned</span>'}
@@ -552,6 +560,59 @@ function toggleExpSummary(){
   d.style.display=isOpen?'none':'block';
   if(btn)btn.textContent=isOpen?'More':'Less';
 }
+
+// ============================================================
+// HEALTH SCORE ENGINE
+// ============================================================
+function calcHealthScore(locationId) {
+  const locTickets = tickets.filter(t =>
+    (t.locationId || t.location_id) === locationId &&
+    !['Resolved','Closed'].includes(t.status)
+  );
+
+  let score = 100;
+
+  // Open tickets (not yet assigned)
+  const open = locTickets.filter(t => t.status === 'Open' && !t.assignedTo && !t.assigned_to);
+  score -= Math.min(open.length * 5, 30);
+
+  // In Progress tickets (minor deduction - work is happening)
+  const inProg = locTickets.filter(t => t.status === 'In Progress');
+  score -= Math.min(inProg.length * 2, 10);
+
+  // Overdue tickets
+  const overdue = locTickets.filter(t => isOD(t));
+  score -= Math.min(overdue.length * 10, 30);
+
+  // Escalated tickets
+  const esc = locTickets.filter(t => isESC(t));
+  score -= Math.min(esc.length * 15, 30);
+
+  // On Hold tickets
+  const onHold = locTickets.filter(t => t.status === 'On Hold');
+  score -= Math.min(onHold.length * 3, 15);
+
+  // AMC issues
+  const locAMC = amcRecords.filter(a => (a.location_id || a.locationId) === locationId);
+  const amcIssues = locAMC.filter(a => amcSt(a) !== 'active');
+  score -= Math.min(amcIssues.length * 5, 20);
+
+  return Math.max(0, Math.round(score));
+}
+
+function healthColor(score) {
+  if (score >= 80) return { dot: '🟢', color: '#166534', bg: '#DCFCE7', label: 'Good' };
+  if (score >= 60) return { dot: '🟡', color: '#B45309', bg: '#FEF3C7', label: 'Fair' };
+  return { dot: '🔴', color: '#991B1B', bg: '#FEE2E2', label: 'Needs attention' };
+}
+
+function overallHealthScore() {
+  const visLocs = visibleLocationIds();
+  if (!visLocs.length) return 100;
+  const scores = visLocs.map(id => calcHealthScore(id));
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+}
+
 function renderDashboard(){
   const all=sortByUrgency(visT());
   const esc=all.filter(isESC).length,od=all.filter(t=>isOD(t)&&!isESC(t)).length;
@@ -671,7 +732,11 @@ function openTicket(id){
       <div><span style="color:#aaa">Due date:</span> <strong>${t.dueDate||'Not set'}</strong></div>
     </div>
     ${expTotal>0?`<div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px;display:flex;align-items:center;justify-content:space-between"><span>💰 <strong>Expenses:</strong> ${fc(expTotal)} (${expCount} entries)</span><button class="btn sm" onclick="openExpModal('${id}')">View expenses</button></div>`:''}
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">Activity</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700">Activity</div>
+      <button class="btn sm" onclick="aiSummariseTicket('${id}')" style="font-size:11px">AI summarise</button>
+    </div>
+    <div id="ai-summary-${id}"></div>
     <div class="timeline">
       <div class="tl-item done"><strong>${raiser?raiser.name:'-'}</strong> raised this ticket <span style="color:#aaa">· ${t.createdAt}</span></div>
       ${t.comments.map(c=>{const u=getUser(c.user);return`<div class="tl-item active"><strong>${u?u.name:c.user}:</strong> ${c.text} <span style="color:#aaa">· ${c.time}</span></div>`;}).join('')}
@@ -1365,6 +1430,15 @@ function renderProfile() {
         <div class="fg"><label>New password <span style="color:#888;font-weight:400">(leave blank to keep current)</span></label><input type="password" id="prof-pass" placeholder="Enter new password"></div>
         <div class="fg"><label>WhatsApp number</label><input type="text" id="prof-wa" value="${session.whatsapp||''}" placeholder="+91XXXXXXXXXX"></div>
         <button class="btn primary" onclick="saveProfile()">Save changes</button>
+      </div>
+
+      <div class="card" style="margin-bottom:1rem">
+        <div style="font-weight:700;font-size:15px;margin-bottom:1rem">Language preference</div>
+        <div style="display:flex;gap:10px;margin-bottom:8px">
+          <button class="btn${userLang==='english'?' primary':''}" onclick="setUserLang('english')">English</button>
+          <button class="btn${userLang==='hindi'?' primary':''}" onclick="setUserLang('hindi')">Hindi</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted)">Comments from others will show a Translate button to convert to your language</div>
       </div>
 
       <div class="card">
@@ -2741,11 +2815,11 @@ function openRaiseTicketModal(){
         style="${['outlet'].includes(session.role)?'':'background:var(--cream);cursor:not-allowed'}">
     </div>
     <div class="fg"><label>Issue title <span style="color:var(--red)">*</span></label>
-      <input type="text" id="ri-t" placeholder="e.g. AC not cooling, gas leak...">
+      <input type="text" id="ri-t" placeholder="e.g. AC not cooling, gas leak..." onblur="aiSuggestCategory();aiSuggestPriority()">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-      <div class="fg"><label>Urgency <span style="color:var(--red)">*</span></label>
+      <div class="fg"><label>Category <span style="font-size:10px;color:var(--amber);cursor:pointer" onclick="aiSuggestCategory()">AI suggest</span></label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+      <div class="fg"><label>Urgency <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--amber);cursor:pointer" onclick="aiSuggestPriority()">AI suggest</span></label>
         <select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select>
       </div>
     </div>
@@ -2763,6 +2837,135 @@ function openRaiseTicketModal(){
     </div>`;
   openModal();
 }
+
+
+// ============================================================
+// AI FEATURES — Powered by Claude
+// ============================================================
+const CLAUDE_API = 'https://api.anthropic.com/v1/messages';
+
+async function callClaude(prompt, systemPrompt='You are a helpful assistant for a restaurant maintenance management app.') {
+  try {
+    const res = await fetch(CLAUDE_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    return data.content?.[0]?.text || '';
+  } catch(e) {
+    console.error('Claude API error:', e);
+    return null;
+  }
+}
+
+// AI FEATURE 1: Auto-categorise ticket
+async function aiSuggestCategory(){
+  const title = document.getElementById('ri-t')?.value?.trim();
+  const desc = document.getElementById('ri-d')?.value?.trim();
+  if(!title) return;
+  showToast('AI is categorising your issue...');
+  const categories = ['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Furniture','Cleaning','Kitchen Equipment','Other'];
+  const result = await callClaude(
+    'Issue: ' + title + (desc ? '. Details: ' + desc : '') + '\n\nChoose the most appropriate category from this list: ' + categories.join(', ') + '\n\nReply with ONLY the category name, nothing else.',
+    'You categorise maintenance issues for a restaurant. Reply with only the category name from the given list.'
+  );
+  if(result) {
+    const cat = categories.find(c => result.trim().includes(c));
+    if(cat) {
+      const sel = document.getElementById('ri-c');
+      if(sel) { sel.value = cat; showToast('AI suggested: ' + cat); }
+    }
+  }
+}
+
+// AI FEATURE 2: Smart priority/urgency suggestion
+async function aiSuggestPriority(){
+  const title = document.getElementById('ri-t')?.value?.trim();
+  const desc = document.getElementById('ri-d')?.value?.trim();
+  if(!title) return;
+  showToast('AI is assessing urgency...');
+  const result = await callClaude(
+    'Restaurant maintenance issue: ' + title + (desc ? '. ' + desc : '') + '\n\nAssess urgency. Reply with only one word: High, Medium, or Low.',
+    'You assess maintenance urgency for a restaurant. Consider safety, food service impact, and customer experience. Reply with only: High, Medium, or Low.'
+  );
+  if(result) {
+    const pri = ['High','Medium','Low'].find(p => result.trim().includes(p));
+    if(pri) {
+      const sel = document.getElementById('ri-p');
+      if(sel) { sel.value = pri; showToast('AI suggested urgency: ' + pri); }
+    }
+  }
+}
+
+// AI FEATURE 3: Summarise ticket history
+async function aiSummariseTicket(ticketId){
+  const t = tickets.find(x=>x.id===ticketId);
+  if(!t) return;
+  const comments = (t.comments||[]).map(c=>{
+    const u = getUser(c.user);
+    return (u?u.name:'Unknown') + ': ' + c.text;
+  }).join('\n');
+  showToast('AI is summarising...');
+  const result = await callClaude(
+    'Ticket: ' + t.title + '\nCategory: ' + t.category + '\nStatus: ' + t.status + '\n\nActivity:\n' + (comments||'No comments yet') + '\n\nWrite a 2-sentence summary of this maintenance ticket status.',
+    'You summarise maintenance ticket history for restaurant managers. Be concise and factual.'
+  );
+  if(result) {
+    // Show in a toast-style popup
+    const el = document.getElementById('ai-summary-' + ticketId);
+    if(el) {
+      el.innerHTML = '<div style="background:var(--amber-pale);border:1px solid var(--amber-light);border-radius:8px;padding:10px 12px;font-size:13px;margin-top:8px"><strong>AI Summary:</strong> ' + result + '</div>';
+    } else {
+      alert('AI Summary:\n\n' + result);
+    }
+  }
+}
+
+// AI FEATURE 4: Auto-generate resolution note
+async function aiGenerateResolutionNote(){
+  const ticketId = document.getElementById('resolve-note')?.closest('[data-ticket-id]')?.dataset?.ticketId;
+  const note = document.getElementById('resolve-note')?.value?.trim();
+  if(!note) { alert('First describe briefly what was done, then tap AI to improve it.'); return; }
+  showToast('AI is writing your resolution note...');
+  const result = await callClaude(
+    'A technician fixed this maintenance issue and described it as: "' + note + '"\n\nWrite a professional resolution note in 2-3 sentences suitable for a maintenance log.',
+    'You write professional maintenance resolution notes for restaurants. Be clear and professional.'
+  );
+  if(result) {
+    const el = document.getElementById('resolve-note');
+    if(el) { el.value = result; showToast('AI improved your resolution note'); }
+  }
+}
+
+// AI FEATURE 5: Translate comment
+async function aiTranslateComment(text, targetLang, elementId){
+  if(!text) return;
+  const el = document.getElementById(elementId);
+  if(el) el.innerHTML = '<span style="color:var(--text-muted);font-size:11px">Translating...</span>';
+  const result = await callClaude(
+    'Translate this to ' + targetLang + ': "' + text + '"\n\nReply with ONLY the translation, nothing else.',
+    'You translate text accurately. Reply with only the translation.'
+  );
+  if(result && el) {
+    el.innerHTML = '<div style="background:var(--cream);border-left:3px solid var(--amber);padding:6px 10px;font-size:12px;color:var(--charcoal);margin-top:4px;border-radius:0 4px 4px 0"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Translation</span><br>' + result + '</div>';
+  }
+}
+
+// User language preference (stored in localStorage)
+let userLang = localStorage.getItem('benne_lang') || 'english';
+function setUserLang(lang){
+  userLang = lang;
+  localStorage.setItem('benne_lang', lang);
+  showToast('Language set to ' + lang);
+}
+function getOtherLang(){ return userLang === 'english' ? 'Hindi' : 'English'; }
+
 
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
@@ -3253,8 +3456,8 @@ function openResolveModal(id){
       <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${t.id} - ${t.category}</div>
     </div>
     <div class="fg">
-      <label>Resolution notes</label>
-      <textarea id="resolve-note" placeholder="What was done to fix the issue?"></textarea>
+      <label>Resolution notes <span style="font-size:10px;color:var(--amber);cursor:pointer" onclick="aiGenerateResolutionNote()">AI improve</span></label>
+      <textarea id="resolve-note" placeholder="Briefly describe what was done..."></textarea>
     </div>
     <div class="fg">
       <label>Resolution photo <span style="color:var(--red)">* required</span></label>
@@ -3614,23 +3817,28 @@ function startLocalChecks() {
   setInterval(checkOverdueAndEscalated, 30 * 60 * 1000);
   checkAMCAlerts();
   // Check unassigned tickets every 90 minutes
-  setInterval(checkUnassignedTickets, 90 * 60 * 1000);
+  setInterval(checkUnassignedTickets, 30 * 60 * 1000);
 }
 
+let _unassignedCheckCount = 0;
 async function checkUnassignedTickets(){
   if(!session || !['admin','manager','supervisor','founder'].includes(session.role)) return;
+  _unassignedCheckCount++;
   const unassigned = tickets.filter(t=>
     !t.assignedTo && !t.assigned_to &&
     !['Resolved','Closed'].includes(t.status)
   );
   if(!unassigned.length) return;
-  const msg = unassigned.length + ' ticket' + (unassigned.length>1?'s':'') + ' still unassigned after 90 minutes. Please assign technicians.';
-  pushNotify('Unassigned tickets reminder', msg);
-  // Send Telegram to all managers
-  for(const t of unassigned){
-    const loc = getLoc(t.locationId||t.location_id);
-    const state = getState(loc.stateId||loc.state_id);
-    await tgNotifyRole('manager', 'Unassigned ticket reminder\n\n' + t.id + ' - ' + t.title + '\n' + state.name + ' - ' + loc.name + '\n\nPlease assign a technician.', null, t.locationId||t.location_id);
+  // Push notification every time
+  pushNotify('Unassigned tickets', unassigned.length + ' ticket' + (unassigned.length>1?'s':'') + ' waiting to be assigned');
+  // Telegram only at 30min (count=1), 60min (count=2), 90min (count=3)
+  if(_unassignedCheckCount <= 3){
+    const mins = _unassignedCheckCount * 30;
+    for(const t of unassigned){
+      const loc = getLoc(t.locationId||t.location_id);
+      await tgNotifyRole('manager', mins + ' min alert: Ticket still unassigned\n\n' + t.id + ' - ' + t.title + '\n' + locDisplay(loc) + '\n\nPlease assign a technician urgently.', null, t.locationId||t.location_id);
+      await tgNotifyRole('supervisor', mins + ' min alert: Ticket still unassigned\n\n' + t.id + ' - ' + t.title + '\n' + locDisplay(loc) + '\n\nPlease assign or take this ticket.', null, t.locationId||t.location_id);
+    }
   }
 }
 
