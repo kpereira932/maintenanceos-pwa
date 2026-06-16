@@ -2796,6 +2796,48 @@ async function assignMissingUserCodes(){
 }
 
 
+
+function openRaiseVoiceNote() {
+  // Inline voice recording for the raise ticket form
+  // Reuse the voice modal but save transcript to raise form
+  _voiceTicketId = null; // No ticket yet - will save to description
+  _voiceChunks = [];
+  _voiceSeconds = 0;
+  document.getElementById('m-title').textContent = 'Describe the issue';
+  document.getElementById('m-body').innerHTML = `
+    <div style="text-align:center;padding:1.5rem 0">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:1rem">Speak clearly and describe the problem</div>
+      <div id="vn-status" style="font-size:14px;color:var(--text-muted);margin-bottom:1rem">Tap Record to start</div>
+      <div id="vn-timer" style="font-size:48px;font-weight:800;color:var(--green);font-family:'Georgia',serif;margin-bottom:1.5rem">0:00</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:1.5rem">
+        <button id="vn-record-btn" class="btn primary" style="padding:14px 28px;font-size:15px;border-radius:50px" onclick="startVoiceRecording()">🎙️ Record</button>
+        <button id="vn-stop-btn" class="btn danger" style="padding:14px 28px;font-size:15px;border-radius:50px;display:none" onclick="stopVoiceRecording()">⏹ Stop</button>
+      </div>
+      <div id="vn-transcript-area" style="display:none">
+        <textarea id="vn-transcript" style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;min-height:80px" placeholder="Transcribing..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button id="vn-attach-btn" class="btn primary" style="display:none" onclick="useRaiseVoiceTranscript()">Use this description</button>
+    </div>`;
+  openModal();
+}
+
+function useRaiseVoiceTranscript() {
+  const t = document.getElementById('vn-transcript')?.value?.trim();
+  if (!t) return;
+  // Put transcript in description field and show it in the raise form
+  const descEl = document.getElementById('ri-d');
+  if (descEl) descEl.value = t;
+  const raiseVoiceText = document.getElementById('raise-voice-text');
+  const raiseVoiceTranscript = document.getElementById('raise-voice-transcript');
+  if (raiseVoiceText) raiseVoiceText.style.display = 'block';
+  if (raiseVoiceTranscript) raiseVoiceTranscript.value = t;
+  closeModal();
+  showToast('Voice description added');
+}
+
 function openRaiseTicketModal(){
   // For outlet - use their own location, for others show location picker
   const canPickLocation = !['outlet'].includes(session.role);
@@ -2831,6 +2873,13 @@ function openRaiseTicketModal(){
     <div class="fg"><label>Photo / video <span style="color:var(--red)">* required</span></label>
       <input type="file" id="raise-file" accept="image/*,video/*" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit">
       <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Take a photo or video of the issue</div>
+    </div>
+    <div class="fg">
+      <label>Voice description <span style="font-size:11px;color:var(--text-muted);font-weight:400">(optional)</span></label>
+      <button class="btn" style="width:100%;justify-content:center;padding:10px" onclick="openRaiseVoiceNote()">🎙️ Record voice description</button>
+      <div id="raise-voice-text" style="display:none;margin-top:8px">
+        <textarea id="raise-voice-transcript" style="width:100%;border:1.5px solid var(--green-mid);border-radius:4px;padding:9px;font-size:13px;font-family:inherit;min-height:60px" placeholder="Voice transcript..."></textarea>
+      </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
       <button class="btn" onclick="closeModal()">Cancel</button>
@@ -3157,6 +3206,184 @@ function renderSLA() {
       ${warningTickets.map(t => ticketCard(t, true)).join('')}
     </div>` : ''}
   `;
+}
+
+
+// ============================================================
+// VOICE NOTES — Record, transcribe, attach to tickets
+// ============================================================
+let _voiceRecorder = null;
+let _voiceChunks = [];
+let _voiceTicketId = null;
+let _voiceTimer = null;
+let _voiceSeconds = 0;
+
+function openVoiceNoteModal(ticketId) {
+  _voiceTicketId = ticketId;
+  _voiceChunks = [];
+  _voiceSeconds = 0;
+  document.getElementById('m-title').textContent = 'Voice note';
+  document.getElementById('m-body').innerHTML = `
+    <div style="text-align:center;padding:1.5rem 0">
+      <div id="vn-status" style="font-size:14px;color:var(--text-muted);margin-bottom:1rem">Tap Record to start</div>
+      <div id="vn-timer" style="font-size:48px;font-weight:800;color:var(--green);font-family:'Georgia',serif;margin-bottom:1.5rem">0:00</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:1.5rem">
+        <button id="vn-record-btn" class="btn primary" style="padding:14px 28px;font-size:15px;border-radius:50px" onclick="startVoiceRecording()">
+          🎙️ Record
+        </button>
+        <button id="vn-stop-btn" class="btn danger" style="padding:14px 28px;font-size:15px;border-radius:50px;display:none" onclick="stopVoiceRecording()">
+          ⏹ Stop
+        </button>
+      </div>
+      <div id="vn-playback" style="display:none;margin-bottom:1rem">
+        <audio id="vn-audio" controls style="width:100%;border-radius:8px"></audio>
+      </div>
+      <div id="vn-transcript-area" style="display:none">
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;text-align:left">Transcript (AI generated)</div>
+        <textarea id="vn-transcript" style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;min-height:80px;resize:vertical" placeholder="Transcribing..."></textarea>
+      </div>
+      <div id="vn-lang-pick" style="display:none;margin-bottom:1rem">
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Recording language</div>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <button class="btn sm primary" id="vn-lang-en" onclick="setVoiceLang('en')">English</button>
+          <button class="btn sm" id="vn-lang-hi" onclick="setVoiceLang('hi')">Hindi</button>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button id="vn-attach-btn" class="btn primary" style="display:none" onclick="attachVoiceNote()">Attach to ticket</button>
+    </div>`;
+  openModal();
+  // Show language picker
+  document.getElementById('vn-lang-pick').style.display = 'block';
+}
+
+let _voiceLang = 'en';
+function setVoiceLang(lang) {
+  _voiceLang = lang;
+  document.getElementById('vn-lang-en').className = 'btn sm' + (lang==='en'?' primary':'');
+  document.getElementById('vn-lang-hi').className = 'btn sm' + (lang==='hi'?' primary':'');
+}
+
+async function startVoiceRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    _voiceChunks = [];
+    _voiceRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
+    _voiceRecorder.ondataavailable = e => { if (e.data.size > 0) _voiceChunks.push(e.data); };
+    _voiceRecorder.onstop = onVoiceRecordingStopped;
+    _voiceRecorder.start(100);
+
+    // UI update
+    document.getElementById('vn-record-btn').style.display = 'none';
+    document.getElementById('vn-stop-btn').style.display = 'inline-flex';
+    document.getElementById('vn-status').textContent = 'Recording...';
+    document.getElementById('vn-status').style.color = 'var(--red)';
+
+    // Timer
+    _voiceSeconds = 0;
+    _voiceTimer = setInterval(() => {
+      _voiceSeconds++;
+      const m = Math.floor(_voiceSeconds / 60);
+      const s = _voiceSeconds % 60;
+      const timerEl = document.getElementById('vn-timer');
+      if (timerEl) timerEl.textContent = m + ':' + String(s).padStart(2,'0');
+      // Auto-stop at 3 minutes
+      if (_voiceSeconds >= 180) stopVoiceRecording();
+    }, 1000);
+
+  } catch(e) {
+    alert('Microphone access denied. Please allow microphone access in your browser settings.');
+  }
+}
+
+function stopVoiceRecording() {
+  if (_voiceRecorder && _voiceRecorder.state !== 'inactive') {
+    _voiceRecorder.stop();
+    _voiceRecorder.stream.getTracks().forEach(t => t.stop());
+  }
+  clearInterval(_voiceTimer);
+  document.getElementById('vn-stop-btn').style.display = 'none';
+  document.getElementById('vn-status').textContent = 'Processing...';
+}
+
+async function onVoiceRecordingStopped() {
+  const mimeType = _voiceChunks[0]?.type || 'audio/webm';
+  const blob = new Blob(_voiceChunks, { type: mimeType });
+  const url = URL.createObjectURL(blob);
+
+  // Show playback
+  const audio = document.getElementById('vn-audio');
+  if (audio) { audio.src = url; document.getElementById('vn-playback').style.display = 'block'; }
+
+  document.getElementById('vn-status').textContent = 'Recording done. Transcribing with AI...';
+  document.getElementById('vn-transcript-area').style.display = 'block';
+
+  // Transcribe using Claude
+  try {
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+      const base64 = ev.target.result.split(',')[1];
+      const langLabel = _voiceLang === 'hi' ? 'Hindi' : 'English';
+      const result = await callClaude(
+        'This is a base64-encoded audio file of a maintenance issue report recorded in ' + langLabel + '. The person is describing a problem at a restaurant. Please transcribe what they said as accurately as possible. If it is in Hindi, also provide an English translation below the transcript.\n\n(Note: If you cannot process audio, please indicate that and ask the user to type their note.)',
+        'You are a transcription assistant for a restaurant maintenance app. Transcribe the audio accurately.'
+      );
+      const transcriptEl = document.getElementById('vn-transcript');
+      if (transcriptEl) {
+        transcriptEl.value = result || 'Could not transcribe audio. Please type your note below.';
+        transcriptEl.style.borderColor = 'var(--green)';
+      }
+      const attachBtn = document.getElementById('vn-attach-btn');
+      if (attachBtn) attachBtn.style.display = 'inline-flex';
+      const statusEl = document.getElementById('vn-status');
+      if (statusEl) { statusEl.textContent = 'Ready to attach'; statusEl.style.color = 'var(--green-mid)'; }
+    };
+    reader.readAsDataURL(blob);
+  } catch(e) {
+    const transcriptEl = document.getElementById('vn-transcript');
+    if (transcriptEl) transcriptEl.value = 'Transcription failed. Please type your note.';
+    const attachBtn = document.getElementById('vn-attach-btn');
+    if (attachBtn) attachBtn.style.display = 'inline-flex';
+  }
+}
+
+async function attachVoiceNote() {
+  const transcript = document.getElementById('vn-transcript')?.value?.trim();
+  if (!transcript) { alert('Please add a transcript or type a note'); return; }
+  const id = _voiceTicketId;
+  if (!id) return;
+
+  // Save as comment
+  const commentText = '🎙️ Voice note: ' + transcript;
+  if (isLive) {
+    await dbInsert('ticket_comments', { id: 'c'+Date.now(), ticket_id: id, user_id: session.id, text: commentText });
+    await loadLiveData();
+  } else {
+    const t = tickets.find(x => x.id === id);
+    if (t) t.comments.push({ user: session.id, text: commentText, time: nowTs() });
+  }
+
+  // Also upload audio file if available
+  if (_voiceChunks.length && isLive && supaClient) {
+    try {
+      const mimeType = _voiceChunks[0]?.type || 'audio/webm';
+      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+      const blob = new Blob(_voiceChunks, { type: mimeType });
+      const attId = 'vn' + Date.now();
+      const fileName = attId + '_voice.' + ext;
+      const { error } = await supaClient.storage.from('ticket-attachments').upload(fileName, blob, { cacheControl: '3600', upsert: false });
+      if (!error) {
+        const { data: urlData } = supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
+        await dbInsert('ticket_attachments', { id: attId, ticket_id: id, uploaded_by: session.id, file_name: 'Voice note.'+ext, file_url: urlData.publicUrl, file_type: mimeType, file_size: blob.size, caption: 'Voice note' });
+      }
+    } catch(e) { console.warn('Voice upload failed', e); }
+  }
+
+  showToast('Voice note attached to ticket');
+  closeModal();
+  refreshPage();
 }
 
 function renderRecurring(){
