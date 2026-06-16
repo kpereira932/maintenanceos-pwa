@@ -409,13 +409,13 @@ const NAV={
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   technician:[
@@ -436,7 +436,7 @@ const NAV={
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},
     {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
 };
@@ -467,7 +467,7 @@ function navTo(p){
   document.querySelectorAll('.mbn-item').forEach(n=>n.classList.remove('active'));
   const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
   const mbn=document.getElementById('mbn-'+p);if(mbn)mbn.classList.add('active');
-  const map={dashboard:renderDashboard,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists,'design-tickets':renderDesignTickets};
+  const map={dashboard:renderDashboard,sla:renderSLA,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists,'design-tickets':renderDesignTickets};
   if(map[p])map[p]();
 }
 
@@ -499,7 +499,8 @@ function ticketCard(t,compact=false){
       ${assignee?`<span style="color:var(--green-mid);font-weight:600">🔧 ${assignee.name}</span>`:'<span style="color:var(--red);font-weight:500">To be assigned</span>'}
       ${t.raised_by_name||t.raisedByName?`<span style="color:var(--text-muted)">by ${t.raised_by_name||t.raisedByName}</span>`:''}
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center" onclick="event.stopPropagation()">
+    ${slaBar(t)}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:${(['Resolved','Closed'].includes(t.status))?'8':'6'}px" onclick="event.stopPropagation()">
       ${isTechSup?`
         ${(t.assignedTo===session.id||t.assigned_to===session.id||t.supervisor_id===session.id)&&!['Resolved','Closed','On Hold'].includes(t.status)?`
           <button class="btn sm warning" onclick="techCheckIn('${t.id}','on_way')">On my way</button>
@@ -2966,6 +2967,197 @@ function setUserLang(lang){
 }
 function getOtherLang(){ return userLang === 'english' ? 'Hindi' : 'English'; }
 
+
+
+// ============================================================
+// SLA ENGINE
+// ============================================================
+const SLA_RULES = {
+  High:   { assignHours: 4,  resolveHours: 24  },
+  Medium: { assignHours: 8,  resolveHours: 48  },
+  Low:    { assignHours: 24, resolveHours: 72  },
+};
+
+function slaRule(priority) {
+  return SLA_RULES[priority] || SLA_RULES.Medium;
+}
+
+function hoursElapsed(fromTs) {
+  if (!fromTs) return 0;
+  const from = new Date(fromTs).getTime();
+  const now = Date.now();
+  return Math.max(0, (now - from) / (1000 * 60 * 60));
+}
+
+function slaStatus(ticket) {
+  const rule = slaRule(ticket.priority);
+  const created = ticket.createdAt || ticket.created_at;
+  const assigned = ticket.assignedTo || ticket.assigned_to;
+  const status = ticket.status;
+  const resolved = status === 'Resolved' || status === 'Closed';
+
+  const hoursOpen = hoursElapsed(created);
+  const assignSLA = rule.assignHours;
+  const resolveSLA = rule.resolveHours;
+
+  // Assignment SLA
+  let assignStatus = 'ok';
+  if (!assigned) {
+    if (hoursOpen > assignSLA) assignStatus = 'breached';
+    else if (hoursOpen > assignSLA * 0.75) assignStatus = 'warning';
+  }
+
+  // Resolution SLA
+  let resolveStatus = 'ok';
+  if (!resolved) {
+    if (hoursOpen > resolveSLA) resolveStatus = 'breached';
+    else if (hoursOpen > resolveSLA * 0.75) resolveStatus = 'warning';
+  }
+
+  const hoursLeft = resolved ? 0 : Math.max(0, resolveSLA - hoursOpen);
+  const pct = resolved ? 100 : Math.min(100, Math.round((hoursOpen / resolveSLA) * 100));
+
+  return { assignStatus, resolveStatus, hoursOpen: Math.round(hoursOpen * 10) / 10,
+           hoursLeft: Math.round(hoursLeft * 10) / 10, pct, assignSLA, resolveSLA,
+           breached: resolveStatus === 'breached', warning: resolveStatus === 'warning' };
+}
+
+function slaBar(ticket) {
+  const s = slaStatus(ticket);
+  const color = s.breached ? 'var(--red)' : s.warning ? 'var(--amber)' : 'var(--green-mid)';
+  const label = s.breached ? 'SLA breached' : s.warning ? 'SLA at risk' : 'Within SLA';
+  if (ticket.status === 'Resolved' || ticket.status === 'Closed') return '';
+  return `<div style="margin-top:6px">
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px">
+      <span style="color:${color};font-weight:600">${label}</span>
+      <span>${s.hoursLeft > 0 ? s.hoursLeft + 'h left' : s.hoursOpen + 'h open'}</span>
+    </div>
+    <div style="height:4px;background:var(--tan);border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${s.pct}%;background:${color};border-radius:2px;transition:width .3s"></div>
+    </div>
+  </div>`;
+}
+
+function calcSLAStats(ticketList) {
+  const total = ticketList.length;
+  if (!total) return { pct: 100, breached: 0, warning: 0, ok: 0 };
+  const statuses = ticketList.map(t => slaStatus(t));
+  const breached = statuses.filter(s => s.breached).length;
+  const warning = statuses.filter(s => s.warning && !s.breached).length;
+  const ok = total - breached - warning;
+  const pct = Math.round((ok / total) * 100);
+  return { pct, breached, warning, ok, total };
+}
+
+function renderSLA() {
+  const vis = visT();
+  const active = vis.filter(t => !['Resolved','Closed'].includes(t.status));
+  const stats = calcSLAStats(active);
+  const breachedTickets = active.filter(t => slaStatus(t).breached);
+  const warningTickets = active.filter(t => { const s = slaStatus(t); return s.warning && !s.breached; });
+  const okTickets = active.filter(t => { const s = slaStatus(t); return !s.breached && !s.warning; });
+
+  // SLA by priority
+  const priorities = ['High','Medium','Low'];
+  const byPri = priorities.map(p => {
+    const pts = active.filter(t => t.priority === p);
+    const st = calcSLAStats(pts);
+    return { p, ...st };
+  });
+
+  // SLA by location
+  const visLocs = visibleLocationIds();
+  const byLoc = visLocs.map(id => {
+    const l = getLoc(id);
+    const lts = active.filter(t => (t.locationId||t.location_id) === id);
+    const st = calcSLAStats(lts);
+    return { id, l, ...st };
+  }).filter(x => x.total > 0).sort((a,b) => a.pct - b.pct);
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div><div class="page-title">SLA Tracker</div>
+      <div class="page-sub">Service level agreement compliance</div></div>
+      <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
+    </div>
+
+    <!-- SLA OVERVIEW -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem">
+      <div class="met" style="grid-column:1/2">
+        <div class="met-bar" style="background:${stats.pct>=80?'var(--green-mid)':stats.pct>=60?'var(--amber)':'var(--red)'}"></div>
+        <div class="ml">SLA compliance</div>
+        <div class="mv ${stats.pct>=80?'g':stats.pct>=60?'w':'r'}" style="font-size:32px">${stats.pct}%</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${stats.total} active tickets</div>
+      </div>
+      <div class="met"><div class="met-bar" style="background:var(--red)"></div><div class="ml">SLA breached</div><div class="mv r">${stats.breached}</div></div>
+      <div class="met"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">At risk</div><div class="mv w">${stats.warning}</div></div>
+      <div class="met"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">Within SLA</div><div class="mv g">${stats.ok}</div></div>
+    </div>
+
+    <!-- SLA RULES -->
+    <div class="card" style="margin-bottom:1.5rem">
+      <div class="section-title" style="margin-bottom:12px">SLA rules</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${priorities.map(p => {
+          const r = slaRule(p);
+          const color = p==='High'?'var(--red)':p==='Medium'?'var(--amber)':'var(--green-mid)';
+          return `<div style="border:1.5px solid var(--tan);border-radius:8px;padding:12px;border-top:3px solid ${color}">
+            <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:8px">${p}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Assign within <strong>${r.assignHours}h</strong></div>
+            <div style="font-size:12px;color:var(--text-muted)">Resolve within <strong>${r.resolveHours}h</strong></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- BY PRIORITY -->
+    <div style="margin-bottom:1.5rem">
+      <div class="section-title" style="margin-bottom:10px">Compliance by urgency</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        ${byPri.map(({p,pct,breached,warning,ok,total}) => {
+          const color = pct>=80?'var(--green-mid)':pct>=60?'var(--amber)':'var(--red)';
+          return `<div class="card" style="text-align:center;padding:14px">
+            <div style="font-weight:700;color:${p==='High'?'var(--red)':p==='Medium'?'var(--amber)':'var(--green-mid)'};margin-bottom:6px">${p}</div>
+            <div style="font-size:28px;font-weight:800;color:${color};font-family:'Georgia',serif">${pct}%</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${total} tickets</div>
+            <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- BY LOCATION -->
+    ${byLoc.length ? `<div style="margin-bottom:1.5rem">
+      <div class="section-title" style="margin-bottom:10px">Compliance by location</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Location</th><th>SLA %</th><th>Breached</th><th>At risk</th><th>OK</th><th>Total</th></tr></thead>
+        <tbody>${byLoc.map(({l,pct,breached,warning,ok,total}) => {
+          const color = pct>=80?'var(--green-mid)':pct>=60?'var(--amber)':'var(--red)';
+          return `<tr>
+            <td><strong>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':''}</strong></td>
+            <td><span style="font-weight:700;color:${color}">${pct}%</span></td>
+            <td style="color:var(--red);font-weight:600">${breached||'-'}</td>
+            <td style="color:var(--amber);font-weight:600">${warning||'-'}</td>
+            <td style="color:var(--green-mid);font-weight:600">${ok}</td>
+            <td style="color:var(--text-muted)">${total}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>` : ''}
+
+    <!-- BREACHED TICKETS -->
+    ${breachedTickets.length ? `<div style="margin-bottom:1.5rem">
+      <div class="section-title" style="color:var(--red);margin-bottom:10px">SLA breached (${breachedTickets.length})</div>
+      ${breachedTickets.map(t => ticketCard(t, true)).join('')}
+    </div>` : ''}
+
+    <!-- AT RISK TICKETS -->
+    ${warningTickets.length ? `<div style="margin-bottom:1.5rem">
+      <div class="section-title" style="color:var(--amber);margin-bottom:10px">At risk (${warningTickets.length})</div>
+      ${warningTickets.map(t => ticketCard(t, true)).join('')}
+    </div>` : ''}
+  `;
+}
 
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
