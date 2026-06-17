@@ -179,7 +179,7 @@ tr:hover td{background:var(--cream)}
   .frow3{grid-template-columns:1fr}
   .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
   .sidebar-overlay.open{display:block}
-  .mobile-topbar{display:flex;align-items:center;justify-content:space-between;background:#A06B18;color:#fff;padding:12px 16px;position:fixed;top:0;left:0;right:0;z-index:998;height:50px}
+  .mobile-topbar{display:flex;align-items:center;justify-content:space-between;background:var(--green-dark);color:#fff;padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));position:fixed;top:0;left:0;right:0;z-index:998;min-height:54px;height:auto}
   .mobile-topbar-title{font-size:15px;font-weight:700}
   .hamburger{background:none;border:none;color:#fff;cursor:pointer;padding:4px;display:flex;flex-direction:column;gap:4px}
   .hamburger span{display:block;width:22px;height:2px;background:#fff;border-radius:2px;transition:all .2s}
@@ -3998,7 +3998,7 @@ function toggleAIChat() {
     ).join('');
   }
   if (_chatOpen && _chatHistory.length === 0) {
-    addChatMessage('ai', 'Hi! I am your MaintenanceOS advisor. Ask me anything about your maintenance data.\n\nFor example:\n• Why is Chowpatty cost high?\n• Which technician is performing best?\n• How many AC issues this month?\n• Which outlet has most open tickets?');
+    addChatMessage('ai', 'Hi! I\'m Nino! Your AI maintenance advisor.\n\nAsk me anything about your data:\n\u2022 Why is Chowpatty cost high?\n\u2022 Which tech is performing best?\n\u2022 Which outlet needs attention?');
   }
   const input = document.getElementById('ai-chat-input');
   if (input && _chatOpen) input.focus();
@@ -5485,18 +5485,6 @@ function setLoginLang(lang) {
   if (saved) { userLang = saved; setTimeout(() => setLoginLang(saved === 'hindi' ? 'hi' : saved), 100); }
 })();
 
-// Detect PWA standalone mode and apply class
-(function detectPWA(){
-  const isStandalone = window.navigator.standalone === true ||
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.matchMedia('(display-mode: fullscreen)').matches;
-  if(isStandalone){
-    document.body.classList.add('pwa-standalone');
-  }
-  window.matchMedia('(display-mode: standalone)').addEventListener('change', e => {
-    document.body.classList.toggle('pwa-standalone', e.matches);
-  });
-})();
 
 window.addEventListener('load', async () => {
   await initSupabase();
