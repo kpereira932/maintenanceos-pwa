@@ -1633,26 +1633,164 @@ function deleteLocation(id){const open=tickets.filter(t=>t.locationId===id&&!['R
 function renderUsers(){
   const visibleUsers = users.filter(u=>u.role!=='superadmin');
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Users & roles</div><div class="page-sub">${visibleUsers.length} users<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div><button class="btn primary" onclick="openAddUser()">+ Add user</button></div>
-    <div class="tab-btns">${['All','Admin','Manager','Supervisor','Technician','Outlet / CK','Founder','Design Manager','Design POC'].map((r,i)=>`<button class="tab-btn${i===0?' active':''}" onclick="filterUsers('${r}',this)">${r}</button>`).join('')}</div>
-    <div id="utbl">${userTable(visibleUsers)}</div>`;
+    <div class="page-hdr">
+      <div><div class="page-title">Users & roles</div><div class="page-sub">${visibleUsers.length} users</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm" onclick="refreshPage()">&#8635;</button>
+        <button class="btn primary sm" onclick="openAddUser()">+ Add user</button>
+      </div>
+    </div>
+
+    <!-- Search bar -->
+    <div style="position:relative;margin-bottom:1rem">
+      <input type="text" id="user-search" placeholder="Search by name, email or role..."
+        oninput="filterAndRenderUsers()"
+        style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:10px 14px 10px 36px;font-size:14px;font-family:inherit;background:var(--warm-white)">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🔍</span>
+    </div>
+
+    <!-- Role filter tabs - scrollable on mobile -->
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:1rem;-webkit-overflow-scrolling:touch;scrollbar-width:none" id="user-role-tabs">
+      ${['All','Admin','Manager','Supervisor','Technician','Outlet / CK','Founder','Design Manager','Design POC'].map((r,i)=>`
+        <button class="tab-btn${i===0?' active':''}" onclick="setUserTab('${r}',this)" style="flex-shrink:0;padding:7px 14px;font-size:12px">${r}</button>
+      `).join('')}
+    </div>
+
+    <div id="utbl"></div>
+    <div id="user-pagination" style="display:flex;justify-content:center;gap:8px;margin-top:1rem;flex-wrap:wrap"></div>
+  `;
+
+  // Render first page
+  filterAndRenderUsers();
 }
-function filterUsers(role,btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  let f;
-  if(role==='All'){
-    f=users.filter(u=>u.role!=='superadmin');
-  } else {
-    const roleLower=role.toLowerCase().replace(/ \/ /g,'/').replace(/ /g,'-');
-    f=users.filter(u=>u.role!=='superadmin'&&(
-      roleLabel(u.role).toLowerCase()===role.toLowerCase()||
-      u.role===roleLower||
-      u.role===role.toLowerCase()
-    ));
+
+let _userPage = 0;
+let _userRoleFilter = 'All';
+const USER_PAGE_SIZE = 10;
+
+function setUserTab(role, btn){
+  document.querySelectorAll('#user-role-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  _userRoleFilter = role;
+  _userPage = 0;
+  filterAndRenderUsers();
+}
+
+function filterAndRenderUsers(){
+  const search = (document.getElementById('user-search')?.value||'').toLowerCase().trim();
+  const role = _userRoleFilter;
+  let list = users.filter(u=>u.role!=='superadmin');
+
+  // Role filter
+  if(role !== 'All'){
+    const roleLower = role.toLowerCase().replace(' / ','/').replace(' ','-');
+    list = list.filter(u=>
+      roleLabel(u.role).toLowerCase()===role.toLowerCase() ||
+      u.role===roleLower || u.role===role.toLowerCase()
+    );
   }
-  document.getElementById('utbl').innerHTML=userTable(f);
+
+  // Search filter
+  if(search){
+    list = list.filter(u=>
+      (u.name||'').toLowerCase().includes(search) ||
+      (u.email||'').toLowerCase().includes(search) ||
+      (u.role||'').toLowerCase().includes(search) ||
+      (u.user_code||'').toLowerCase().includes(search)
+    );
+  }
+
+  const total = list.length;
+  const pages = Math.ceil(total / USER_PAGE_SIZE);
+  _userPage = Math.min(_userPage, Math.max(0, pages-1));
+  const page = list.slice(_userPage * USER_PAGE_SIZE, (_userPage+1) * USER_PAGE_SIZE);
+
+  // Render table - mobile friendly card style
+  const tbl = document.getElementById('utbl');
+  if(!tbl) return;
+
+  if(!page.length){
+    tbl.innerHTML = '<div class="empty">No users found</div>';
+    document.getElementById('user-pagination').innerHTML = '';
+    return;
+  }
+
+  // On mobile: card layout. On desktop: table
+  const isMobile = window.innerWidth <= 768;
+  if(isMobile){
+    tbl.innerHTML = page.map(u=>{
+      const s = getState(u.stateId||u.state_id||'');
+      const l = getLoc(u.locationId||u.location_id||'');
+      return `<div class="card" style="margin-bottom:8px;padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div class="avatar" style="background:${roleColor(u.role)};color:#fff;width:36px;height:36px;font-size:13px">${u.avatar||'?'}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:14px">${u.name}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${u.email}</div>
+            ${u.user_code?`<div style="font-size:10px;color:var(--amber);font-weight:700">${u.user_code}</div>`:''}
+          </div>
+          ${roleBadge(u.role)}
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+          ${s&&s.name?'📍 '+s.name:''}
+          ${l&&l.name&&l.name!=='-'?' · '+l.name:''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn sm" style="flex:1;justify-content:center" onclick="openEditUser('${u.id}')">✏️ Edit</button>
+          ${u.id!==session.id?`<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑</button>`:'<span style="font-size:11px;color:var(--text-muted);padding:4px 8px">(you)</span>'}
+        </div>
+      </div>`;
+    }).join('');
+  } else {
+    tbl.innerHTML = `<div class="tbl-wrap"><table>
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead>
+      <tbody>${page.map(u=>{
+        const s=getState(u.stateId||u.state_id||'');
+        const l=getLoc(u.locationId||u.location_id||'');
+        return `<tr>
+          <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div><div><div>${u.name}</div>${u.user_code?`<div style="font-size:10px;color:var(--amber);font-weight:600">${u.user_code}</div>`:''}</div></div></td>
+          <td style="color:var(--text-muted);font-size:12px">${u.email}</td>
+          <td>${roleBadge(u.role)}</td>
+          <td style="font-size:12px">${s&&s.name?s.name:'-'}</td>
+          <td style="font-size:12px">${l&&l.name&&l.name!=='-'?l.name:'-'}</td>
+          <td><div style="display:flex;gap:5px">
+            <button class="btn sm" onclick="openEditUser('${u.id}')">Edit</button>
+            ${u.id!==session.id?`<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑</button>`:'<span style="font-size:11px;color:var(--text-muted)">(you)</span>'}
+          </div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+
+  // Pagination
+  const pg = document.getElementById('user-pagination');
+  if(!pg) return;
+  if(pages <= 1){ pg.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">${total} users</div>`; return; }
+
+  let paginHtml = `<div style="font-size:12px;color:var(--text-muted);width:100%;text-align:center;margin-bottom:6px">${total} users · Page ${_userPage+1} of ${pages}</div>`;
+  paginHtml += `<button class="btn sm" onclick="goUserPage(0)" ${_userPage===0?'disabled':''}>«</button>`;
+  paginHtml += `<button class="btn sm" onclick="goUserPage(${_userPage-1})" ${_userPage===0?'disabled':''}>‹ Prev</button>`;
+  for(let i=0;i<pages;i++){
+    if(i===_userPage){
+      paginHtml += `<button class="btn sm primary" style="pointer-events:none">${i+1}</button>`;
+    } else if(i===0||i===pages-1||Math.abs(i-_userPage)<=1){
+      paginHtml += `<button class="btn sm" onclick="goUserPage(${i})">${i+1}</button>`;
+    } else if(Math.abs(i-_userPage)===2){
+      paginHtml += `<span style="padding:0 4px;color:var(--text-muted)">…</span>`;
+    }
+  }
+  paginHtml += `<button class="btn sm" onclick="goUserPage(${_userPage+1})" ${_userPage===pages-1?'disabled':''}>Next ›</button>`;
+  paginHtml += `<button class="btn sm" onclick="goUserPage(${pages-1})" ${_userPage===pages-1?'disabled':''}>»</button>`;
+  pg.innerHTML = paginHtml;
 }
+
+function goUserPage(p){
+  _userPage = p;
+  filterAndRenderUsers();
+  // Scroll back to top of user list
+  document.getElementById('utbl')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+// filterUsers replaced by filterAndRenderUsers
 function userTable(list){
   if(!list.length)return'<div class="empty">No users</div>';
   return`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead><tbody>${list.map(u=>{
@@ -5345,6 +5483,19 @@ function setLoginLang(lang) {
 (function() {
   const saved = localStorage.getItem('benne_lang');
   if (saved) { userLang = saved; setTimeout(() => setLoginLang(saved === 'hindi' ? 'hi' : saved), 100); }
+})();
+
+// Detect PWA standalone mode and apply class
+(function detectPWA(){
+  const isStandalone = window.navigator.standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches ||
+    window.matchMedia('(display-mode: fullscreen)').matches;
+  if(isStandalone){
+    document.body.classList.add('pwa-standalone');
+  }
+  window.matchMedia('(display-mode: standalone)').addEventListener('change', e => {
+    document.body.classList.toggle('pwa-standalone', e.matches);
+  });
 })();
 
 window.addEventListener('load', async () => {
