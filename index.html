@@ -227,6 +227,32 @@ tr:hover td{background:var(--cream)}
 <!-- APP -->
 <div class="app" id="app" style="display:none">
   <button id="float-refresh" onclick="refreshPage()" style="background:var(--amber);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.2);display:none;align-items:center;justify-content:center">&#8635;</button>
+
+  <!-- AI CHAT PANEL -->
+  <div id="ai-chat-btn" onclick="toggleAIChat()" style="position:fixed;bottom:130px;right:16px;z-index:996;background:var(--green);color:#fff;border:none;border-radius:50%;width:52px;height:52px;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(27,67,50,.4);display:flex;align-items:center;justify-content:center;font-family:inherit" title="AI Advisor">🤖</div>
+
+  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:190px;right:16px;z-index:995;width:340px;max-width:calc(100vw - 32px);height:480px;max-height:60vh;background:var(--warm-white);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.2);border:1px solid var(--tan);flex-direction:column;overflow:hidden">
+    <!-- Header -->
+    <div style="background:var(--green);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0">
+      <div>
+        <div style="font-weight:700;font-size:14px">🤖 AI Advisor</div>
+        <div style="font-size:11px;opacity:.7">Ask about your maintenance data</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Clear</button>
+        <button onclick="toggleAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:16px;cursor:pointer;line-height:1">×</button>
+      </div>
+    </div>
+    <!-- Quick questions -->
+    <div id="ai-quick-btns" style="padding:8px;border-bottom:1px solid var(--tan);display:flex;gap:6px;overflow-x:auto;flex-shrink:0"></div>
+    <!-- Messages -->
+    <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:12px"></div>
+    <!-- Input -->
+    <div style="padding:10px;border-top:1px solid var(--tan);display:flex;gap:8px;flex-shrink:0">
+      <textarea id="ai-chat-input" onkeydown="aiChatKeydown(event)" placeholder="Ask anything..." style="flex:1;border:1.5px solid var(--tan);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:none;height:40px;max-height:100px;line-height:1.4"></textarea>
+      <button onclick="sendAIChat()" style="background:var(--amber);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:16px;cursor:pointer;flex-shrink:0">➤</button>
+    </div>
+  </div>
   <!-- Mobile top bar -->
   <div class="mobile-topbar">
     <button class="hamburger" onclick="toggleSidebar()" id="hamburger-btn">
@@ -413,13 +439,13 @@ const NAV={
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'performance',i:'',l:'Team performance'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'performance',i:'',l:'Team performance'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   technician:[
@@ -438,9 +464,9 @@ const NAV={
   founder:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},
+    {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},{id:'assets',i:'',l:'Asset Register'},
     {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'performance',i:'',l:'Team performance'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
 };
@@ -471,7 +497,7 @@ function navTo(p){
   document.querySelectorAll('.mbn-item').forEach(n=>n.classList.remove('active'));
   const el=document.getElementById('nav-'+p);if(el)el.classList.add('active');
   const mbn=document.getElementById('mbn-'+p);if(mbn)mbn.classList.add('active');
-  const map={dashboard:renderDashboard,sla:renderSLA,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists,'design-tickets':renderDesignTickets};
+  const map={dashboard:renderDashboard,sla:renderSLA,assets:renderAssets,performance:renderTechPerformance,whatsapp:renderWhatsAppSetup,budgets:renderBudgets,tickets:renderTickets,locations:renderLocations,users:renderUsers,recurring:renderRecurring,log:renderLog,assign:renderAssign,notifications:renderNotifications,'my-tasks':renderMyTasks,raise:renderRaise,'my-tickets':renderMyTickets,expenses:renderExpenses,'my-expenses':renderMyExpenses,amc:renderAMC,reports:renderReports,profile:renderProfile,vendors:renderVendors,superadmin:renderSuperAdmin,'design-lists':renderDesignLists,'design-raise':renderDesignRaise,'design-my-lists':renderDesignMyLists,'design-tickets':renderDesignTickets};
   if(map[p])map[p]();
 }
 
@@ -3814,6 +3840,771 @@ function setUserLang(lang) {
   refreshPage(); // Re-render current page
 }
 
+
+// ============================================================
+// AI CHAT ADVISOR — Ask questions about your data
+// ============================================================
+let _chatHistory = [];
+let _chatOpen = false;
+
+function toggleAIChat() {
+  const panel = document.getElementById('ai-chat-panel');
+  if (!panel) return;
+  _chatOpen = !_chatOpen;
+  panel.style.display = _chatOpen ? 'flex' : 'none';
+  // Render quick questions
+  const qc = document.getElementById('ai-quick-btns');
+  if (qc && !qc.children.length) {
+    qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,3).map(q =>
+      `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:var(--cream);border:1px solid var(--tan);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--charcoal);flex-shrink:0">${q.slice(0,28)}...</button>`
+    ).join('');
+  }
+  if (_chatOpen && _chatHistory.length === 0) {
+    addChatMessage('ai', 'Hi! I am your MaintenanceOS advisor. Ask me anything about your maintenance data.\n\nFor example:\n• Why is Chowpatty cost high?\n• Which technician is performing best?\n• How many AC issues this month?\n• Which outlet has most open tickets?');
+  }
+  const input = document.getElementById('ai-chat-input');
+  if (input && _chatOpen) input.focus();
+}
+
+function addChatMessage(role, text) {
+  _chatHistory.push({ role, text, time: new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) });
+  renderChatMessages();
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  container.innerHTML = _chatHistory.map(m => `
+    <div style="display:flex;flex-direction:column;align-items:${m.role==='user'?'flex-end':'flex-start'};margin-bottom:12px">
+      <div style="max-width:80%;background:${m.role==='user'?'var(--amber)':'var(--cream)'};color:${m.role==='user'?'#fff':'var(--charcoal)'};border-radius:${m.role==='user'?'12px 12px 2px 12px':'12px 12px 12px 2px'};padding:10px 14px;font-size:13px;line-height:1.5;white-space:pre-wrap;border:1px solid ${m.role==='user'?'transparent':'var(--tan)'}">
+        ${m.text}
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${m.time}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendAIChat() {
+  const input = document.getElementById('ai-chat-input');
+  const question = input?.value?.trim();
+  if (!question) return;
+  input.value = '';
+  addChatMessage('user', question);
+
+  // Show typing indicator
+  const container = document.getElementById('ai-chat-messages');
+  const typingId = 'typing-' + Date.now();
+  if (container) {
+    container.innerHTML += `<div id="${typingId}" style="display:flex;align-items:flex-start;margin-bottom:12px"><div style="background:var(--cream);border:1px solid var(--tan);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;color:var(--text-muted)">Thinking...</div></div>`;
+    container.scrollTop = container.scrollHeight;
+  }
+
+  // Build context from live data
+  const vis = visT();
+  const context = buildDataContext();
+
+  const systemPrompt = `You are an AI maintenance advisor for Benne, a restaurant chain in India. You have access to real maintenance data and answer questions concisely and helpfully. Always be specific with numbers. Format your answers clearly with line breaks. Keep answers under 200 words unless asked for more detail.
+
+Current data context:
+${context}`;
+
+  const conversationMessages = [
+    ..._chatHistory.slice(-6).filter(m=>m.role!=='ai' || _chatHistory.indexOf(m)>0).map(m => ({
+      role: m.role === 'ai' ? 'assistant' : 'user',
+      content: m.text
+    }))
+  ];
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: conversationMessages
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || 'Sorry, I could not process that. Please try again.';
+
+    // Remove typing indicator
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+
+    addChatMessage('ai', reply);
+  } catch(e) {
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+    addChatMessage('ai', 'Sorry, I could not connect. Please check your internet connection and try again.');
+  }
+}
+
+function buildDataContext() {
+  const vis = visT();
+  const active = vis.filter(t => !['Resolved','Closed'].includes(t.status));
+  const resolved = vis.filter(t => t.status === 'Resolved');
+  const totalExp = expenses.reduce((s,e) => s+Number(e.amount), 0);
+
+  // By location
+  const locStats = {};
+  vis.forEach(t => {
+    const lid = t.locationId||t.location_id;
+    const loc = getLoc(lid);
+    const name = (loc.city||loc.name);
+    if (!locStats[name]) locStats[name] = {open:0,resolved:0,exp:0,tickets:[]};
+    if (['Resolved','Closed'].includes(t.status)) locStats[name].resolved++;
+    else locStats[name].open++;
+    locStats[name].tickets.push(t.title);
+  });
+  expenses.forEach(e => {
+    const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
+    if (t) {
+      const loc = getLoc(t.locationId||t.location_id);
+      const name = loc.city||loc.name;
+      if (locStats[name]) locStats[name].exp += Number(e.amount);
+    }
+  });
+
+  // By category
+  const catStats = {};
+  vis.forEach(t => { const c = t.category||'Other'; catStats[c]=(catStats[c]||0)+1; });
+
+  // By technician
+  const techStats = {};
+  vis.forEach(t => {
+    const tid = t.assignedTo||t.assigned_to;
+    if (tid) {
+      const u = getUser(tid);
+      if (u) {
+        if (!techStats[u.name]) techStats[u.name] = {assigned:0,resolved:0};
+        techStats[u.name].assigned++;
+        if (['Resolved','Closed'].includes(t.status)) techStats[u.name].resolved++;
+      }
+    }
+  });
+
+  return `OVERVIEW:
+Total tickets: ${vis.length} | Active: ${active.length} | Resolved: ${resolved.length}
+Escalated: ${vis.filter(isESC).length} | Overdue: ${vis.filter(t=>isOD(t)&&!isESC(t)).length}
+Total spend: Rs ${totalExp.toLocaleString('en-IN')}
+Overall health score: ${overallHealthScore()}/100
+
+BY LOCATION:
+${Object.entries(locStats).map(([name,s])=>`${name}: ${s.open} open, ${s.resolved} resolved, spend Rs ${s.exp.toLocaleString('en-IN')}`).join('\n')}
+
+BY CATEGORY:
+${Object.entries(catStats).sort((a,b)=>b[1]-a[1]).map(([cat,count])=>`${cat}: ${count} tickets`).join('\n')}
+
+BY TECHNICIAN:
+${Object.entries(techStats).map(([name,s])=>`${name}: ${s.assigned} assigned, ${s.resolved} resolved (${s.assigned>0?Math.round(s.resolved/s.assigned*100):0}% rate)`).join('\n')}
+
+RECENT OPEN TICKETS:
+${active.slice(0,10).map(t=>{const loc=getLoc(t.locationId||t.location_id);return `${t.id}: ${t.title} at ${loc.city||loc.name} (${t.priority})`}).join('\n')}`;
+}
+
+function clearAIChat() {
+  _chatHistory = [];
+  renderChatMessages();
+}
+
+function aiChatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAIChat();
+  }
+}
+
+// Quick question buttons
+const AI_QUICK_QUESTIONS = [
+  'Which outlet has the most open tickets?',
+  'What is our most common issue category?',
+  'Which technician has the best performance?',
+  'What is our total maintenance spend?',
+  'Which tickets are escalated right now?',
+  'Show a summary of this month\'s activity',
+];
+
+
+// ============================================================
+// ASSET REGISTER + QR CODES
+// ============================================================
+let assets = []; // loaded from Supabase asset_register table
+
+function renderAssets() {
+  const visLocs = visibleLocationIds();
+  const myAssets = assets.filter(a => visLocs.includes(a.location_id||a.locationId));
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div><div class="page-title">Asset Register</div>
+      <div class="page-sub">${myAssets.length} assets tracked</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
+        <button class="btn sm" onclick="openQRScanner()">&#9633; Scan QR</button>
+        ${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openAddAsset()">+ Add asset</button>':''}
+      </div>
+    </div>
+
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="filterAssets('all',this)">All</button>
+      <button class="tab-btn" onclick="filterAssets('kitchen',this)">Kitchen</button>
+      <button class="tab-btn" onclick="filterAssets('hvac',this)">HVAC</button>
+      <button class="tab-btn" onclick="filterAssets('electrical',this)">Electrical</button>
+      <button class="tab-btn" onclick="filterAssets('plumbing',this)">Plumbing</button>
+    </div>
+
+    <div id="asset-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${myAssets.length ? myAssets.map(a => assetCard(a)).join('') :
+        '<div class="empty">No assets added yet.<br>Add your first asset to start tracking equipment.</div>'}
+    </div>`;
+}
+
+function assetCard(a) {
+  const loc = getLoc(a.location_id||a.locationId||'');
+  const health = a.health_score || 100;
+  const hColor = health >= 80 ? 'var(--green-mid)' : health >= 60 ? 'var(--amber)' : 'var(--red)';
+  const assetTickets = tickets.filter(t =>
+    (t.assetId||t.asset_id) === a.id ||
+    (t.title||'').toLowerCase().includes((a.name||'').toLowerCase().split(' ')[0].toLowerCase())
+  ).length;
+  const warrantyDate = a.warranty_date ? new Date(a.warranty_date) : null;
+  const warrantyOk = warrantyDate && warrantyDate > new Date();
+
+  return `<div class="card" onclick="openAssetDetail('${a.id}')" style="cursor:pointer">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:14px;margin-bottom:3px">${a.name}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${a.brand||''} ${a.model||''}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">📍 ${loc.city?loc.city+' - ':''}${loc.name}</div>
+      </div>
+      <div style="text-align:center;flex-shrink:0;margin-left:12px">
+        <div style="font-size:24px;font-weight:800;color:${hColor};font-family:'Georgia',serif">${health}</div>
+        <div style="font-size:9px;color:${hColor};text-transform:uppercase;font-weight:700">health</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="badge b-grey">${a.category||'Equipment'}</span>
+      ${warrantyOk?'<span class="badge b-done">Warranty OK</span>':'<span class="badge b-ov">Warranty expired</span>'}
+      ${assetTickets>0?`<span class="badge b-exp">${assetTickets} tickets</span>`:''}
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
+      ${a.purchase_date?`Purchased: ${a.purchase_date}`:''}
+      ${a.last_service_date?` · Last service: ${a.last_service_date}`:''}
+    </div>
+    <div style="height:4px;background:var(--tan);border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${health}%;background:${hColor};border-radius:2px"></div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:10px" onclick="event.stopPropagation()">
+      <button class="btn sm" onclick="openAssetDetail('${a.id}')">View</button>
+      <button class="btn sm" onclick="showAssetQR('${a.id}')">QR Code</button>
+      ${['admin','manager','founder'].includes(session.role)?`<button class="btn sm primary" onclick="raiseAssetTicket('${a.id}')">Raise ticket</button>`:''}
+    </div>
+  </div>`;
+}
+
+function filterAssets(type, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const visLocs = visibleLocationIds();
+  let filtered = assets.filter(a => visLocs.includes(a.location_id||a.locationId));
+  if (type !== 'all') filtered = filtered.filter(a => (a.category||'').toLowerCase().includes(type));
+  document.getElementById('asset-grid').innerHTML = filtered.length ?
+    filtered.map(a=>assetCard(a)).join('') :
+    '<div class="empty">No assets in this category</div>';
+}
+
+function openAddAsset() {
+  document.getElementById('m-title').textContent = 'Add asset';
+  document.getElementById('m-body').innerHTML = `
+    <div class="frow">
+      <div class="fg"><label>Asset name *</label><input type="text" id="ast-name" placeholder="e.g. Daikin AC Unit 1"></div>
+      <div class="fg"><label>Category</label>
+        <select id="ast-cat">
+          <option>Kitchen Equipment</option><option>HVAC / AC</option><option>Electrical</option>
+          <option>Plumbing</option><option>Furniture</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Brand</label><input type="text" id="ast-brand" placeholder="e.g. Daikin"></div>
+      <div class="fg"><label>Model</label><input type="text" id="ast-model" placeholder="e.g. FTKG50TV16U"></div>
+    </div>
+    <div class="fg"><label>Location</label>
+      <select id="ast-loc">
+        <option value="">Select location...</option>
+        ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
+      </select>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Purchase date</label><input type="date" id="ast-pdate"></div>
+      <div class="fg"><label>Warranty until</label><input type="date" id="ast-wdate"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Last service date</label><input type="date" id="ast-sdate"></div>
+      <div class="fg"><label>Next service date</label><input type="date" id="ast-ndate"></div>
+    </div>
+    <div class="fg"><label>Notes</label><textarea id="ast-notes" placeholder="Any additional details..."></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveAsset()">Save asset</button>
+    </div>`;
+  openModal();
+}
+
+async function saveAsset() {
+  const name = document.getElementById('ast-name')?.value?.trim();
+  const locId = document.getElementById('ast-loc')?.value;
+  if (!name) { alert('Asset name is required'); return; }
+  if (!locId) { alert('Please select a location'); return; }
+
+  const assetId = 'AST' + Date.now().toString().slice(-6);
+  const row = {
+    id: assetId,
+    name,
+    category: document.getElementById('ast-cat')?.value,
+    brand: document.getElementById('ast-brand')?.value?.trim()||null,
+    model: document.getElementById('ast-model')?.value?.trim()||null,
+    location_id: locId,
+    purchase_date: document.getElementById('ast-pdate')?.value||null,
+    warranty_date: document.getElementById('ast-wdate')?.value||null,
+    last_service_date: document.getElementById('ast-sdate')?.value||null,
+    next_service_date: document.getElementById('ast-ndate')?.value||null,
+    notes: document.getElementById('ast-notes')?.value?.trim()||null,
+    health_score: 100,
+    created_by: session.id,
+  };
+
+  if (isLive) {
+    await dbInsert('asset_register', row);
+    await loadAssets();
+  } else {
+    assets.push({...row, locationId: locId});
+  }
+
+  closeModal();
+  showToast('Asset ' + assetId + ' added');
+  renderAssets();
+}
+
+async function loadAssets() {
+  if (!isLive || !supaClient) return;
+  try {
+    const { data } = await supaClient.from('asset_register').select('*').order('name');
+    if (data) assets = data.map(a => ({...a, locationId: a.location_id}));
+  } catch(e) { console.warn('Assets load failed', e); }
+}
+
+function openAssetDetail(id) {
+  const a = assets.find(x => x.id === id);
+  if (!a) return;
+  const loc = getLoc(a.location_id||a.locationId||'');
+  const assetTickets = tickets.filter(t => (t.assetId||t.asset_id) === id);
+  const health = a.health_score || 100;
+  const hColor = health >= 80 ? 'var(--green-mid)' : health >= 60 ? 'var(--amber)' : 'var(--red)';
+
+  document.getElementById('m-title').textContent = a.name;
+  document.getElementById('m-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;margin-bottom:1rem">
+      <div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">${a.brand||''} ${a.model||''}</div>
+        <div style="font-size:12px;color:var(--text-muted)">📍 ${loc.city?loc.city+' - ':''}${loc.name}</div>
+        <div style="font-size:11px;color:var(--amber);font-weight:700;margin-top:6px">ID: ${a.id}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:36px;font-weight:800;color:${hColor};font-family:'Georgia',serif">${health}</div>
+        <div style="font-size:10px;color:${hColor}">Health score</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;font-size:12px">
+      ${a.purchase_date?`<div style="background:var(--cream);padding:8px 10px;border-radius:6px"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:2px">Purchased</div>${a.purchase_date}</div>`:''}
+      ${a.warranty_date?`<div style="background:var(--cream);padding:8px 10px;border-radius:6px"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:2px">Warranty until</div>${a.warranty_date}</div>`:''}
+      ${a.last_service_date?`<div style="background:var(--cream);padding:8px 10px;border-radius:6px"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:2px">Last service</div>${a.last_service_date}</div>`:''}
+      ${a.next_service_date?`<div style="background:var(--amber-pale);padding:8px 10px;border-radius:6px;border:1px solid var(--amber-light)"><div style="color:var(--amber);font-size:10px;text-transform:uppercase;margin-bottom:2px">Next service</div>${a.next_service_date}</div>`:''}
+    </div>
+    ${a.notes?`<div style="background:var(--cream);border-radius:6px;padding:10px;font-size:12px;color:var(--text-muted);margin-bottom:1rem">${a.notes}</div>`:''}
+    ${assetTickets.length?`<div style="margin-bottom:1rem">
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">Ticket history (${assetTickets.length})</div>
+      ${assetTickets.slice(0,5).map(t=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--tan)"><span>${t.title}</span>${sbadge(t)}</div>`).join('')}
+    </div>`:''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Close</button>
+      <button class="btn sm" onclick="showAssetQR('${id}');closeModal()">QR Code</button>
+      <button class="btn primary" onclick="raiseAssetTicket('${id}');closeModal()">Raise ticket</button>
+    </div>`;
+  openModal();
+}
+
+function showAssetQR(id) {
+  const a = assets.find(x => x.id === id);
+  if (!a) return;
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('https://maintenanceos-pwa.vercel.app?asset=' + id);
+  document.getElementById('m-title').textContent = 'QR Code — ' + a.name;
+  document.getElementById('m-body').innerHTML = `
+    <div style="text-align:center;padding:1rem">
+      <img src="${qrUrl}" width="200" height="200" style="border:8px solid #fff;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:8px">
+      <div style="font-size:14px;font-weight:700;margin-top:16px">${a.name}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Asset ID: ${a.id}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Scan to view full history and raise a ticket</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+        <button class="btn" onclick="closeModal()">Close</button>
+        <button class="btn primary" onclick="printAssetQR('${id}')">Print QR</button>
+      </div>
+    </div>`;
+  openModal();
+}
+
+function printAssetQR(id) {
+  const a = assets.find(x => x.id === id);
+  if (!a) return;
+  const loc = getLoc(a.location_id||a.locationId||'');
+  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent('https://maintenanceos-pwa.vercel.app?asset=' + id);
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>QR — ${a.name}</title>
+    <style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1C1C1A}
+    .box{border:2px solid #1B4332;border-radius:12px;padding:24px;display:inline-block;min-width:280px}
+    h2{color:#1B4332;margin-bottom:4px;font-size:18px} .sub{color:#7A7060;font-size:12px;margin-bottom:16px}
+    img{border:4px solid white;box-shadow:0 2px 12px rgba(0,0,0,.1)} .id{font-size:11px;color:#C48524;font-weight:700;margin-top:12px}
+    .btn{margin-top:20px;padding:10px 24px;background:#1B4332;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+    @media print{.btn{display:none}}</style>
+  </head><body>
+    <div class="box">
+      <h2>${a.name}</h2>
+      <div class="sub">${loc.city?loc.city+' - ':''}${loc.name} · ${a.category||'Equipment'}</div>
+      <img src="${qrUrl}" width="250" height="250">
+      <div class="id">Asset ID: ${a.id}</div>
+      ${a.brand?`<div style="font-size:12px;color:#7A7060;margin-top:4px">${a.brand} ${a.model||''}</div>`:''}
+    </div>
+    <br><button class="btn" onclick="window.print()">Print</button>
+  </body></html>`);
+  w.document.close();
+}
+
+function raiseAssetTicket(assetId) {
+  const a = assets.find(x => x.id === assetId);
+  if (!a) return;
+  openRaiseTicketModal();
+  // Pre-fill location and title
+  setTimeout(() => {
+    const locSel = document.getElementById('ri-loc');
+    if (locSel && a.location_id) { locSel.value = a.location_id; }
+    const titleEl = document.getElementById('ri-t');
+    if (titleEl) titleEl.value = 'Issue with ' + a.name;
+    const descEl = document.getElementById('ri-d');
+    if (descEl) descEl.value = 'Asset: ' + a.name + ' (ID: ' + assetId + ')\nBrand: ' + (a.brand||'-') + ' ' + (a.model||'');
+  }, 100);
+}
+
+function openQRScanner() {
+  // Check URL params on load for QR scan
+  const params = new URLSearchParams(window.location.search);
+  const assetId = params.get('asset');
+  if (assetId) {
+    const a = assets.find(x => x.id === assetId);
+    if (a) { openAssetDetail(assetId); return; }
+  }
+  showToast('Open the camera app on your phone and scan any asset QR code');
+}
+
+// Check URL on load for QR asset deep link
+function checkAssetQRLink() {
+  const params = new URLSearchParams(window.location.search);
+  const assetId = params.get('asset');
+  if (assetId && session) {
+    setTimeout(() => {
+      navTo('assets');
+      setTimeout(() => openAssetDetail(assetId), 300);
+    }, 1000);
+  }
+}
+
+
+// ============================================================
+// TECHNICIAN PERFORMANCE
+// ============================================================
+function renderTechPerformance() {
+  const techs = users.filter(u => u.role === 'technician');
+  const sups = users.filter(u => u.role === 'supervisor');
+  const allStaff = [...techs, ...sups];
+
+  const perfData = allStaff.map(u => {
+    const assigned = tickets.filter(t => (t.assignedTo||t.assigned_to) === u.id);
+    const resolved = assigned.filter(t => ['Resolved','Closed'].includes(t.status));
+    const open = assigned.filter(t => !['Resolved','Closed'].includes(t.status));
+    const overdue = open.filter(t => isOD(t));
+    const resRate = assigned.length > 0 ? Math.round(resolved.length / assigned.length * 100) : 0;
+    const slaBreached = assigned.filter(t => slaStatus(t).breached).length;
+    const totalExp = expenses.filter(e => {
+      const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
+      return t && (t.assignedTo||t.assigned_to) === u.id;
+    }).reduce((s,e) => s+Number(e.amount), 0);
+
+    // Avg resolution time in hours
+    let avgResHours = 0;
+    if (resolved.length > 0) {
+      const times = resolved.map(t => {
+        const c = new Date(t.createdAt||t.created_at||0).getTime();
+        const r = new Date(t.updatedAt||t.updated_at||0).getTime();
+        return (r - c) / (1000 * 60 * 60);
+      }).filter(h => h > 0);
+      avgResHours = times.length > 0 ? Math.round(times.reduce((a,b)=>a+b,0)/times.length) : 0;
+    }
+
+    // Performance score
+    let score = 100;
+    if (overdue.length > 0) score -= overdue.length * 10;
+    if (slaBreached > 0) score -= slaBreached * 15;
+    if (resRate < 50) score -= 20;
+    score = Math.max(0, Math.min(100, score));
+
+    return { u, assigned: assigned.length, resolved: resolved.length, open: open.length,
+             overdue: overdue.length, resRate, slaBreached, totalExp, avgResHours, score };
+  }).sort((a,b) => b.score - a.score);
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div><div class="page-title">Team Performance</div>
+      <div class="page-sub">Technician & supervisor stats</div></div>
+      <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div style="margin-bottom:1.5rem">
+      <div class="section-title" style="margin-bottom:12px">Performance leaderboard</div>
+      ${perfData.length ? perfData.map((p,i) => {
+        const hColor = p.score>=80?'var(--green-mid)':p.score>=60?'var(--amber)':'var(--red)';
+        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+        return `<div class="card" style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="font-size:24px;min-width:32px;text-align:center">${medal||'#'+(i+1)}</div>
+            <div class="avatar" style="background:${roleColor(p.u.role)};color:#fff;flex-shrink:0">${p.u.avatar||'?'}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:14px">${p.u.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${roleLabel(p.u.role)} ${p.u.specialty?'· '+p.u.specialty:''}</div>
+            </div>
+            <div style="text-align:center;flex-shrink:0">
+              <div style="font-size:28px;font-weight:800;color:${hColor};font-family:'Georgia',serif">${p.score}</div>
+              <div style="font-size:9px;color:${hColor};text-transform:uppercase">score</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;text-align:center">
+            <div><div style="font-size:18px;font-weight:700;color:var(--blue)">${p.assigned}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Total</div></div>
+            <div><div style="font-size:18px;font-weight:700;color:var(--green-mid)">${p.resolved}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Resolved</div></div>
+            <div><div style="font-size:18px;font-weight:700;color:var(--amber)">${p.open}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Open</div></div>
+            <div><div style="font-size:18px;font-weight:700;color:${p.overdue>0?'var(--red)':'var(--green-mid)'}">${p.overdue}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Overdue</div></div>
+            <div><div style="font-size:18px;font-weight:700;color:var(--charcoal)">${p.resRate}%</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Rate</div></div>
+          </div>
+          <div style="margin-top:8px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px">
+              <span>Performance</span><span>${p.score}/100</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${p.score}%;background:${hColor}"></div></div>
+          </div>
+        </div>`;
+      }).join('') : '<div class="empty">No technicians or supervisors found</div>'}
+    </div>
+  `;
+}
+
+
+// ============================================================
+// WHATSAPP INTEGRATION
+// Guides users to raise tickets via WhatsApp message to manager
+// Also handles incoming Telegram messages as tickets
+// ============================================================
+
+function renderWhatsAppSetup() {
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div><div class="page-title">WhatsApp Integration</div>
+      <div class="page-sub">Raise tickets via WhatsApp</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem;border-left:4px solid #25D366">
+      <div style="font-size:16px;font-weight:700;margin-bottom:8px">📱 How to raise a ticket on WhatsApp</div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
+        1. Open WhatsApp and message your manager<br>
+        2. Send a photo of the problem<br>
+        3. Type the issue description<br>
+        4. Your manager will create the ticket in the app
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:1rem">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px">Quick raise via WhatsApp message</div>
+      <div class="fg"><label>Your name</label><input type="text" id="wa-name" value="${session.name||''}" ${session.role!=='outlet'?'readonly':''} style="${session.role!=='outlet'?'background:var(--cream);cursor:not-allowed':''}"></div>
+      <div class="fg"><label>Location</label>
+        <select id="wa-loc">
+          <option value="">Select location...</option>
+          ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}"${session.locationId===id?' selected':''}>${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
+        </select>
+      </div>
+      <div class="fg"><label>Issue description</label>
+        <textarea id="wa-desc" placeholder="Describe the problem clearly..."></textarea>
+      </div>
+      <div class="fg"><label>Urgency</label>
+        <select id="wa-pri"><option>High</option><option selected>Medium</option><option>Low</option></select>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn wa" onclick="sendViaWhatsApp()">Send on WhatsApp</button>
+        <button class="btn primary" onclick="raiseFromWA()">Raise ticket directly</button>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--cream)">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px">Manager WhatsApp numbers</div>
+      ${users.filter(u=>['manager','supervisor'].includes(u.role)&&u.whatsapp).map(u=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--tan)">
+          <div>
+            <div style="font-weight:600;font-size:13px">${u.name}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${roleLabel(u.role)}</div>
+          </div>
+          <a href="https://wa.me/${(u.whatsapp||'').replace(/[^0-9]/g,'')}?text=Maintenance+issue+at+Benne" target="_blank" class="btn wa sm">WhatsApp</a>
+        </div>`).join('')}
+      ${!users.some(u=>['manager','supervisor'].includes(u.role)&&u.whatsapp)?'<div style="font-size:12px;color:var(--text-muted)">No WhatsApp numbers set. Managers can add their WhatsApp number in My Profile.</div>':''}
+    </div>`;
+}
+
+function sendViaWhatsApp() {
+  const name = document.getElementById('wa-name')?.value?.trim();
+  const locId = document.getElementById('wa-loc')?.value;
+  const desc = document.getElementById('wa-desc')?.value?.trim();
+  const pri = document.getElementById('wa-pri')?.value;
+  if (!desc) { alert('Please describe the issue'); return; }
+  const loc = locId ? getLoc(locId) : null;
+  const msg = encodeURIComponent(
+    'MAINTENANCE ISSUE\n' +
+    'From: ' + (name||session.name) + '\n' +
+    (loc?'Location: ' + (loc.city||'') + ' ' + loc.name + '\n':'') +
+    'Urgency: ' + pri + '\n\n' +
+    'Issue: ' + desc + '\n\n' +
+    'Please create a ticket in MaintenanceOS.'
+  );
+  // Send to first available manager
+  const mgr = users.find(u=>u.role==='manager'&&u.whatsapp);
+  if (mgr) {
+    window.open('https://wa.me/' + (mgr.whatsapp||'').replace(/[^0-9]/g,'') + '?text=' + msg, '_blank');
+  } else {
+    alert('No manager WhatsApp number found. Please raise the ticket directly.');
+  }
+}
+
+async function raiseFromWA() {
+  const name = document.getElementById('wa-name')?.value?.trim();
+  const locId = document.getElementById('wa-loc')?.value;
+  const desc = document.getElementById('wa-desc')?.value?.trim();
+  const pri = document.getElementById('wa-pri')?.value;
+  if (!name||!desc||!locId) { alert('Please fill all fields'); return; }
+  // Use the main raise ticket flow
+  openRaiseTicketModal();
+  setTimeout(() => {
+    const el = document.getElementById('ri-t'); if(el) el.value = desc.slice(0,80);
+    const dl = document.getElementById('ri-d'); if(dl) dl.value = desc;
+    const ll = document.getElementById('ri-loc'); if(ll) ll.value = locId;
+    const pl = document.getElementById('ri-p'); if(pl) pl.value = pri;
+  }, 100);
+}
+
+
+// ============================================================
+// BUDGET & SPEND CONTROL
+// ============================================================
+let budgets = {}; // { locationId: { monthly: amount, spent: amount } }
+
+function getBudgetStatus(locationId) {
+  const b = budgets[locationId];
+  if (!b || !b.monthly) return null;
+  const spent = expenses.filter(e => {
+    const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
+    return t && (t.locationId||t.location_id) === locationId;
+  }).reduce((s,e)=>s+Number(e.amount),0);
+  const pct = Math.round(spent/b.monthly*100);
+  return { monthly: b.monthly, spent, remaining: b.monthly - spent, pct: Math.min(pct,100), over: spent > b.monthly };
+}
+
+function renderBudgets() {
+  const visLocs = visibleLocationIds();
+  const locBudgets = visLocs.map(id => ({ id, l: getLoc(id), budget: getBudgetStatus(id) }));
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div><div class="page-title">Budget Control</div>
+      <div class="page-sub">Monthly spend limits per location</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
+        ${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openSetBudget()">Set budget</button>':''}
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+      ${locBudgets.map(({id,l,budget}) => {
+        if (!budget) return `<div class="card">
+          <div style="font-weight:700">${l.city?l.city+' - ':''}${l.name}</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px">No budget set</div>
+          <button class="btn sm primary" style="margin-top:10px" onclick="openSetBudget('${id}')">Set budget</button>
+        </div>`;
+        const color = budget.over?'var(--red)':budget.pct>=80?'var(--amber)':'var(--green-mid)';
+        return `<div class="card" style="border-left:4px solid ${color}">
+          <div style="font-weight:700;margin-bottom:6px">${l.city?l.city+' - ':''}${l.name}</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">
+            <span style="color:var(--text-muted)">Budget: ${fc(budget.monthly)}/month</span>
+            <span style="color:${color};font-weight:700">${budget.pct}% used</span>
+          </div>
+          <div class="progress-bar" style="margin-bottom:8px"><div class="progress-fill" style="width:${budget.pct}%;background:${color}"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px">
+            <div><div style="font-weight:700;color:var(--amber)">${fc(budget.spent)}</div><div style="font-size:10px;color:var(--text-muted)">Spent</div></div>
+            <div style="text-align:right"><div style="font-weight:700;color:${budget.remaining>=0?'var(--green-mid)':'var(--red)'}">${fc(Math.abs(budget.remaining))}</div><div style="font-size:10px;color:var(--text-muted)">${budget.remaining>=0?'Remaining':'Over budget'}</div></div>
+          </div>
+          ${budget.over?`<div style="background:#FEE2E2;border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:var(--red);font-weight:600">⚠️ Over budget by ${fc(Math.abs(budget.remaining))}</div>`:''}
+          <button class="btn sm" style="margin-top:10px;width:100%" onclick="openSetBudget('${id}')">Update budget</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function openSetBudget(locationId) {
+  const loc = locationId ? getLoc(locationId) : null;
+  document.getElementById('m-title').textContent = 'Set monthly budget';
+  document.getElementById('m-body').innerHTML = `
+    ${!locationId?`<div class="fg"><label>Location</label>
+      <select id="bgt-loc">
+        <option value="">Select location...</option>
+        ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
+      </select>
+    </div>`:`<div style="font-weight:700;margin-bottom:1rem">${loc.city?loc.city+' - ':''}${loc.name}</div><input type="hidden" id="bgt-loc" value="${locationId}">`}
+    <div class="fg"><label>Monthly maintenance budget (₹)</label>
+      <input type="number" id="bgt-amount" placeholder="e.g. 50000" value="${locationId&&budgets[locationId]?budgets[locationId].monthly:''}">
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">Managers will be alerted when spend reaches 80% of this limit.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveBudget()">Save budget</button>
+    </div>`;
+  openModal();
+}
+
+async function saveBudget() {
+  const locId = document.getElementById('bgt-loc')?.value;
+  const amount = Number(document.getElementById('bgt-amount')?.value);
+  if (!locId || !amount) { alert('Please fill all fields'); return; }
+  budgets[locId] = { monthly: amount };
+  // Save to localStorage for now (could be Supabase in future)
+  localStorage.setItem('benne_budgets', JSON.stringify(budgets));
+  closeModal();
+  showToast('Budget saved for ' + getLoc(locId).name);
+  renderBudgets();
+}
+
+// Load budgets on startup
+(function loadBudgets() {
+  try {
+    const saved = localStorage.getItem('benne_budgets');
+    if (saved) budgets = JSON.parse(saved);
+  } catch(e) {}
+})();
+
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
@@ -4133,6 +4924,11 @@ async function loadLiveData() {
     // Load design lists
     const dl = await supaClient.from('design_lists').select('*').order('created_at',{ascending:false});
     if (dl.data) designLists = dl.data.map(d=>({...d,pocId:d.poc_id,locationId:d.location_id,visitDate:d.visit_date,items:d.items||[]}));
+    // Load assets
+    try {
+      const astData = await supaClient.from('asset_register').select('*').order('name');
+      if (astData.data) assets = astData.data.map(a=>({...a,locationId:a.location_id}));
+    } catch(e) { console.warn('Assets not loaded - table may not exist yet'); }
     showToast('Live data loaded');
   } catch(e) {
     console.error('loadLiveData error',e);
@@ -4174,6 +4970,7 @@ window.doLogin = async function() {
     setTimeout(assignMissingUserCodes, 2000);
     buildNav();
     navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
+    checkAssetQRLink();
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
     setTimeout(showInstallBanner, 5000);
