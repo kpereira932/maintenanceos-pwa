@@ -229,7 +229,17 @@ tr:hover td{background:var(--cream)}
   <button id="float-refresh" onclick="refreshPage()" style="background:var(--amber);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.2);display:none;align-items:center;justify-content:center">&#8635;</button>
 
   <!-- AI CHAT PANEL -->
-  <div id="ai-chat-btn" onclick="toggleAIChat()" style="position:fixed;bottom:130px;right:16px;z-index:996;background:var(--green);color:#fff;border:none;border-radius:50%;width:52px;height:52px;font-size:24px;cursor:pointer;box-shadow:0 4px 16px rgba(27,67,50,.4);display:flex;align-items:center;justify-content:center;font-family:inherit" title="AI Advisor">🤖</div>
+  <!-- NINO AI BUTTON -->
+  <button id="ai-chat-btn" title="Ask Nino"
+    style="position:fixed;bottom:130px;right:16px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:58px;height:58px;cursor:pointer;box-shadow:0 4px 20px rgba(27,67,50,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none;flex-direction:column;gap:1px">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="4"/><path d="M8 8h-2a2 2 0 0 0-2 2v1h16v-1a2 2 0 0 0-2-2h-2"/>
+      <rect x="9" y="11" width="6" height="6" rx="1"/>
+      <line x1="9" y1="16" x2="7" y2="19"/><line x1="15" y1="16" x2="17" y2="19"/>
+      <circle cx="10" cy="8" r=".5" fill="currentColor"/><circle cx="14" cy="8" r=".5" fill="currentColor"/>
+    </svg>
+    <span style="font-size:8px;font-weight:800;letter-spacing:.5px;line-height:1">NINO</span>
+  </button>
 
   <div id="ai-chat-panel" style="display:none;position:fixed;bottom:190px;right:16px;z-index:995;width:340px;max-width:calc(100vw - 32px);height:480px;max-height:60vh;background:var(--warm-white);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.2);border:1px solid var(--tan);flex-direction:column;overflow:hidden">
     <!-- Header -->
@@ -3990,6 +4000,7 @@ function toggleAIChat() {
   if (!panel) return;
   _chatOpen = !_chatOpen;
   panel.style.display = _chatOpen ? 'flex' : 'none';
+  if (_chatOpen) setTimeout(repositionNinoPanel, 10);
   // Render quick questions
   const qc = document.getElementById('ai-quick-btns');
   if (qc && !qc.children.length) {
@@ -4742,6 +4753,91 @@ async function saveBudget() {
     if (saved) budgets = JSON.parse(saved);
   } catch(e) {}
 })();
+
+
+// ============================================================
+// NINO — Draggable floating AI button
+// ============================================================
+(function initNino(){
+  let dragging = false;
+  let moved = false;
+  let startX, startY, origLeft, origTop;
+
+  function getBtn(){ return document.getElementById('ai-chat-btn'); }
+
+  function onPointerDown(e){
+    const btn = getBtn(); if(!btn) return;
+    dragging = true; moved = false;
+    const point = e.touches ? e.touches[0] : e;
+    startX = point.clientX; startY = point.clientY;
+    const rect = btn.getBoundingClientRect();
+    origLeft = rect.left; origTop = rect.top;
+    btn.style.transition = 'none';
+    btn.style.right = 'auto'; btn.style.bottom = 'auto';
+    btn.style.left = origLeft + 'px'; btn.style.top = origTop + 'px';
+    e.preventDefault();
+  }
+
+  function onPointerMove(e){
+    if(!dragging) return;
+    const point = e.touches ? e.touches[0] : e;
+    const dx = point.clientX - startX;
+    const dy = point.clientY - startY;
+    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+    const btn = getBtn(); if(!btn) return;
+    const newLeft = Math.max(8, Math.min(window.innerWidth - 66, origLeft + dx));
+    const newTop  = Math.max(80, Math.min(window.innerHeight - 80, origTop + dy));
+    btn.style.left = newLeft + 'px';
+    btn.style.top  = newTop  + 'px';
+    e.preventDefault();
+  }
+
+  function onPointerUp(e){
+    if(!dragging) return;
+    dragging = false;
+    const btn = getBtn(); if(!btn) return;
+    btn.style.transition = '';
+    if(!moved) toggleAIChat();
+    else repositionNinoPanel();
+  }
+
+  function attachNinoEvents(){
+    const btn = getBtn(); if(!btn) return;
+    btn.addEventListener('mousedown',  onPointerDown, {passive:false});
+    btn.addEventListener('touchstart', onPointerDown, {passive:false});
+    document.addEventListener('mousemove',  onPointerMove, {passive:false});
+    document.addEventListener('touchmove',  onPointerMove, {passive:false});
+    document.addEventListener('mouseup',  onPointerUp);
+    document.addEventListener('touchend', onPointerUp);
+  }
+
+  // Attach after DOM ready
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', attachNinoEvents);
+  } else {
+    attachNinoEvents();
+  }
+  // Also re-attach after login (app div shows)
+  window._attachNinoEvents = attachNinoEvents;
+})();
+
+function repositionNinoPanel(){
+  const btn = document.getElementById('ai-chat-btn');
+  const panel = document.getElementById('ai-chat-panel');
+  if(!btn || !panel || panel.style.display === 'none') return;
+  const rect = btn.getBoundingClientRect();
+  const pw = Math.min(340, window.innerWidth - 32);
+  let left = rect.right - pw;
+  let top = rect.top - 490;
+  if(left < 8) left = 8;
+  if(top < 80) top = rect.bottom + 8;
+  panel.style.left = left + 'px';
+  panel.style.top = top + 'px';
+  panel.style.right = 'auto';
+  panel.style.bottom = 'auto';
+  panel.style.width = pw + 'px';
+}
+
 
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
