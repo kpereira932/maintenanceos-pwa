@@ -246,8 +246,7 @@ tr:hover td{background:var(--cream)}
     <!-- Header -->
     <div style="background:var(--green);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0">
       <div>
-        <div style="font-weight:700;font-size:14px">🤖 AI Advisor</div>
-        <div style="font-size:11px;opacity:.7">Ask about your maintenance data</div>
+        <div style="font-weight:700;font-size:15px">Ask Nino Anything 🤖</div>
       </div>
       <div style="display:flex;gap:8px">
         <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Clear</button>
@@ -341,7 +340,7 @@ function getLoc(id){return locations.find(l=>l.id===id)||{name:'Unknown',type:'o
 function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
 function getUser(id){return users.find(u=>u.id===id);}
 function getTechs(stateId){
-  const allTechs = users.filter(u=>u.role==='technician');
+  const allTechs = users.filter(u=>u.role==='technician'||u.role==='tech-manager');
   if(!stateId) return allTechs;
   return allTechs.filter(u=>{
     const uState = u.stateId||u.state_id;
@@ -398,7 +397,7 @@ function visT(){
   if(session.role==='superadmin') return tickets;
   if(session.role==='founder') return tickets; // founder sees everything
   const visLocs = visibleLocationIds();
-  if(['admin','manager','supervisor','design-manager'].includes(session.role)){
+  if(['admin','manager','supervisor','design-manager','tech-manager'].includes(session.role)){
     return tickets.filter(t=>visLocs.includes(t.locationId||t.location_id));
   }
   if(session.role==='technician'){
@@ -499,6 +498,12 @@ NAV2['design-poc'] = [
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 // Merge NAV2 into NAV so all roles work with one lookup
+NAV2['tech-manager'] = [
+  {s:'Overview'},{id:'dashboard',i:'⊞',l:'Dashboard'},
+  {s:'Operations'},{id:'tickets',i:'📋',l:'Tickets'},{id:'my-tasks',i:'✓',l:'My tasks'},{id:'expenses',i:'💰',l:'Expenses'},{id:'vendors',i:'🏭',l:'Vendors'},{id:'amc',i:'📄',l:'AMC tracker'},
+  {s:'Reports'},{id:'reports',i:'📊',l:'Reports'},{id:'sla',i:'⏱',l:'SLA tracker'},{id:'performance',i:'🏆',l:'Team performance'},
+  {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
+];
 Object.assign(NAV, NAV2);
 function buildNav(){
   const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||NAV2[session.role]||[]);
@@ -4069,8 +4074,8 @@ async function sendAIChat() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
         system: fullSystem,
         messages: conversationMessages.length ? conversationMessages : [{role:'user',content: question}]
       })
@@ -5273,7 +5278,7 @@ window.doLogin = async function() {
     // Auto-assign user codes to anyone missing one
     setTimeout(assignMissingUserCodes, 2000);
     buildNav();
-    navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
+    navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
     checkAssetQRLink();
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
