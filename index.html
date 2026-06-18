@@ -560,6 +560,49 @@ function renderBudgets(){
   document.getElementById('main-content').innerHTML = `<div class="page-hdr"><div><div class="page-title">Budget Control</div></div><div style="display:flex;gap:8px"><button class="btn sm" onclick="refreshPage()">&#8635;</button>${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openSetBudget()">Set budget</button>':''}</div></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">${visLocs.map(id=>{const l=getLoc(id);const spent=expenses.filter(e=>{const t=tickets.find(x=>x.id===(e.ticketId||e.ticket_id));return t&&(t.locationId||t.location_id)===id;}).reduce((s,e)=>s+Number(e.amount),0);return`<div class="card"><div style="font-weight:700;margin-bottom:6px">${l.city?l.city+' - ':''}${l.name}</div><div style="font-size:13px;color:var(--amber);font-weight:600">${fc(spent)} spent</div><button class="btn sm" style="margin-top:8px" onclick="openSetBudget('${id}')">Set budget</button></div>`;}).join('')}</div>`;
 }
 
+
+// Check URL for QR asset deep link on login
+function checkAssetQRLink() {
+  const params = new URLSearchParams(window.location.search);
+  const assetId = params.get('asset');
+  if (assetId && session) {
+    setTimeout(() => {
+      navTo('assets');
+      setTimeout(() => {
+        const a = assets.find(x => x.id === assetId);
+        if (a) openAssetDetail(assetId);
+      }, 300);
+    }, 1000);
+  }
+}
+
+// Apply language translations to nav items
+function applyLanguage() {
+  if (typeof TRANSLATIONS === 'undefined') return;
+  const lang = userLang === 'hindi' ? 'hi' : 'en';
+  const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+  if (!t) return;
+  const NAV_LABELS = {
+    dashboard:'dashboard', tickets:'tickets', users:'users',
+    locations:'locations', expenses:'expenses', vendors:'vendors',
+    amc:'amc', reports:'reports', log:'log', profile:'profile',
+    sla:'sla', recurring:'recurring', raise:'raise',
+    'my-tickets':'my_tickets', 'my-tasks':'my_tasks',
+    'design-lists':'design_lists', 'design-raise':'design_raise',
+    'design-my-lists':'design_my_lists', 'design-tickets':'design_tickets',
+  };
+  document.querySelectorAll('.nav-item[id]').forEach(el => {
+    const id = el.id.replace('nav-','');
+    const key = NAV_LABELS[id];
+    if (key && t[key]) {
+      const icon = el.querySelector('.ni');
+      const iconHtml = icon ? icon.outerHTML : '';
+      el.innerHTML = iconHtml + t[key];
+    }
+  });
+}
+
+
 function navTo(p){
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
