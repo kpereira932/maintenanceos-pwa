@@ -1905,6 +1905,14 @@ function renderProfile() {
         </div>
         <div style="font-size:12px;color:var(--text-muted)">Comments from others will show a Translate button to convert to your language</div>
       </div>
+      ${['admin','superadmin','founder'].includes(session.role)?`
+      <div class="card" style="margin-bottom:1rem">
+        <div style="font-weight:700;font-size:15px;margin-bottom:8px">🤖 Nino AI Setup</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Configure the API key for Nino to work.</div>
+        <button class="btn primary" onclick="openNinoSettings()">Configure Nino API key</button>
+        ${window._ninoKey?'<span style="font-size:12px;color:var(--green-mid);margin-left:10px">✓ Key configured</span>':'<span style="font-size:12px;color:var(--red);margin-left:10px">Not configured</span>'}
+      </div>`:''}
+      </div>
 
       <div class="card">
         <div style="font-weight:700;font-size:15px;margin-bottom:4px">Telegram notifications</div>
@@ -3358,692 +3366,41 @@ function openRaiseTicketModal(){
 // ============================================================
 const CLAUDE_API = 'https://api.anthropic.com/v1/messages';
 
-async function callClaude(prompt, systemPrompt='You are a helpful assistant for a restaurant maintenance management app.') {
+// NINO SYSTEM PROMPT — Full app knowledge
+const NINO_SYSTEM_PROMPT = "You are Nino, the friendly AI assistant for MaintenanceOS, Benne restaurant chain maintenance app. Answer in the same language as the question (English or Hindi). Keep answers short, clear and practical. Use emojis. For how-to questions give numbered steps.\n\nAPP KNOWLEDGE:\n- Raise ticket: Tickets page > + Raise ticket > fill form > take photo (mandatory) > Submit\n- Assign ticket: Open ticket > tap flashing Assign button > choose technician/supervisor > set due date > Confirm\n- Resolve ticket: Open ticket > Resolve > take resolution photo > write notes > Submit\n- Add expense: Submit estimate first > wait for manager approval > Expense button appears > add with bill photo\n- Approve expense: Open ticket > Expenses > Approve or Reject\n- Voice note: Open ticket > Voice note button > record > AI transcribes > Attach\n- Design POC: New site visit > add items with photos > Submit to Design Manager\n- Design Manager: Site visit lists > Review > Approve/Reject each item > Finalise converts to tickets\n- SLA High: assign 4h, resolve 24h. Medium: assign 8h, resolve 48h. Low: assign 24h, resolve 72h\n- Reports: Reports page > Download PDF or Export to Google Sheets\n- Asset register: Design > Asset Register > Add asset > print QR code\n- Change language: My Profile > Language preference\n- Roles: Outlet raises tickets. Tech fixes them. Manager assigns and approves. Founder sees everything.\n- Nino: floating robot button, drag to move, tap to open, voice input with mic button\n\nFor data questions about current tickets/costs/performance, use the live data provided.";
+
+const GROQ_API_KEY = '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';
+const GROQ_API = 'https://api.groq.com/openai/v1/chat/completions';
+
+async function callClaude(prompt, systemPrompt=null) {
   try {
-    const res = await fetch(CLAUDE_API, {
+    const res = await fetch(GROQ_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: prompt }]
+        model: 'llama3-8b-8192',
+        max_tokens: 500,
+        messages: [
+          { role: 'system', content: systemPrompt || NINO_SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]
       })
     });
+    if (!res.ok) {
+      const err = await res.json();
+      console.error('Nino error:', err);
+      return null;
+    }
     const data = await res.json();
-    return data.content?.[0]?.text || '';
+    return data.choices?.[0]?.message?.content || '';
   } catch(e) {
-    console.error('Claude API error:', e);
+    console.error('Nino error:', e);
     return null;
   }
 }
-
-// AI FEATURE 1: Auto-categorise ticket
-async function aiSuggestCategory(){
-  const title = document.getElementById('ri-t')?.value?.trim();
-  const desc = document.getElementById('ri-d')?.value?.trim();
-  if(!title) return;
-  showToast('AI is categorising your issue...');
-  const categories = ['Electrical','Plumbing','Gas & Appliances','HVAC / AC','Water Systems','Civil / Structural','Furniture','Cleaning','Kitchen Equipment','Other'];
-  const result = await callClaude(
-    'Issue: ' + title + (desc ? '. Details: ' + desc : '') + '\n\nChoose the most appropriate category from this list: ' + categories.join(', ') + '\n\nReply with ONLY the category name, nothing else.',
-    'You categorise maintenance issues for a restaurant. Reply with only the category name from the given list.'
-  );
-  if(result) {
-    const cat = categories.find(c => result.trim().includes(c));
-    if(cat) {
-      const sel = document.getElementById('ri-c');
-      if(sel) { sel.value = cat; showToast('AI suggested: ' + cat); }
-    }
-  }
-}
-
-// AI FEATURE 2: Smart priority/urgency suggestion
-async function aiSuggestPriority(){
-  const title = document.getElementById('ri-t')?.value?.trim();
-  const desc = document.getElementById('ri-d')?.value?.trim();
-  if(!title) return;
-  showToast('AI is assessing urgency...');
-  const result = await callClaude(
-    'Restaurant maintenance issue: ' + title + (desc ? '. ' + desc : '') + '\n\nAssess urgency. Reply with only one word: High, Medium, or Low.',
-    'You assess maintenance urgency for a restaurant. Consider safety, food service impact, and customer experience. Reply with only: High, Medium, or Low.'
-  );
-  if(result) {
-    const pri = ['High','Medium','Low'].find(p => result.trim().includes(p));
-    if(pri) {
-      const sel = document.getElementById('ri-p');
-      if(sel) { sel.value = pri; showToast('AI suggested urgency: ' + pri); }
-    }
-  }
-}
-
-// AI FEATURE 3: Summarise ticket history
-async function aiSummariseTicket(ticketId){
-  const t = tickets.find(x=>x.id===ticketId);
-  if(!t) return;
-  const comments = (t.comments||[]).map(c=>{
-    const u = getUser(c.user);
-    return (u?u.name:'Unknown') + ': ' + c.text;
-  }).join('\n');
-  showToast('AI is summarising...');
-  const result = await callClaude(
-    'Ticket: ' + t.title + '\nCategory: ' + t.category + '\nStatus: ' + t.status + '\n\nActivity:\n' + (comments||'No comments yet') + '\n\nWrite a 2-sentence summary of this maintenance ticket status.',
-    'You summarise maintenance ticket history for restaurant managers. Be concise and factual.'
-  );
-  if(result) {
-    // Show in a toast-style popup
-    const el = document.getElementById('ai-summary-' + ticketId);
-    if(el) {
-      el.innerHTML = '<div style="background:var(--amber-pale);border:1px solid var(--amber-light);border-radius:8px;padding:10px 12px;font-size:13px;margin-top:8px"><strong>AI Summary:</strong> ' + result + '</div>';
-    } else {
-      alert('AI Summary:\n\n' + result);
-    }
-  }
-}
-
-// AI FEATURE 4: Auto-generate resolution note
-async function aiGenerateResolutionNote(){
-  const ticketId = document.getElementById('resolve-note')?.closest('[data-ticket-id]')?.dataset?.ticketId;
-  const note = document.getElementById('resolve-note')?.value?.trim();
-  if(!note) { alert('First describe briefly what was done, then tap AI to improve it.'); return; }
-  showToast('AI is writing your resolution note...');
-  const result = await callClaude(
-    'A technician fixed this maintenance issue and described it as: "' + note + '"\n\nWrite a professional resolution note in 2-3 sentences suitable for a maintenance log.',
-    'You write professional maintenance resolution notes for restaurants. Be clear and professional.'
-  );
-  if(result) {
-    const el = document.getElementById('resolve-note');
-    if(el) { el.value = result; showToast('AI improved your resolution note'); }
-  }
-}
-
-// AI FEATURE 5: Translate comment
-async function aiTranslateComment(text, targetLang, elementId){
-  if(!text) return;
-  const el = document.getElementById(elementId);
-  if(el) el.innerHTML = '<span style="color:var(--text-muted);font-size:11px">Translating...</span>';
-  const result = await callClaude(
-    'Translate this to ' + targetLang + ': "' + text + '"\n\nReply with ONLY the translation, nothing else.',
-    'You translate text accurately. Reply with only the translation.'
-  );
-  if(result && el) {
-    el.innerHTML = '<div style="background:var(--cream);border-left:3px solid var(--amber);padding:6px 10px;font-size:12px;color:var(--charcoal);margin-top:4px;border-radius:0 4px 4px 0"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Translation</span><br>' + result + '</div>';
-  }
-}
-
-// User language preference (stored in localStorage)
-let userLang = localStorage.getItem('benne_lang') || 'english';
-function setUserLang(lang){
-  userLang = lang;
-  localStorage.setItem('benne_lang', lang);
-  showToast('Language set to ' + lang);
-}
-function getOtherLang(){ return userLang === 'english' ? 'Hindi' : 'English'; }
-
-
-
-// ============================================================
-// SLA ENGINE
-// ============================================================
-const SLA_RULES = {
-  High:   { assignHours: 4,  resolveHours: 24  },
-  Medium: { assignHours: 8,  resolveHours: 48  },
-  Low:    { assignHours: 24, resolveHours: 72  },
-};
-
-function slaRule(priority) {
-  return SLA_RULES[priority] || SLA_RULES.Medium;
-}
-
-function hoursElapsed(fromTs) {
-  if (!fromTs) return 0;
-  const from = new Date(fromTs).getTime();
-  const now = Date.now();
-  return Math.max(0, (now - from) / (1000 * 60 * 60));
-}
-
-function slaStatus(ticket) {
-  const rule = slaRule(ticket.priority);
-  const created = ticket.createdAt || ticket.created_at;
-  const assigned = ticket.assignedTo || ticket.assigned_to;
-  const status = ticket.status;
-  const resolved = status === 'Resolved' || status === 'Closed';
-
-  const hoursOpen = hoursElapsed(created);
-  const assignSLA = rule.assignHours;
-  const resolveSLA = rule.resolveHours;
-
-  // Assignment SLA
-  let assignStatus = 'ok';
-  if (!assigned) {
-    if (hoursOpen > assignSLA) assignStatus = 'breached';
-    else if (hoursOpen > assignSLA * 0.75) assignStatus = 'warning';
-  }
-
-  // Resolution SLA
-  let resolveStatus = 'ok';
-  if (!resolved) {
-    if (hoursOpen > resolveSLA) resolveStatus = 'breached';
-    else if (hoursOpen > resolveSLA * 0.75) resolveStatus = 'warning';
-  }
-
-  const hoursLeft = resolved ? 0 : Math.max(0, resolveSLA - hoursOpen);
-  const pct = resolved ? 100 : Math.min(100, Math.round((hoursOpen / resolveSLA) * 100));
-
-  return { assignStatus, resolveStatus, hoursOpen: Math.round(hoursOpen * 10) / 10,
-           hoursLeft: Math.round(hoursLeft * 10) / 10, pct, assignSLA, resolveSLA,
-           breached: resolveStatus === 'breached', warning: resolveStatus === 'warning' };
-}
-
-function slaBar(ticket) {
-  const s = slaStatus(ticket);
-  const color = s.breached ? 'var(--red)' : s.warning ? 'var(--amber)' : 'var(--green-mid)';
-  const label = s.breached ? 'SLA breached' : s.warning ? 'SLA at risk' : 'Within SLA';
-  if (ticket.status === 'Resolved' || ticket.status === 'Closed') return '';
-  return `<div style="margin-top:6px">
-    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px">
-      <span style="color:${color};font-weight:600">${label}</span>
-      <span>${s.hoursLeft > 0 ? s.hoursLeft + 'h left' : s.hoursOpen + 'h open'}</span>
-    </div>
-    <div style="height:4px;background:var(--tan);border-radius:2px;overflow:hidden">
-      <div style="height:100%;width:${s.pct}%;background:${color};border-radius:2px;transition:width .3s"></div>
-    </div>
-  </div>`;
-}
-
-function calcSLAStats(ticketList) {
-  const total = ticketList.length;
-  if (!total) return { pct: 100, breached: 0, warning: 0, ok: 0 };
-  const statuses = ticketList.map(t => slaStatus(t));
-  const breached = statuses.filter(s => s.breached).length;
-  const warning = statuses.filter(s => s.warning && !s.breached).length;
-  const ok = total - breached - warning;
-  const pct = Math.round((ok / total) * 100);
-  return { pct, breached, warning, ok, total };
-}
-
-function renderSLA() {
-  const vis = visT();
-  const active = vis.filter(t => !['Resolved','Closed'].includes(t.status));
-  const stats = calcSLAStats(active);
-  const breachedTickets = active.filter(t => slaStatus(t).breached);
-  const warningTickets = active.filter(t => { const s = slaStatus(t); return s.warning && !s.breached; });
-  const okTickets = active.filter(t => { const s = slaStatus(t); return !s.breached && !s.warning; });
-
-  // SLA by priority
-  const priorities = ['High','Medium','Low'];
-  const byPri = priorities.map(p => {
-    const pts = active.filter(t => t.priority === p);
-    const st = calcSLAStats(pts);
-    return { p, ...st };
-  });
-
-  // SLA by location
-  const visLocs = visibleLocationIds();
-  const byLoc = visLocs.map(id => {
-    const l = getLoc(id);
-    const lts = active.filter(t => (t.locationId||t.location_id) === id);
-    const st = calcSLAStats(lts);
-    return { id, l, ...st };
-  }).filter(x => x.total > 0).sort((a,b) => a.pct - b.pct);
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="page-hdr">
-      <div><div class="page-title">SLA Tracker</div>
-      <div class="page-sub">Service level agreement compliance</div></div>
-      <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
-    </div>
-
-    <!-- SLA OVERVIEW -->
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem">
-      <div class="met" style="grid-column:1/2">
-        <div class="met-bar" style="background:${stats.pct>=80?'var(--green-mid)':stats.pct>=60?'var(--amber)':'var(--red)'}"></div>
-        <div class="ml">SLA compliance</div>
-        <div class="mv ${stats.pct>=80?'g':stats.pct>=60?'w':'r'}" style="font-size:32px">${stats.pct}%</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${stats.total} active tickets</div>
-      </div>
-      <div class="met"><div class="met-bar" style="background:var(--red)"></div><div class="ml">SLA breached</div><div class="mv r">${stats.breached}</div></div>
-      <div class="met"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">At risk</div><div class="mv w">${stats.warning}</div></div>
-      <div class="met"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">Within SLA</div><div class="mv g">${stats.ok}</div></div>
-    </div>
-
-    <!-- SLA RULES -->
-    <div class="card" style="margin-bottom:1.5rem">
-      <div class="section-title" style="margin-bottom:12px">SLA rules</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        ${priorities.map(p => {
-          const r = slaRule(p);
-          const color = p==='High'?'var(--red)':p==='Medium'?'var(--amber)':'var(--green-mid)';
-          return `<div style="border:1.5px solid var(--tan);border-radius:8px;padding:12px;border-top:3px solid ${color}">
-            <div style="font-weight:700;font-size:13px;color:${color};margin-bottom:8px">${p}</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Assign within <strong>${r.assignHours}h</strong></div>
-            <div style="font-size:12px;color:var(--text-muted)">Resolve within <strong>${r.resolveHours}h</strong></div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- BY PRIORITY -->
-    <div style="margin-bottom:1.5rem">
-      <div class="section-title" style="margin-bottom:10px">Compliance by urgency</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-        ${byPri.map(({p,pct,breached,warning,ok,total}) => {
-          const color = pct>=80?'var(--green-mid)':pct>=60?'var(--amber)':'var(--red)';
-          return `<div class="card" style="text-align:center;padding:14px">
-            <div style="font-weight:700;color:${p==='High'?'var(--red)':p==='Medium'?'var(--amber)':'var(--green-mid)'};margin-bottom:6px">${p}</div>
-            <div style="font-size:28px;font-weight:800;color:${color};font-family:'Georgia',serif">${pct}%</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${total} tickets</div>
-            <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>
-
-    <!-- BY LOCATION -->
-    ${byLoc.length ? `<div style="margin-bottom:1.5rem">
-      <div class="section-title" style="margin-bottom:10px">Compliance by location</div>
-      <div class="tbl-wrap"><table>
-        <thead><tr><th>Location</th><th>SLA %</th><th>Breached</th><th>At risk</th><th>OK</th><th>Total</th></tr></thead>
-        <tbody>${byLoc.map(({l,pct,breached,warning,ok,total}) => {
-          const color = pct>=80?'var(--green-mid)':pct>=60?'var(--amber)':'var(--red)';
-          return `<tr>
-            <td><strong>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</strong></td>
-            <td><span style="font-weight:700;color:${color}">${pct}%</span></td>
-            <td style="color:var(--red);font-weight:600">${breached||'-'}</td>
-            <td style="color:var(--amber);font-weight:600">${warning||'-'}</td>
-            <td style="color:var(--green-mid);font-weight:600">${ok}</td>
-            <td style="color:var(--text-muted)">${total}</td>
-          </tr>`;
-        }).join('')}</tbody>
-      </table></div>
-    </div>` : ''}
-
-    <!-- BREACHED TICKETS -->
-    ${breachedTickets.length ? `<div style="margin-bottom:1.5rem">
-      <div class="section-title" style="color:var(--red);margin-bottom:10px">SLA breached (${breachedTickets.length})</div>
-      ${breachedTickets.map(t => ticketCard(t, true)).join('')}
-    </div>` : ''}
-
-    <!-- AT RISK TICKETS -->
-    ${warningTickets.length ? `<div style="margin-bottom:1.5rem">
-      <div class="section-title" style="color:var(--amber);margin-bottom:10px">At risk (${warningTickets.length})</div>
-      ${warningTickets.map(t => ticketCard(t, true)).join('')}
-    </div>` : ''}
-  `;
-}
-
-
-// ============================================================
-// VOICE NOTES — Record, transcribe, attach to tickets
-// ============================================================
-let _voiceRecorder = null;
-let _voiceChunks = [];
-let _voiceTicketId = null;
-let _voiceTimer = null;
-let _voiceSeconds = 0;
-
-function openVoiceNoteModal(ticketId) {
-  _voiceTicketId = ticketId;
-  _voiceChunks = [];
-  _voiceSeconds = 0;
-  document.getElementById('m-title').textContent = 'Voice note';
-  document.getElementById('m-body').innerHTML = `
-    <div style="text-align:center;padding:1.5rem 0">
-      <div id="vn-status" style="font-size:14px;color:var(--text-muted);margin-bottom:1rem">Tap Record to start</div>
-      <div id="vn-timer" style="font-size:48px;font-weight:800;color:var(--green);font-family:'Georgia',serif;margin-bottom:1.5rem">0:00</div>
-      <div style="display:flex;gap:12px;justify-content:center;margin-bottom:1.5rem">
-        <button id="vn-record-btn" class="btn primary" style="padding:14px 28px;font-size:15px;border-radius:50px" onclick="startVoiceRecording()">
-          🎙️ Record
-        </button>
-        <button id="vn-stop-btn" class="btn danger" style="padding:14px 28px;font-size:15px;border-radius:50px;display:none" onclick="stopVoiceRecording()">
-          ⏹ Stop
-        </button>
-      </div>
-      <div id="vn-playback" style="display:none;margin-bottom:1rem">
-        <audio id="vn-audio" controls style="width:100%;border-radius:8px"></audio>
-      </div>
-      <div id="vn-transcript-area" style="display:none">
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;text-align:left">Transcript (AI generated)</div>
-        <textarea id="vn-transcript" style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;min-height:80px;resize:vertical" placeholder="Transcribing..."></textarea>
-      </div>
-      <div id="vn-lang-pick" style="display:none;margin-bottom:1rem">
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Recording language</div>
-        <div style="display:flex;gap:8px;justify-content:center">
-          <button class="btn sm primary" id="vn-lang-en" onclick="setVoiceLang('en')">English</button>
-          <button class="btn sm" id="vn-lang-hi" onclick="setVoiceLang('hi')">Hindi</button>
-        </div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button id="vn-attach-btn" class="btn primary" style="display:none" onclick="attachVoiceNote()">Attach to ticket</button>
-    </div>`;
-  openModal();
-  // Show language picker
-  document.getElementById('vn-lang-pick').style.display = 'block';
-}
-
-let _voiceLang = 'en';
-function setVoiceLang(lang) {
-  _voiceLang = lang;
-  document.getElementById('vn-lang-en').className = 'btn sm' + (lang==='en'?' primary':'');
-  document.getElementById('vn-lang-hi').className = 'btn sm' + (lang==='hi'?' primary':'');
-}
-
-async function startVoiceRecording() {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    _voiceChunks = [];
-    _voiceRecorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4' });
-    _voiceRecorder.ondataavailable = e => { if (e.data.size > 0) _voiceChunks.push(e.data); };
-    _voiceRecorder.onstop = onVoiceRecordingStopped;
-    _voiceRecorder.start(100);
-
-    // UI update
-    document.getElementById('vn-record-btn').style.display = 'none';
-    document.getElementById('vn-stop-btn').style.display = 'inline-flex';
-    document.getElementById('vn-status').textContent = 'Recording...';
-    document.getElementById('vn-status').style.color = 'var(--red)';
-
-    // Timer
-    _voiceSeconds = 0;
-    _voiceTimer = setInterval(() => {
-      _voiceSeconds++;
-      const m = Math.floor(_voiceSeconds / 60);
-      const s = _voiceSeconds % 60;
-      const timerEl = document.getElementById('vn-timer');
-      if (timerEl) timerEl.textContent = m + ':' + String(s).padStart(2,'0');
-      // Auto-stop at 3 minutes
-      if (_voiceSeconds >= 180) stopVoiceRecording();
-    }, 1000);
-
-  } catch(e) {
-    alert('Microphone access denied. Please allow microphone access in your browser settings.');
-  }
-}
-
-function stopVoiceRecording() {
-  if (_voiceRecorder && _voiceRecorder.state !== 'inactive') {
-    _voiceRecorder.stop();
-    _voiceRecorder.stream.getTracks().forEach(t => t.stop());
-  }
-  clearInterval(_voiceTimer);
-  document.getElementById('vn-stop-btn').style.display = 'none';
-  document.getElementById('vn-status').textContent = 'Processing...';
-}
-
-async function onVoiceRecordingStopped() {
-  const mimeType = _voiceChunks[0]?.type || 'audio/webm';
-  const blob = new Blob(_voiceChunks, { type: mimeType });
-  const url = URL.createObjectURL(blob);
-
-  // Show playback
-  const audio = document.getElementById('vn-audio');
-  if (audio) { audio.src = url; document.getElementById('vn-playback').style.display = 'block'; }
-
-  document.getElementById('vn-status').textContent = 'Recording done. Transcribing with AI...';
-  document.getElementById('vn-transcript-area').style.display = 'block';
-
-  // Transcribe using Claude
-  try {
-    const reader = new FileReader();
-    reader.onload = async function(ev) {
-      const base64 = ev.target.result.split(',')[1];
-      const langLabel = _voiceLang === 'hi' ? 'Hindi' : 'English';
-      const result = await callClaude(
-        'This is a base64-encoded audio file of a maintenance issue report recorded in ' + langLabel + '. The person is describing a problem at a restaurant. Please transcribe what they said as accurately as possible. If it is in Hindi, also provide an English translation below the transcript.\n\n(Note: If you cannot process audio, please indicate that and ask the user to type their note.)',
-        'You are a transcription assistant for a restaurant maintenance app. Transcribe the audio accurately.'
-      );
-      const transcriptEl = document.getElementById('vn-transcript');
-      if (transcriptEl) {
-        transcriptEl.value = result || 'Could not transcribe audio. Please type your note below.';
-        transcriptEl.style.borderColor = 'var(--green)';
-      }
-      const attachBtn = document.getElementById('vn-attach-btn');
-      if (attachBtn) attachBtn.style.display = 'inline-flex';
-      const statusEl = document.getElementById('vn-status');
-      if (statusEl) { statusEl.textContent = 'Ready to attach'; statusEl.style.color = 'var(--green-mid)'; }
-    };
-    reader.readAsDataURL(blob);
-  } catch(e) {
-    const transcriptEl = document.getElementById('vn-transcript');
-    if (transcriptEl) transcriptEl.value = 'Transcription failed. Please type your note.';
-    const attachBtn = document.getElementById('vn-attach-btn');
-    if (attachBtn) attachBtn.style.display = 'inline-flex';
-  }
-}
-
-async function attachVoiceNote() {
-  const transcript = document.getElementById('vn-transcript')?.value?.trim();
-  if (!transcript) { alert('Please add a transcript or type a note'); return; }
-  const id = _voiceTicketId;
-  if (!id) return;
-
-  // Save as comment
-  const commentText = '🎙️ Voice note: ' + transcript;
-  if (isLive) {
-    await dbInsert('ticket_comments', { id: 'c'+Date.now(), ticket_id: id, user_id: session.id, text: commentText });
-    await loadLiveData();
-  } else {
-    const t = tickets.find(x => x.id === id);
-    if (t) t.comments.push({ user: session.id, text: commentText, time: nowTs() });
-  }
-
-  // Also upload audio file if available
-  if (_voiceChunks.length && isLive && supaClient) {
-    try {
-      const mimeType = _voiceChunks[0]?.type || 'audio/webm';
-      const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-      const blob = new Blob(_voiceChunks, { type: mimeType });
-      const attId = 'vn' + Date.now();
-      const fileName = attId + '_voice.' + ext;
-      const { error } = await supaClient.storage.from('ticket-attachments').upload(fileName, blob, { cacheControl: '3600', upsert: false });
-      if (!error) {
-        const { data: urlData } = supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
-        await dbInsert('ticket_attachments', { id: attId, ticket_id: id, uploaded_by: session.id, file_name: 'Voice note.'+ext, file_url: urlData.publicUrl, file_type: mimeType, file_size: blob.size, caption: 'Voice note' });
-      }
-    } catch(e) { console.warn('Voice upload failed', e); }
-  }
-
-  showToast('Voice note attached to ticket');
-  closeModal();
-  refreshPage();
-}
-
-
-// ============================================================
-// MULTILINGUAL SYSTEM — Hindi + English
-// ============================================================
-const TRANSLATIONS = {
-  en: {
-    // Nav
-    dashboard: 'Dashboard', tickets: 'Tickets', users: 'Users & Roles',
-    locations: 'Locations', expenses: 'Expenses', vendors: 'Vendors',
-    amc: 'AMC Tracker', reports: 'Reports', log: 'Audit Log',
-    profile: 'My Profile', sla: 'SLA Tracker', recurring: 'Recurring Tasks',
-    raise: 'Raise Ticket', my_tickets: 'My Tickets', my_tasks: 'My Tasks',
-    design_lists: 'Site Visit Lists', design_raise: 'New Site Visit',
-    design_my_lists: 'My Lists', design_tickets: 'Design Tickets',
-    // Actions
-    assign: 'Assign', resolve: 'Resolve', reassign: 'Reassign',
-    on_my_way: 'On my way', arrived: 'Arrived', take_ticket: 'Take ticket',
-    raise_ticket: 'Raise ticket', submit: 'Submit', save: 'Save',
-    cancel: 'Cancel', close: 'Close', refresh: 'Refresh',
-    approve: 'Approve', reject: 'Reject', post: 'Post',
-    edit: 'Edit', delete: 'Delete', view: 'View',
-    // Labels
-    title: 'Issue Title', description: 'Description', category: 'Category',
-    urgency: 'Urgency', location: 'Location', raised_by: 'Raised by',
-    assigned_to: 'Assigned to', due_date: 'Due date', status: 'Status',
-    priority: 'Urgency', photo: 'Photo / Video', required: 'required',
-    add_comment: 'Add comment', update: 'Update', notes: 'Notes',
-    // Status
-    open: 'Open', in_progress: 'In Progress', resolved: 'Resolved',
-    on_hold: 'On Hold', closed: 'Closed', escalated: 'Escalated',
-    to_be_assigned: 'To be assigned', overdue: 'Overdue',
-    // Dashboard
-    health_score: 'Health Score', outlet_health: 'Outlet health',
-    needs_attention: 'Needs attention', all_good: 'All good',
-    welcome_back: 'Welcome back', expenses_overview: 'Expenses overview',
-    total: 'Total', pending_approval: 'Pending approval',
-    // Messages
-    ticket_saved: 'Ticket saved!', ticket_submitted: 'Ticket submitted!',
-    assigned_success: 'Assigned successfully', resolved_success: 'Ticket resolved',
-    photo_required: 'Please attach a photo before submitting',
-    name_required: 'Please enter your name',
-    select_location: 'Please select a location',
-    // Voice
-    voice_note: 'Voice note', record: 'Record', stop: 'Stop',
-    transcribing: 'Transcribing with AI...', attach: 'Attach to ticket',
-    speak_now: 'Speak clearly and describe the problem',
-  },
-  hi: {
-    // Nav
-    dashboard: 'डैशबोर्ड', tickets: 'टिकट', users: 'उपयोगकर्ता',
-    locations: 'स्थान', expenses: 'खर्च', vendors: 'विक्रेता',
-    amc: 'AMC ट्रैकर', reports: 'रिपोर्ट', log: 'ऑडिट लॉग',
-    profile: 'मेरी प्रोफाइल', sla: 'SLA ट्रैकर', recurring: 'आवर्ती कार्य',
-    raise: 'टिकट उठाएं', my_tickets: 'मेरे टिकट', my_tasks: 'मेरे कार्य',
-    design_lists: 'साइट विजिट सूची', design_raise: 'नई साइट विजिट',
-    design_my_lists: 'मेरी सूचियां', design_tickets: 'डिज़ाइन टिकट',
-    // Actions
-    assign: 'असाइन करें', resolve: 'हल करें', reassign: 'पुनः असाइन करें',
-    on_my_way: 'रास्ते में हूं', arrived: 'पहुंच गया', take_ticket: 'टिकट लें',
-    raise_ticket: 'टिकट उठाएं', submit: 'जमा करें', save: 'सहेजें',
-    cancel: 'रद्द करें', close: 'बंद करें', refresh: 'ताज़ा करें',
-    approve: 'स्वीकृत करें', reject: 'अस्वीकार करें', post: 'पोस्ट करें',
-    edit: 'संपादित करें', delete: 'हटाएं', view: 'देखें',
-    // Labels
-    title: 'समस्या का शीर्षक', description: 'विवरण', category: 'श्रेणी',
-    urgency: 'तात्कालिकता', location: 'स्थान', raised_by: 'उठाया गया',
-    assigned_to: 'असाइन किया गया', due_date: 'नियत तारीख', status: 'स्थिति',
-    priority: 'तात्कालिकता', photo: 'फोटो / वीडियो', required: 'आवश्यक',
-    add_comment: 'टिप्पणी जोड़ें', update: 'अपडेट', notes: 'नोट्स',
-    // Status
-    open: 'खुला', in_progress: 'प्रगति में', resolved: 'हल हुआ',
-    on_hold: 'रोका गया', closed: 'बंद', escalated: 'एस्केलेट',
-    to_be_assigned: 'असाइन होना बाकी', overdue: 'अतिदेय',
-    // Dashboard
-    health_score: 'स्वास्थ्य स्कोर', outlet_health: 'आउटलेट स्वास्थ्य',
-    needs_attention: 'ध्यान चाहिए', all_good: 'सब ठीक है',
-    welcome_back: 'वापस स्वागत है', expenses_overview: 'खर्च का अवलोकन',
-    total: 'कुल', pending_approval: 'स्वीकृति बाकी',
-    // Messages
-    ticket_saved: 'टिकट सहेजा गया!', ticket_submitted: 'टिकट जमा हुआ!',
-    assigned_success: 'सफलतापूर्वक असाइन किया', resolved_success: 'टिकट हल हुआ',
-    photo_required: 'जमा करने से पहले फोटो संलग्न करें',
-    name_required: 'कृपया अपना नाम दर्ज करें',
-    select_location: 'कृपया एक स्थान चुनें',
-    // Voice
-    voice_note: 'वॉइस नोट', record: 'रिकॉर्ड करें', stop: 'रोकें',
-    transcribing: 'AI से लिप्यंतरण...', attach: 'टिकट से जोड़ें',
-    speak_now: 'स्पष्ट रूप से बोलें और समस्या बताएं',
-  }
-};
-
-// Get translation
-function t(key) {
-  const lang = userLang === 'hindi' ? 'hi' : 'en';
-  return (TRANSLATIONS[lang] && TRANSLATIONS[lang][key]) || TRANSLATIONS.en[key] || key;
-}
-
-// Apply language to nav items dynamically
-const NAV_LABELS = {
-  dashboard: 'dashboard', tickets: 'tickets', users: 'users',
-  locations: 'locations', expenses: 'expenses', vendors: 'vendors',
-  amc: 'amc', reports: 'reports', log: 'log', profile: 'profile',
-  sla: 'sla', recurring: 'recurring', raise: 'raise',
-  'my-tickets': 'my_tickets', 'my-tasks': 'my_tasks',
-  'design-lists': 'design_lists', 'design-raise': 'design_raise',
-  'design-my-lists': 'design_my_lists', 'design-tickets': 'design_tickets',
-};
-
-function applyLanguage() {
-  // Update nav items
-  document.querySelectorAll('.nav-item[id]').forEach(el => {
-    const id = el.id.replace('nav-', '');
-    const key = NAV_LABELS[id];
-    if (key) {
-      const icon = el.querySelector('.ni');
-      const iconHtml = icon ? icon.outerHTML : '';
-      el.innerHTML = iconHtml + t(key);
-    }
-  });
-  // Update bottom nav items
-  document.querySelectorAll('.mbn-item[id]').forEach(el => {
-    const id = el.id.replace('mbn-', '');
-    const key = NAV_LABELS[id];
-    if (key) {
-      const icon = el.querySelector('.mbn-icon');
-      const iconHtml = icon ? icon.outerHTML : '';
-      const label = t(key);
-      el.innerHTML = iconHtml + '<span>' + (label.length > 8 ? label.slice(0,7) + '...' : label) + '</span>';
-    }
-  });
-  // Update page title if on a known page
-  const titleEl = document.querySelector('.page-title');
-  if (titleEl && currentPage) {
-    const key = NAV_LABELS[currentPage];
-    if (key) titleEl.textContent = t(key);
-  }
-}
-
-// Override setUserLang to also apply translations
-const _origSetLang = typeof setUserLang === 'function' ? setUserLang : null;
-function setUserLang(lang) {
-  userLang = lang;
-  localStorage.setItem('benne_lang', lang);
-  showToast(lang === 'hindi' ? 'भाषा हिंदी में बदल गई' : 'Language set to English');
-  applyLanguage();
-  refreshPage(); // Re-render current page
-}
-
-
-// ============================================================
-// AI CHAT ADVISOR — Ask questions about your data
-// ============================================================
-let _chatHistory = [];
-let _chatOpen = false;
-
-function toggleAIChat() {
-  const panel = document.getElementById('ai-chat-panel');
-  if (!panel) return;
-  _chatOpen = !_chatOpen;
-  panel.style.display = _chatOpen ? 'flex' : 'none';
-  if (_chatOpen) setTimeout(repositionNinoPanel, 10);
-  // Render quick questions
-  const qc = document.getElementById('ai-quick-btns');
-  if (qc && !qc.children.length) {
-    qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,3).map(q =>
-      `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:var(--cream);border:1px solid var(--tan);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--charcoal);flex-shrink:0">${q.slice(0,28)}...</button>`
-    ).join('');
-  }
-  if (_chatOpen && _chatHistory.length === 0) {
-    addChatMessage('ai', 'Hi! I\'m Nino! \ud83e\udd16\n\nI know MaintenanceOS inside out. Ask me anything:\n\n\u2022 How to raise a ticket\n\u2022 How to assign or resolve\n\u2022 Your live data and reports\n\u2022 Anything in Hindi or English\n\u2022 Or tap the mic and speak!\n\nWhat can I help you with?');
-  }
-  const input = document.getElementById('ai-chat-input');
-  if (input && _chatOpen) input.focus();
-}
-
-function addChatMessage(role, text) {
-  _chatHistory.push({ role, text, time: new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) });
-  renderChatMessages();
-}
-
-function renderChatMessages() {
-  const container = document.getElementById('ai-chat-messages');
-  if (!container) return;
-  container.innerHTML = _chatHistory.map(m => `
-    <div style="display:flex;flex-direction:column;align-items:${m.role==='user'?'flex-end':'flex-start'};margin-bottom:12px">
-      <div style="max-width:80%;background:${m.role==='user'?'var(--amber)':'var(--cream)'};color:${m.role==='user'?'#fff':'var(--charcoal)'};border-radius:${m.role==='user'?'12px 12px 2px 12px':'12px 12px 12px 2px'};padding:10px 14px;font-size:13px;line-height:1.5;white-space:pre-wrap;border:1px solid ${m.role==='user'?'transparent':'var(--tan)'}">
-        ${m.text}
-      </div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${m.time}</div>
-    </div>
-  `).join('');
-  container.scrollTop = container.scrollHeight;
-}
-
 async function sendAIChat() {
   const input = document.getElementById('ai-chat-input');
   const question = input?.value?.trim();
@@ -4055,832 +3412,58 @@ async function sendAIChat() {
   const container = document.getElementById('ai-chat-messages');
   const typingId = 'typing-' + Date.now();
   if (container) {
-    container.innerHTML += `<div id="${typingId}" style="display:flex;align-items:flex-start;margin-bottom:12px"><div style="background:var(--cream);border:1px solid var(--tan);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;color:var(--text-muted)">Thinking...</div></div>`;
+    container.innerHTML += `<div id="${typingId}" style="display:flex;align-items:flex-start;margin-bottom:12px"><div style="background:var(--cream);border:1px solid var(--tan);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;color:var(--text-muted)">Nino is thinking...</div></div>`;
     container.scrollTop = container.scrollHeight;
   }
 
-  // Build context from live data
-  const vis = visT();
-  const context = buildDataContext();
-  const fullSystem = NINO_SYSTEM_PROMPT + '\n\nLIVE DATA:\n' + context;
+  // Build short live data context
+  const visTix = visT();
+  const liveData = [
+    'Tickets - Total:' + visTix.length + ' Open:' + visTix.filter(t=>t.status==='Open').length + ' InProgress:' + visTix.filter(t=>t.status==='In Progress').length + ' Escalated:' + visTix.filter(isESC).length,
+    'Unassigned:' + visTix.filter(t=>!t.assignedTo&&!t.assigned_to&&!["Resolved","Closed"].includes(t.status)).length,
+    'Total spend: ' + fc(expenses.reduce((s,e)=>s+Number(e.amount),0)),
+    'Locations: ' + visibleLocationIds().map(id=>locDisplay(getLoc(id))).join(', '),
+    'User role: ' + roleLabel(session.role),
+  ].join('. ');
 
-  const conversationMessages = _chatHistory.slice(-8).map(m => ({
+  const fullSystem = NINO_SYSTEM_PROMPT + '\n\nLIVE DATA: ' + liveData;
+
+  // Build conversation for context
+  const msgs = _chatHistory.slice(-6).map(m => ({
     role: m.role === 'ai' ? 'assistant' : 'user',
     content: m.text
   }));
+  if (!msgs.length || msgs[msgs.length-1].role !== 'user') {
+    msgs.push({ role: 'user', content: question });
+  }
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(GROQ_API, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + GROQ_API_KEY
+      },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'llama3-8b-8192',
         max_tokens: 500,
-        system: fullSystem,
-        messages: conversationMessages.length ? conversationMessages : [{role:'user',content: question}]
+        messages: [
+          { role: 'system', content: fullSystem },
+          ...msgs.slice(-6)
+        ]
       })
     });
     const data = await res.json();
-    const reply = data.content?.[0]?.text || 'Sorry, I could not process that. Please try again.';
-
-    // Remove typing indicator
+    const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond. Please try again.';
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
-
     addChatMessage('ai', reply);
   } catch(e) {
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
-    addChatMessage('ai', 'Sorry, I could not connect. Please check your internet connection and try again.');
+    addChatMessage('ai', 'Connection error. Please check your internet and try again.');
   }
 }
-
-function buildDataContext() {
-  const vis = visT();
-  const active = vis.filter(t => !['Resolved','Closed'].includes(t.status));
-  const resolved = vis.filter(t => t.status === 'Resolved');
-  const totalExp = expenses.reduce((s,e) => s+Number(e.amount), 0);
-
-  // By location
-  const locStats = {};
-  vis.forEach(t => {
-    const lid = t.locationId||t.location_id;
-    const loc = getLoc(lid);
-    const name = (loc.city||loc.name);
-    if (!locStats[name]) locStats[name] = {open:0,resolved:0,exp:0,tickets:[]};
-    if (['Resolved','Closed'].includes(t.status)) locStats[name].resolved++;
-    else locStats[name].open++;
-    locStats[name].tickets.push(t.title);
-  });
-  expenses.forEach(e => {
-    const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
-    if (t) {
-      const loc = getLoc(t.locationId||t.location_id);
-      const name = loc.city||loc.name;
-      if (locStats[name]) locStats[name].exp += Number(e.amount);
-    }
-  });
-
-  // By category
-  const catStats = {};
-  vis.forEach(t => { const c = t.category||'Other'; catStats[c]=(catStats[c]||0)+1; });
-
-  // By technician
-  const techStats = {};
-  vis.forEach(t => {
-    const tid = t.assignedTo||t.assigned_to;
-    if (tid) {
-      const u = getUser(tid);
-      if (u) {
-        if (!techStats[u.name]) techStats[u.name] = {assigned:0,resolved:0};
-        techStats[u.name].assigned++;
-        if (['Resolved','Closed'].includes(t.status)) techStats[u.name].resolved++;
-      }
-    }
-  });
-
-  return `OVERVIEW:
-Total tickets: ${vis.length} | Active: ${active.length} | Resolved: ${resolved.length}
-Escalated: ${vis.filter(isESC).length} | Overdue: ${vis.filter(t=>isOD(t)&&!isESC(t)).length}
-Total spend: Rs ${totalExp.toLocaleString('en-IN')}
-Overall health score: ${overallHealthScore()}/100
-
-BY LOCATION:
-${Object.entries(locStats).map(([name,s])=>`${name}: ${s.open} open, ${s.resolved} resolved, spend Rs ${s.exp.toLocaleString('en-IN')}`).join('\n')}
-
-BY CATEGORY:
-${Object.entries(catStats).sort((a,b)=>b[1]-a[1]).map(([cat,count])=>`${cat}: ${count} tickets`).join('\n')}
-
-BY TECHNICIAN:
-${Object.entries(techStats).map(([name,s])=>`${name}: ${s.assigned} assigned, ${s.resolved} resolved (${s.assigned>0?Math.round(s.resolved/s.assigned*100):0}% rate)`).join('\n')}
-
-RECENT OPEN TICKETS:
-${active.slice(0,10).map(t=>{const loc=getLoc(t.locationId||t.location_id);return `${t.id}: ${t.title} at ${loc.city||loc.name} (${t.priority})`}).join('\n')}`;
-}
-
-function clearAIChat() {
-  _chatHistory = [];
-  renderChatMessages();
-}
-
-function aiChatKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendAIChat();
-  }
-}
-
-// Quick question buttons
-const AI_QUICK_QUESTIONS = [
-  'How do I raise a ticket?',
-  'How do I assign a ticket?',
-  'Which outlet has most open tickets?',
-  'How do I approve an expense?',
-  'What are the SLA rules?',
-  'How do I resolve a ticket?',
-  'Which technician is performing best?',
-  'How do I add a voice note?',
-  'टिकट कैसे उठाएं?',
-  'What is our total spend this month?',
-];
-
-
-// ============================================================
-// ASSET REGISTER + QR CODES
-// ============================================================
-let assets = []; // loaded from Supabase asset_register table
-
-function renderAssets() {
-  const visLocs = visibleLocationIds();
-  const myAssets = assets.filter(a => visLocs.includes(a.location_id||a.locationId));
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="page-hdr">
-      <div><div class="page-title">Asset Register</div>
-      <div class="page-sub">${myAssets.length} assets tracked</div></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
-        <button class="btn sm" onclick="openQRScanner()">&#9633; Scan QR</button>
-        ${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openAddAsset()">+ Add asset</button>':''}
-      </div>
-    </div>
-
-    <div class="tab-btns">
-      <button class="tab-btn active" onclick="filterAssets('all',this)">All</button>
-      <button class="tab-btn" onclick="filterAssets('kitchen',this)">Kitchen</button>
-      <button class="tab-btn" onclick="filterAssets('hvac',this)">HVAC</button>
-      <button class="tab-btn" onclick="filterAssets('electrical',this)">Electrical</button>
-      <button class="tab-btn" onclick="filterAssets('plumbing',this)">Plumbing</button>
-    </div>
-
-    <div id="asset-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
-      ${myAssets.length ? myAssets.map(a => assetCard(a)).join('') :
-        '<div class="empty">No assets added yet.<br>Add your first asset to start tracking equipment.</div>'}
-    </div>`;
-}
-
-function assetCard(a) {
-  const loc = getLoc(a.location_id||a.locationId||'');
-  const health = a.health_score || 100;
-  const hColor = health >= 80 ? 'var(--green-mid)' : health >= 60 ? 'var(--amber)' : 'var(--red)';
-  const assetTickets = tickets.filter(t =>
-    (t.assetId||t.asset_id) === a.id ||
-    (t.title||'').toLowerCase().includes((a.name||'').toLowerCase().split(' ')[0].toLowerCase())
-  ).length;
-  const warrantyDate = a.warranty_date ? new Date(a.warranty_date) : null;
-  const warrantyOk = warrantyDate && warrantyDate > new Date();
-
-  return `<div class="card" onclick="openAssetDetail('${a.id}')" style="cursor:pointer">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-      <div style="flex:1">
-        <div style="font-weight:700;font-size:14px;margin-bottom:3px">${a.name}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${a.brand||''} ${a.model||''}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">📍 ${loc.city?loc.city+' - ':''}${loc.name}</div>
-      </div>
-      <div style="text-align:center;flex-shrink:0;margin-left:12px">
-        <div style="font-size:24px;font-weight:800;color:${hColor};font-family:'Georgia',serif">${health}</div>
-        <div style="font-size:9px;color:${hColor};text-transform:uppercase;font-weight:700">health</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <span class="badge b-grey">${a.category||'Equipment'}</span>
-      ${warrantyOk?'<span class="badge b-done">Warranty OK</span>':'<span class="badge b-ov">Warranty expired</span>'}
-      ${assetTickets>0?`<span class="badge b-exp">${assetTickets} tickets</span>`:''}
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">
-      ${a.purchase_date?`Purchased: ${a.purchase_date}`:''}
-      ${a.last_service_date?` · Last service: ${a.last_service_date}`:''}
-    </div>
-    <div style="height:4px;background:var(--tan);border-radius:2px;overflow:hidden">
-      <div style="height:100%;width:${health}%;background:${hColor};border-radius:2px"></div>
-    </div>
-    <div style="display:flex;gap:6px;margin-top:10px" onclick="event.stopPropagation()">
-      <button class="btn sm" onclick="openAssetDetail('${a.id}')">View</button>
-      <button class="btn sm" onclick="showAssetQR('${a.id}')">QR Code</button>
-      ${['admin','manager','founder'].includes(session.role)?`<button class="btn sm primary" onclick="raiseAssetTicket('${a.id}')">Raise ticket</button>`:''}
-    </div>
-  </div>`;
-}
-
-function filterAssets(type, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  const visLocs = visibleLocationIds();
-  let filtered = assets.filter(a => visLocs.includes(a.location_id||a.locationId));
-  if (type !== 'all') filtered = filtered.filter(a => (a.category||'').toLowerCase().includes(type));
-  document.getElementById('asset-grid').innerHTML = filtered.length ?
-    filtered.map(a=>assetCard(a)).join('') :
-    '<div class="empty">No assets in this category</div>';
-}
-
-function openAddAsset() {
-  document.getElementById('m-title').textContent = 'Add asset';
-  document.getElementById('m-body').innerHTML = `
-    <div class="frow">
-      <div class="fg"><label>Asset name *</label><input type="text" id="ast-name" placeholder="e.g. Daikin AC Unit 1"></div>
-      <div class="fg"><label>Category</label>
-        <select id="ast-cat">
-          <option>Kitchen Equipment</option><option>HVAC / AC</option><option>Electrical</option>
-          <option>Plumbing</option><option>Furniture</option><option>Other</option>
-        </select>
-      </div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Brand</label><input type="text" id="ast-brand" placeholder="e.g. Daikin"></div>
-      <div class="fg"><label>Model</label><input type="text" id="ast-model" placeholder="e.g. FTKG50TV16U"></div>
-    </div>
-    <div class="fg"><label>Location</label>
-      <select id="ast-loc">
-        <option value="">Select location...</option>
-        ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
-      </select>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Purchase date</label><input type="date" id="ast-pdate"></div>
-      <div class="fg"><label>Warranty until</label><input type="date" id="ast-wdate"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Last service date</label><input type="date" id="ast-sdate"></div>
-      <div class="fg"><label>Next service date</label><input type="date" id="ast-ndate"></div>
-    </div>
-    <div class="fg"><label>Notes</label><textarea id="ast-notes" placeholder="Any additional details..."></textarea></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn primary" onclick="saveAsset()">Save asset</button>
-    </div>`;
-  openModal();
-}
-
-async function saveAsset() {
-  const name = document.getElementById('ast-name')?.value?.trim();
-  const locId = document.getElementById('ast-loc')?.value;
-  if (!name) { alert('Asset name is required'); return; }
-  if (!locId) { alert('Please select a location'); return; }
-
-  const assetId = 'AST' + Date.now().toString().slice(-6);
-  const row = {
-    id: assetId,
-    name,
-    category: document.getElementById('ast-cat')?.value,
-    brand: document.getElementById('ast-brand')?.value?.trim()||null,
-    model: document.getElementById('ast-model')?.value?.trim()||null,
-    location_id: locId,
-    purchase_date: document.getElementById('ast-pdate')?.value||null,
-    warranty_date: document.getElementById('ast-wdate')?.value||null,
-    last_service_date: document.getElementById('ast-sdate')?.value||null,
-    next_service_date: document.getElementById('ast-ndate')?.value||null,
-    notes: document.getElementById('ast-notes')?.value?.trim()||null,
-    health_score: 100,
-    created_by: session.id,
-  };
-
-  if (isLive) {
-    await dbInsert('asset_register', row);
-    await loadAssets();
-  } else {
-    assets.push({...row, locationId: locId});
-  }
-
-  closeModal();
-  showToast('Asset ' + assetId + ' added');
-  renderAssets();
-}
-
-async function loadAssets() {
-  if (!isLive || !supaClient) return;
-  try {
-    const { data } = await supaClient.from('asset_register').select('*').order('name');
-    if (data) assets = data.map(a => ({...a, locationId: a.location_id}));
-  } catch(e) { console.warn('Assets load failed', e); }
-}
-
-function openAssetDetail(id) {
-  const a = assets.find(x => x.id === id);
-  if (!a) return;
-  const loc = getLoc(a.location_id||a.locationId||'');
-  const assetTickets = tickets.filter(t => (t.assetId||t.asset_id) === id);
-  const health = a.health_score || 100;
-  const hColor = health >= 80 ? 'var(--green-mid)' : health >= 60 ? 'var(--amber)' : 'var(--red)';
-
-  document.getElementById('m-title').textContent = a.name;
-  document.getElementById('m-body').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;margin-bottom:1rem">
-      <div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">${a.brand||''} ${a.model||''}</div>
-        <div style="font-size:12px;color:var(--text-muted)">📍 ${loc.city?loc.city+' - ':''}${loc.name}</div>
-        <div style="font-size:11px;color:var(--amber);font-weight:700;margin-top:6px">ID: ${a.id}</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:36px;font-weight:800;color:${hColor};font-family:'Georgia',serif">${health}</div>
-        <div style="font-size:10px;color:${hColor}">Health score</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;font-size:12px">
-      ${a.purchase_date?`<div style="background:var(--cream);padding:8px 10px;border-radius:6px"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:2px">Purchased</div>${a.purchase_date}</div>`:''}
-      ${a.warranty_date?`<div style="background:var(--cream);padding:8px 10px;border-radius:6px"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:2px">Warranty until</div>${a.warranty_date}</div>`:''}
-      ${a.last_service_date?`<div style="background:var(--cream);padding:8px 10px;border-radius:6px"><div style="color:var(--text-muted);font-size:10px;text-transform:uppercase;margin-bottom:2px">Last service</div>${a.last_service_date}</div>`:''}
-      ${a.next_service_date?`<div style="background:var(--amber-pale);padding:8px 10px;border-radius:6px;border:1px solid var(--amber-light)"><div style="color:var(--amber);font-size:10px;text-transform:uppercase;margin-bottom:2px">Next service</div>${a.next_service_date}</div>`:''}
-    </div>
-    ${a.notes?`<div style="background:var(--cream);border-radius:6px;padding:10px;font-size:12px;color:var(--text-muted);margin-bottom:1rem">${a.notes}</div>`:''}
-    ${assetTickets.length?`<div style="margin-bottom:1rem">
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px">Ticket history (${assetTickets.length})</div>
-      ${assetTickets.slice(0,5).map(t=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--tan)"><span>${t.title}</span>${sbadge(t)}</div>`).join('')}
-    </div>`:''}
-    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-      <button class="btn" onclick="closeModal()">Close</button>
-      <button class="btn sm" onclick="showAssetQR('${id}');closeModal()">QR Code</button>
-      <button class="btn primary" onclick="raiseAssetTicket('${id}');closeModal()">Raise ticket</button>
-    </div>`;
-  openModal();
-}
-
-function showAssetQR(id) {
-  const a = assets.find(x => x.id === id);
-  if (!a) return;
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('https://maintenanceos-pwa.vercel.app?asset=' + id);
-  document.getElementById('m-title').textContent = 'QR Code — ' + a.name;
-  document.getElementById('m-body').innerHTML = `
-    <div style="text-align:center;padding:1rem">
-      <img src="${qrUrl}" width="200" height="200" style="border:8px solid #fff;box-shadow:0 2px 20px rgba(0,0,0,.1);border-radius:8px">
-      <div style="font-size:14px;font-weight:700;margin-top:16px">${a.name}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Asset ID: ${a.id}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Scan to view full history and raise a ticket</div>
-      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
-        <button class="btn" onclick="closeModal()">Close</button>
-        <button class="btn primary" onclick="printAssetQR('${id}')">Print QR</button>
-      </div>
-    </div>`;
-  openModal();
-}
-
-function printAssetQR(id) {
-  const a = assets.find(x => x.id === id);
-  if (!a) return;
-  const loc = getLoc(a.location_id||a.locationId||'');
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent('https://maintenanceos-pwa.vercel.app?asset=' + id);
-  const w = window.open('','_blank');
-  w.document.write(`<!DOCTYPE html><html><head><title>QR — ${a.name}</title>
-    <style>body{font-family:Arial,sans-serif;text-align:center;padding:40px;color:#1C1C1A}
-    .box{border:2px solid #1B4332;border-radius:12px;padding:24px;display:inline-block;min-width:280px}
-    h2{color:#1B4332;margin-bottom:4px;font-size:18px} .sub{color:#7A7060;font-size:12px;margin-bottom:16px}
-    img{border:4px solid white;box-shadow:0 2px 12px rgba(0,0,0,.1)} .id{font-size:11px;color:#C48524;font-weight:700;margin-top:12px}
-    .btn{margin-top:20px;padding:10px 24px;background:#1B4332;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:14px}
-    @media print{.btn{display:none}}</style>
-  </head><body>
-    <div class="box">
-      <h2>${a.name}</h2>
-      <div class="sub">${loc.city?loc.city+' - ':''}${loc.name} · ${a.category||'Equipment'}</div>
-      <img src="${qrUrl}" width="250" height="250">
-      <div class="id">Asset ID: ${a.id}</div>
-      ${a.brand?`<div style="font-size:12px;color:#7A7060;margin-top:4px">${a.brand} ${a.model||''}</div>`:''}
-    </div>
-    <br><button class="btn" onclick="window.print()">Print</button>
-  </body></html>`);
-  w.document.close();
-}
-
-function raiseAssetTicket(assetId) {
-  const a = assets.find(x => x.id === assetId);
-  if (!a) return;
-  openRaiseTicketModal();
-  // Pre-fill location and title
-  setTimeout(() => {
-    const locSel = document.getElementById('ri-loc');
-    if (locSel && a.location_id) { locSel.value = a.location_id; }
-    const titleEl = document.getElementById('ri-t');
-    if (titleEl) titleEl.value = 'Issue with ' + a.name;
-    const descEl = document.getElementById('ri-d');
-    if (descEl) descEl.value = 'Asset: ' + a.name + ' (ID: ' + assetId + ')\nBrand: ' + (a.brand||'-') + ' ' + (a.model||'');
-  }, 100);
-}
-
-function openQRScanner() {
-  // Check URL params on load for QR scan
-  const params = new URLSearchParams(window.location.search);
-  const assetId = params.get('asset');
-  if (assetId) {
-    const a = assets.find(x => x.id === assetId);
-    if (a) { openAssetDetail(assetId); return; }
-  }
-  showToast('Open the camera app on your phone and scan any asset QR code');
-}
-
-// Check URL on load for QR asset deep link
-function checkAssetQRLink() {
-  const params = new URLSearchParams(window.location.search);
-  const assetId = params.get('asset');
-  if (assetId && session) {
-    setTimeout(() => {
-      navTo('assets');
-      setTimeout(() => openAssetDetail(assetId), 300);
-    }, 1000);
-  }
-}
-
-
-// ============================================================
-// TECHNICIAN PERFORMANCE
-// ============================================================
-function renderTechPerformance() {
-  const techs = users.filter(u => u.role === 'technician');
-  const sups = users.filter(u => u.role === 'supervisor');
-  const allStaff = [...techs, ...sups];
-
-  const perfData = allStaff.map(u => {
-    const assigned = tickets.filter(t => (t.assignedTo||t.assigned_to) === u.id);
-    const resolved = assigned.filter(t => ['Resolved','Closed'].includes(t.status));
-    const open = assigned.filter(t => !['Resolved','Closed'].includes(t.status));
-    const overdue = open.filter(t => isOD(t));
-    const resRate = assigned.length > 0 ? Math.round(resolved.length / assigned.length * 100) : 0;
-    const slaBreached = assigned.filter(t => slaStatus(t).breached).length;
-    const totalExp = expenses.filter(e => {
-      const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
-      return t && (t.assignedTo||t.assigned_to) === u.id;
-    }).reduce((s,e) => s+Number(e.amount), 0);
-
-    // Avg resolution time in hours
-    let avgResHours = 0;
-    if (resolved.length > 0) {
-      const times = resolved.map(t => {
-        const c = new Date(t.createdAt||t.created_at||0).getTime();
-        const r = new Date(t.updatedAt||t.updated_at||0).getTime();
-        return (r - c) / (1000 * 60 * 60);
-      }).filter(h => h > 0);
-      avgResHours = times.length > 0 ? Math.round(times.reduce((a,b)=>a+b,0)/times.length) : 0;
-    }
-
-    // Performance score
-    let score = 100;
-    if (overdue.length > 0) score -= overdue.length * 10;
-    if (slaBreached > 0) score -= slaBreached * 15;
-    if (resRate < 50) score -= 20;
-    score = Math.max(0, Math.min(100, score));
-
-    return { u, assigned: assigned.length, resolved: resolved.length, open: open.length,
-             overdue: overdue.length, resRate, slaBreached, totalExp, avgResHours, score };
-  }).sort((a,b) => b.score - a.score);
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="page-hdr">
-      <div><div class="page-title">Team Performance</div>
-      <div class="page-sub">Technician & supervisor stats</div></div>
-      <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
-    </div>
-
-    <!-- LEADERBOARD -->
-    <div style="margin-bottom:1.5rem">
-      <div class="section-title" style="margin-bottom:12px">Performance leaderboard</div>
-      ${perfData.length ? perfData.map((p,i) => {
-        const hColor = p.score>=80?'var(--green-mid)':p.score>=60?'var(--amber)':'var(--red)';
-        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-        return `<div class="card" style="margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap:12px">
-            <div style="font-size:24px;min-width:32px;text-align:center">${medal||'#'+(i+1)}</div>
-            <div class="avatar" style="background:${roleColor(p.u.role)};color:#fff;flex-shrink:0">${p.u.avatar||'?'}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:700;font-size:14px">${p.u.name}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${roleLabel(p.u.role)} ${p.u.specialty?'· '+p.u.specialty:''}</div>
-            </div>
-            <div style="text-align:center;flex-shrink:0">
-              <div style="font-size:28px;font-weight:800;color:${hColor};font-family:'Georgia',serif">${p.score}</div>
-              <div style="font-size:9px;color:${hColor};text-transform:uppercase">score</div>
-            </div>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px;text-align:center">
-            <div><div style="font-size:18px;font-weight:700;color:var(--blue)">${p.assigned}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Total</div></div>
-            <div><div style="font-size:18px;font-weight:700;color:var(--green-mid)">${p.resolved}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Resolved</div></div>
-            <div><div style="font-size:18px;font-weight:700;color:var(--amber)">${p.open}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Open</div></div>
-            <div><div style="font-size:18px;font-weight:700;color:${p.overdue>0?'var(--red)':'var(--green-mid)'}">${p.overdue}</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Overdue</div></div>
-            <div><div style="font-size:18px;font-weight:700;color:var(--charcoal)">${p.resRate}%</div><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase">Rate</div></div>
-          </div>
-          <div style="margin-top:8px">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px">
-              <span>Performance</span><span>${p.score}/100</span>
-            </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:${p.score}%;background:${hColor}"></div></div>
-          </div>
-        </div>`;
-      }).join('') : '<div class="empty">No technicians or supervisors found</div>'}
-    </div>
-  `;
-}
-
-
-// ============================================================
-// WHATSAPP INTEGRATION
-// Guides users to raise tickets via WhatsApp message to manager
-// Also handles incoming Telegram messages as tickets
-// ============================================================
-
-function renderWhatsAppSetup() {
-  document.getElementById('main-content').innerHTML = `
-    <div class="page-hdr">
-      <div><div class="page-title">WhatsApp Integration</div>
-      <div class="page-sub">Raise tickets via WhatsApp</div></div>
-    </div>
-
-    <div class="card" style="margin-bottom:1rem;border-left:4px solid #25D366">
-      <div style="font-size:16px;font-weight:700;margin-bottom:8px">📱 How to raise a ticket on WhatsApp</div>
-      <div style="font-size:13px;color:var(--text-muted);line-height:1.8">
-        1. Open WhatsApp and message your manager<br>
-        2. Send a photo of the problem<br>
-        3. Type the issue description<br>
-        4. Your manager will create the ticket in the app
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:1rem">
-      <div style="font-size:14px;font-weight:700;margin-bottom:12px">Quick raise via WhatsApp message</div>
-      <div class="fg"><label>Your name</label><input type="text" id="wa-name" value="${session.name||''}" ${session.role!=='outlet'?'readonly':''} style="${session.role!=='outlet'?'background:var(--cream);cursor:not-allowed':''}"></div>
-      <div class="fg"><label>Location</label>
-        <select id="wa-loc">
-          <option value="">Select location...</option>
-          ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}"${session.locationId===id?' selected':''}>${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
-        </select>
-      </div>
-      <div class="fg"><label>Issue description</label>
-        <textarea id="wa-desc" placeholder="Describe the problem clearly..."></textarea>
-      </div>
-      <div class="fg"><label>Urgency</label>
-        <select id="wa-pri"><option>High</option><option selected>Medium</option><option>Low</option></select>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn wa" onclick="sendViaWhatsApp()">Send on WhatsApp</button>
-        <button class="btn primary" onclick="raiseFromWA()">Raise ticket directly</button>
-      </div>
-    </div>
-
-    <div class="card" style="background:var(--cream)">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px">Manager WhatsApp numbers</div>
-      ${users.filter(u=>['manager','supervisor'].includes(u.role)&&u.whatsapp).map(u=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--tan)">
-          <div>
-            <div style="font-weight:600;font-size:13px">${u.name}</div>
-            <div style="font-size:11px;color:var(--text-muted)">${roleLabel(u.role)}</div>
-          </div>
-          <a href="https://wa.me/${(u.whatsapp||'').replace(/[^0-9]/g,'')}?text=Maintenance+issue+at+Benne" target="_blank" class="btn wa sm">WhatsApp</a>
-        </div>`).join('')}
-      ${!users.some(u=>['manager','supervisor'].includes(u.role)&&u.whatsapp)?'<div style="font-size:12px;color:var(--text-muted)">No WhatsApp numbers set. Managers can add their WhatsApp number in My Profile.</div>':''}
-    </div>`;
-}
-
-function sendViaWhatsApp() {
-  const name = document.getElementById('wa-name')?.value?.trim();
-  const locId = document.getElementById('wa-loc')?.value;
-  const desc = document.getElementById('wa-desc')?.value?.trim();
-  const pri = document.getElementById('wa-pri')?.value;
-  if (!desc) { alert('Please describe the issue'); return; }
-  const loc = locId ? getLoc(locId) : null;
-  const msg = encodeURIComponent(
-    'MAINTENANCE ISSUE\n' +
-    'From: ' + (name||session.name) + '\n' +
-    (loc?'Location: ' + (loc.city||'') + ' ' + loc.name + '\n':'') +
-    'Urgency: ' + pri + '\n\n' +
-    'Issue: ' + desc + '\n\n' +
-    'Please create a ticket in MaintenanceOS.'
-  );
-  // Send to first available manager
-  const mgr = users.find(u=>u.role==='manager'&&u.whatsapp);
-  if (mgr) {
-    window.open('https://wa.me/' + (mgr.whatsapp||'').replace(/[^0-9]/g,'') + '?text=' + msg, '_blank');
-  } else {
-    alert('No manager WhatsApp number found. Please raise the ticket directly.');
-  }
-}
-
-async function raiseFromWA() {
-  const name = document.getElementById('wa-name')?.value?.trim();
-  const locId = document.getElementById('wa-loc')?.value;
-  const desc = document.getElementById('wa-desc')?.value?.trim();
-  const pri = document.getElementById('wa-pri')?.value;
-  if (!name||!desc||!locId) { alert('Please fill all fields'); return; }
-  // Use the main raise ticket flow
-  openRaiseTicketModal();
-  setTimeout(() => {
-    const el = document.getElementById('ri-t'); if(el) el.value = desc.slice(0,80);
-    const dl = document.getElementById('ri-d'); if(dl) dl.value = desc;
-    const ll = document.getElementById('ri-loc'); if(ll) ll.value = locId;
-    const pl = document.getElementById('ri-p'); if(pl) pl.value = pri;
-  }, 100);
-}
-
-
-// ============================================================
-// BUDGET & SPEND CONTROL
-// ============================================================
-let budgets = {}; // { locationId: { monthly: amount, spent: amount } }
-
-function getBudgetStatus(locationId) {
-  const b = budgets[locationId];
-  if (!b || !b.monthly) return null;
-  const spent = expenses.filter(e => {
-    const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
-    return t && (t.locationId||t.location_id) === locationId;
-  }).reduce((s,e)=>s+Number(e.amount),0);
-  const pct = Math.round(spent/b.monthly*100);
-  return { monthly: b.monthly, spent, remaining: b.monthly - spent, pct: Math.min(pct,100), over: spent > b.monthly };
-}
-
-function renderBudgets() {
-  const visLocs = visibleLocationIds();
-  const locBudgets = visLocs.map(id => ({ id, l: getLoc(id), budget: getBudgetStatus(id) }));
-
-  document.getElementById('main-content').innerHTML = `
-    <div class="page-hdr">
-      <div><div class="page-title">Budget Control</div>
-      <div class="page-sub">Monthly spend limits per location</div></div>
-      <div style="display:flex;gap:8px">
-        <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
-        ${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openSetBudget()">Set budget</button>':''}
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-      ${locBudgets.map(({id,l,budget}) => {
-        if (!budget) return `<div class="card">
-          <div style="font-weight:700">${l.city?l.city+' - ':''}${l.name}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:6px">No budget set</div>
-          <button class="btn sm primary" style="margin-top:10px" onclick="openSetBudget('${id}')">Set budget</button>
-        </div>`;
-        const color = budget.over?'var(--red)':budget.pct>=80?'var(--amber)':'var(--green-mid)';
-        return `<div class="card" style="border-left:4px solid ${color}">
-          <div style="font-weight:700;margin-bottom:6px">${l.city?l.city+' - ':''}${l.name}</div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">
-            <span style="color:var(--text-muted)">Budget: ${fc(budget.monthly)}/month</span>
-            <span style="color:${color};font-weight:700">${budget.pct}% used</span>
-          </div>
-          <div class="progress-bar" style="margin-bottom:8px"><div class="progress-fill" style="width:${budget.pct}%;background:${color}"></div></div>
-          <div style="display:flex;justify-content:space-between;font-size:13px">
-            <div><div style="font-weight:700;color:var(--amber)">${fc(budget.spent)}</div><div style="font-size:10px;color:var(--text-muted)">Spent</div></div>
-            <div style="text-align:right"><div style="font-weight:700;color:${budget.remaining>=0?'var(--green-mid)':'var(--red)'}">${fc(Math.abs(budget.remaining))}</div><div style="font-size:10px;color:var(--text-muted)">${budget.remaining>=0?'Remaining':'Over budget'}</div></div>
-          </div>
-          ${budget.over?`<div style="background:#FEE2E2;border-radius:6px;padding:8px;margin-top:8px;font-size:12px;color:var(--red);font-weight:600">⚠️ Over budget by ${fc(Math.abs(budget.remaining))}</div>`:''}
-          <button class="btn sm" style="margin-top:10px;width:100%" onclick="openSetBudget('${id}')">Update budget</button>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
-
-function openSetBudget(locationId) {
-  const loc = locationId ? getLoc(locationId) : null;
-  document.getElementById('m-title').textContent = 'Set monthly budget';
-  document.getElementById('m-body').innerHTML = `
-    ${!locationId?`<div class="fg"><label>Location</label>
-      <select id="bgt-loc">
-        <option value="">Select location...</option>
-        ${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}</option>`;}).join('')}
-      </select>
-    </div>`:`<div style="font-weight:700;margin-bottom:1rem">${loc.city?loc.city+' - ':''}${loc.name}</div><input type="hidden" id="bgt-loc" value="${locationId}">`}
-    <div class="fg"><label>Monthly maintenance budget (₹)</label>
-      <input type="number" id="bgt-amount" placeholder="e.g. 50000" value="${locationId&&budgets[locationId]?budgets[locationId].monthly:''}">
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:1rem">Managers will be alerted when spend reaches 80% of this limit.</div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn primary" onclick="saveBudget()">Save budget</button>
-    </div>`;
-  openModal();
-}
-
-async function saveBudget() {
-  const locId = document.getElementById('bgt-loc')?.value;
-  const amount = Number(document.getElementById('bgt-amount')?.value);
-  if (!locId || !amount) { alert('Please fill all fields'); return; }
-  budgets[locId] = { monthly: amount };
-  // Save to localStorage for now (could be Supabase in future)
-  localStorage.setItem('benne_budgets', JSON.stringify(budgets));
-  closeModal();
-  showToast('Budget saved for ' + getLoc(locId).name);
-  renderBudgets();
-}
-
-// Load budgets on startup
-(function loadBudgets() {
-  try {
-    const saved = localStorage.getItem('benne_budgets');
-    if (saved) budgets = JSON.parse(saved);
-  } catch(e) {}
-})();
-
-
-// ============================================================
-// NINO — Draggable floating AI button
-// ============================================================
-(function initNino(){
-  let dragging = false;
-  let moved = false;
-  let startX, startY, origLeft, origTop;
-
-  function getBtn(){ return document.getElementById('ai-chat-btn'); }
-
-  function onPointerDown(e){
-    const btn = getBtn(); if(!btn) return;
-    dragging = true; moved = false;
-    const point = e.touches ? e.touches[0] : e;
-    startX = point.clientX; startY = point.clientY;
-    const rect = btn.getBoundingClientRect();
-    origLeft = rect.left; origTop = rect.top;
-    btn.style.transition = 'none';
-    btn.style.right = 'auto'; btn.style.bottom = 'auto';
-    btn.style.left = origLeft + 'px'; btn.style.top = origTop + 'px';
-    e.preventDefault();
-  }
-
-  function onPointerMove(e){
-    if(!dragging) return;
-    const point = e.touches ? e.touches[0] : e;
-    const dx = point.clientX - startX;
-    const dy = point.clientY - startY;
-    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
-    const btn = getBtn(); if(!btn) return;
-    const newLeft = Math.max(8, Math.min(window.innerWidth - 66, origLeft + dx));
-    const newTop  = Math.max(80, Math.min(window.innerHeight - 80, origTop + dy));
-    btn.style.left = newLeft + 'px';
-    btn.style.top  = newTop  + 'px';
-    e.preventDefault();
-  }
-
-  function onPointerUp(e){
-    if(!dragging) return;
-    dragging = false;
-    const btn = getBtn(); if(!btn) return;
-    btn.style.transition = '';
-    if(!moved) toggleAIChat();
-    else repositionNinoPanel();
-  }
-
-  function attachNinoEvents(){
-    const btn = getBtn(); if(!btn) return;
-    btn.addEventListener('mousedown',  onPointerDown, {passive:false});
-    btn.addEventListener('touchstart', onPointerDown, {passive:false});
-    document.addEventListener('mousemove',  onPointerMove, {passive:false});
-    document.addEventListener('touchmove',  onPointerMove, {passive:false});
-    document.addEventListener('mouseup',  onPointerUp);
-    document.addEventListener('touchend', onPointerUp);
-  }
-
-  // Attach after DOM ready
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', attachNinoEvents);
-  } else {
-    attachNinoEvents();
-  }
-  // Also re-attach after login (app div shows)
-  window._attachNinoEvents = attachNinoEvents;
-})();
-
-function repositionNinoPanel(){
-  const btn = document.getElementById('ai-chat-btn');
-  const panel = document.getElementById('ai-chat-panel');
-  if(!btn || !panel || panel.style.display === 'none') return;
-  const rect = btn.getBoundingClientRect();
-  const pw = Math.min(340, window.innerWidth - 32);
-  let left = rect.right - pw;
-  let top = rect.top - 490;
-  if(left < 8) left = 8;
-  if(top < 80) top = rect.bottom + 8;
-  panel.style.left = left + 'px';
-  panel.style.top = top + 'px';
-  panel.style.right = 'auto';
-  panel.style.bottom = 'auto';
-  panel.style.width = pw + 'px';
-}
-
-
-
-// ============================================================
-// NINO VOICE INPUT
-// ============================================================
-let _ninoVoiceRecorder = null;
-let _ninoVoiceChunks = [];
-let _ninoVoiceActive = false;
-
-async function startNinoVoice(){
-  const btn = document.getElementById('nino-voice-btn');
-  if(_ninoVoiceActive){
-    // Stop recording
-    if(_ninoVoiceRecorder && _ninoVoiceRecorder.state !== 'inactive'){
-      _ninoVoiceRecorder.stop();
-      _ninoVoiceRecorder.stream.getTracks().forEach(t=>t.stop());
-    }
-    return;
-  }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
-    _ninoVoiceChunks = [];
-    _ninoVoiceRecorder = new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'audio/mp4'});
-    _ninoVoiceRecorder.ondataavailable = e => { if(e.data.size>0) _ninoVoiceChunks.push(e.data); };
-    _ninoVoiceRecorder.onstop = ninoVoiceStopped;
-    _ninoVoiceRecorder.start(100);
-    _ninoVoiceActive = true;
-    if(btn){ btn.textContent='⏹'; btn.style.background='#FEE2E2'; btn.style.borderColor='var(--red)'; }
-    // Auto stop after 30 seconds
-    setTimeout(()=>{ if(_ninoVoiceActive) startNinoVoice(); }, 30000);
-  } catch(e){
-    alert('Microphone access denied. Please allow microphone in browser settings.');
-  }
-}
-
 async function ninoVoiceStopped(){
   _ninoVoiceActive = false;
   const btn = document.getElementById('nino-voice-btn');
@@ -4897,8 +3480,8 @@ async function ninoVoiceStopped(){
   const reader = new FileReader();
   reader.onload = async function(ev){
     const result = await callClaude(
-      'Transcribe this voice message accurately. The person is asking a question about a maintenance app called MaintenanceOS. They may be speaking in English or Hindi. Return ONLY the transcribed text, nothing else.',
-      'You are a transcription assistant. Transcribe the voice message exactly as spoken. Support both English and Hindi.'
+      'Please transcribe this voice message. The person is asking about a maintenance app. They may speak English or Hindi. Return ONLY the transcription.',
+      'Transcription assistant. Return only the transcribed text.'
     );
     if(input){
       input.value = result || '';
@@ -4911,6 +3494,53 @@ async function ninoVoiceStopped(){
     }
   };
   reader.readAsDataURL(blob);
+}
+
+
+// ============================================================
+// NINO API KEY MANAGEMENT
+// ============================================================
+(function loadNinoKey(){
+  const saved = localStorage.getItem('nino_api_key');
+  if (saved) window._ninoKey = saved;
+})();
+
+function openNinoSettings(){
+  document.getElementById('m-title').textContent = 'Nino AI Settings';
+  document.getElementById('m-body').innerHTML = `
+    <div style="background:var(--cream);border-radius:8px;padding:12px;margin-bottom:1rem;font-size:13px;color:var(--text-muted);line-height:1.6">
+      Nino needs an Anthropic API key to work. Get one from <a href="https://console.anthropic.com" target="_blank" style="color:var(--amber)">console.anthropic.com</a>
+    </div>
+    <div class="fg">
+      <label>Anthropic API Key</label>
+      <input type="password" id="nino-key-input" value="${window._ninoKey||''}" placeholder="sk-ant-..." style="font-family:monospace">
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:1rem">Stored locally on this device only. Never sent anywhere except Anthropic.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn danger" onclick="clearNinoKey()">Clear</button>
+      <button class="btn primary" onclick="saveNinoKey()">Save key</button>
+    </div>`;
+  openModal();
+}
+
+function saveNinoKey(){
+  const key = document.getElementById('nino-key-input')?.value?.trim();
+  if (!key || !key.startsWith('sk-ant-')) {
+    alert('Please enter a valid Anthropic API key (starts with sk-ant-)');
+    return;
+  }
+  window._ninoKey = key;
+  localStorage.setItem('nino_api_key', key);
+  closeModal();
+  showToast('Nino API key saved! You can now use Nino.');
+}
+
+function clearNinoKey(){
+  window._ninoKey = '';
+  localStorage.removeItem('nino_api_key');
+  closeModal();
+  showToast('Nino API key cleared');
 }
 
 function renderRecurring(){
