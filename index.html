@@ -9,9 +9,12 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1a1a18">
 <meta name="description" content="Multi-location restaurant maintenance management">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
-<title>MaintenanceOS v2.2</title>
+<title>MaintenanceOS v2.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -4610,7 +4613,7 @@ function setLoginLang(lang) {
 
 
 window.addEventListener('load', async () => {
-  console.log('MaintenanceOS v2.2 loaded - ' + new Date().toISOString());
+  console.log('MaintenanceOS v2.3 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
@@ -4627,6 +4630,11 @@ let pushSubscription = null;
 let notifPermission = 'default';
 
 async function initPWA() {
+  // Unregister all existing service workers to prevent stale cache issues
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) { await reg.unregister(); }
+  }
   if (!('serviceWorker' in navigator)) return;
   try {
     swRegistration = await navigator.serviceWorker.register('/sw.js');
