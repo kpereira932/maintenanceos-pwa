@@ -4026,6 +4026,427 @@ function renderLog(){
 }
 
 </script>
+
+
+</body>
+</html
+// ============================================================
+// CONTEXT-AWARE GUIDE — changes per page + role
+// ============================================================
+
+const PAGE_GUIDE = {
+
+  // TICKETS PAGE
+  tickets: {
+    outlet: {
+      title: 'Tickets',
+      sections: [
+        { heading: 'How to raise a ticket', steps: [
+          { n:'1', text:'Tap the orange + Raise button at the top right' },
+          { n:'2', text:'Enter your name and describe the issue clearly. Example: "AC in dining area not cooling"' },
+          { n:'3', text:'Choose the category — Electrical, Plumbing, Kitchen etc.' },
+          { n:'4', text:'Set urgency — High if it affects service now, Medium for soon, Low for minor issues' },
+          { n:'5', text:'Take a clear photo of the problem. This is mandatory.' },
+          { n:'6', text:'Tap Submit ticket. Your manager gets notified immediately.' },
+        ]},
+        { heading: 'After you raise a ticket', steps: [
+          { n:'🟡', text:'Open — Ticket raised. Waiting for a technician to be assigned.' },
+          { n:'🔵', text:'In Progress — Technician assigned and on the way.' },
+          { n:'🟢', text:'Resolved — Issue fixed. Please confirm it is working.' },
+          { n:'⏸', text:'On Hold — Waiting for parts or approval.' },
+        ]},
+        { heading: 'Tips', steps: [
+          { n:'📸', text:'Always take a photo. Clear photos = faster repairs.' },
+          { n:'💬', text:'Tap any ticket to add a comment or update.' },
+          { n:'🔄', text:'Tap ⟳ Refresh to see the latest status.' },
+        ]},
+      ]
+    },
+    technician: {
+      title: 'My Tasks',
+      sections: [
+        { heading: 'Working your tickets', steps: [
+          { n:'1', text:'Tap any ticket to see the full details and photo of the problem.' },
+          { n:'2', text:'Tap "On my way" when you leave for the job — manager gets notified.' },
+          { n:'3', text:'Fix the issue.' },
+          { n:'4', text:'Take a clear photo showing the fix is done.' },
+          { n:'5', text:'Tap Resolve, upload the photo, write a brief note, and submit.' },
+        ]},
+        { heading: 'Expenses', steps: [
+          { n:'⚠️', text:'Always submit an Estimate before buying parts. Wait for manager approval.' },
+          { n:'✅', text:'Once approved, the Expense button appears on the ticket.' },
+          { n:'📸', text:'Take a photo of every bill when logging expenses.' },
+        ]},
+        { heading: 'If you cannot complete the job', steps: [
+          { n:'⏸', text:'Tap On Hold and explain why — e.g. "Waiting for spare part, 3 days".' },
+          { n:'📞', text:'The manager is notified and can approve the hold or reassign.' },
+        ]},
+      ]
+    },
+    manager: {
+      title: 'Managing Tickets',
+      sections: [
+        { heading: 'Assign a ticket', steps: [
+          { n:'1', text:'Tap the flashing Assign button on any unassigned ticket.' },
+          { n:'2', text:'Choose a technician from the dropdown.' },
+          { n:'3', text:'Set a due date and add any notes for the technician.' },
+          { n:'4', text:'Tap Confirm — technician gets a Telegram notification immediately.' },
+        ]},
+        { heading: 'SLA rules', steps: [
+          { n:'🔴', text:'High — Assign within 4 hours, resolve within 24 hours.' },
+          { n:'🟡', text:'Medium — Assign within 8 hours, resolve within 48 hours.' },
+          { n:'🟢', text:'Low — Assign within 24 hours, resolve within 72 hours.' },
+        ]},
+        { heading: 'Approving expenses', steps: [
+          { n:'1', text:'Open a ticket with a pending expense.' },
+          { n:'2', text:'Tap Expenses to see what the technician submitted.' },
+          { n:'3', text:'Review the amount and bill photo, then Approve or Reject.' },
+        ]},
+      ]
+    },
+    supervisor: {
+      title: 'Supervising Tickets',
+      sections: [
+        { heading: 'Assign and monitor', steps: [
+          { n:'1', text:'Find tickets with the flashing Assign button — these need a technician.' },
+          { n:'2', text:'Assign to a technician in your area and set a due date.' },
+          { n:'3', text:'Monitor In Progress tickets — check if any are going overdue.' },
+        ]},
+        { heading: 'SLA rules', steps: [
+          { n:'🔴', text:'High — Assign within 4 hours, resolve within 24 hours.' },
+          { n:'🟡', text:'Medium — Assign within 8 hours, resolve within 48 hours.' },
+          { n:'🟢', text:'Low — Assign within 24 hours, resolve within 72 hours.' },
+        ]},
+      ]
+    },
+    founder: {
+      title: 'Ticket Overview',
+      sections: [
+        { heading: 'What you can do on any ticket', steps: [
+          { n:'👁', text:'View full history — comments, photos, expenses, all activity.' },
+          { n:'🚨', text:'Raise a concern — tap Raise concern on any ticket to alert all staff on Telegram.' },
+          { n:'👤', text:'Reassign — change the technician if needed.' },
+        ]},
+        { heading: 'What to watch for', steps: [
+          { n:'🔴', text:'Escalated tickets — overdue High urgency. Needs immediate action.' },
+          { n:'🟡', text:'Unassigned tickets — no technician assigned yet. Manager should act.' },
+          { n:'📊', text:'Go to Reports or SLA Tracker for a full picture.' },
+        ]},
+      ]
+    },
+  },
+
+  // DASHBOARD PAGE
+  dashboard: {
+    _all: {
+      title: 'Your Dashboard',
+      sections: [
+        { heading: 'Reading the dashboard', steps: [
+          { n:'🔴', text:'Escalated — High urgency tickets that are overdue. Needs immediate action.' },
+          { n:'🟡', text:'Overdue — Tickets past their due date.' },
+          { n:'🔵', text:'Open — New tickets waiting to be assigned.' },
+          { n:'💜', text:'To assign — Tickets with no technician yet.' },
+          { n:'🟢', text:'In progress — Tickets being actively worked on.' },
+        ]},
+        { heading: 'Health scores', steps: [
+          { n:'🟢', text:'80-100 — All good. Issues are being resolved on time.' },
+          { n:'🟡', text:'60-79 — Fair. Some overdue or unassigned tickets.' },
+          { n:'🔴', text:'Below 60 — Needs attention. Multiple issues unresolved.' },
+        ]},
+        { heading: 'Quick actions', steps: [
+          { n:'⟳', text:'Tap Refresh to reload the latest data.' },
+          { n:'📊', text:'Tap Report to download a PDF or export to Google Sheets.' },
+          { n:'🤖', text:'Ask Nino anything about your data.' },
+        ]},
+      ]
+    }
+  },
+
+  // EXPENSES PAGE
+  expenses: {
+    technician: {
+      title: 'Expenses',
+      sections: [
+        { heading: 'How to log an expense', steps: [
+          { n:'1', text:'You must submit an Estimate first on the ticket. Do this before buying anything.' },
+          { n:'2', text:'Wait for manager approval.' },
+          { n:'3', text:'Once approved, go to the ticket and tap Expenses.' },
+          { n:'4', text:'Add each item with amount and a photo of the bill.' },
+          { n:'5', text:'Submit — manager gets notified to approve.' },
+        ]},
+      ]
+    },
+    manager: {
+      title: 'Approving Expenses',
+      sections: [
+        { heading: 'How to approve', steps: [
+          { n:'1', text:'Open a ticket with a pending expense notification.' },
+          { n:'2', text:'Tap Expenses tab to see all submitted expenses.' },
+          { n:'3', text:'Review the amount, description and bill photo.' },
+          { n:'4', text:'Tap Approve or Reject. If rejecting, give a clear reason.' },
+        ]},
+      ]
+    },
+  },
+
+  // USERS PAGE
+  users: {
+    admin: {
+      title: 'Managing Users',
+      sections: [
+        { heading: 'Adding a new user', steps: [
+          { n:'1', text:'Tap + Add user at the top right.' },
+          { n:'2', text:'Enter their full name and a username (they use this to login).' },
+          { n:'3', text:'Set their role — this controls what they can see.' },
+          { n:'4', text:'Assign their city and location if they are outlet or technician.' },
+          { n:'5', text:'Set a password. Default is Benne@2026!' },
+          { n:'6', text:'Tap Save. They can login immediately.' },
+        ]},
+        { heading: 'Roles explained', steps: [
+          { n:'🏪', text:'Outlet / CK / Welfare — Can only raise tickets and see their own.' },
+          { n:'🔧', text:'Technician — Sees assigned jobs, resolves tickets, logs expenses.' },
+          { n:'👷', text:'Supervisor — Assigns technicians, monitors area.' },
+          { n:'📋', text:'Manager — Full access for their city. Approves expenses.' },
+          { n:'👑', text:'Founder — Full access across all locations.' },
+        ]},
+      ]
+    },
+  },
+
+  // REPORTS PAGE  
+  reports: {
+    _all: {
+      title: 'Reports',
+      sections: [
+        { heading: 'Download a PDF report', steps: [
+          { n:'1', text:'Go to Reports in the sidebar.' },
+          { n:'2', text:'Tap Download PDF — a formatted report opens in a new tab.' },
+          { n:'3', text:'Tap Print / Save as PDF to save to your device.' },
+        ]},
+        { heading: 'Export to Google Sheets', steps: [
+          { n:'1', text:'Tap Export to Google Sheets — a CSV file downloads.' },
+          { n:'2', text:'Open Google Sheets on your computer.' },
+          { n:'3', text:'File → Import → Upload the CSV file.' },
+          { n:'4', text:'All ticket data appears in a spreadsheet.' },
+        ]},
+      ]
+    }
+  },
+
+  // MY PROFILE
+  profile: {
+    _all: {
+      title: 'My Profile',
+      sections: [
+        { heading: 'Update your details', steps: [
+          { n:'✏️', text:'Change your name, email or password here.' },
+          { n:'📱', text:'Add your WhatsApp number so managers can contact you directly.' },
+          { n:'📲', text:'Add your Telegram ID to receive notifications for your tickets.' },
+        ]},
+        { heading: 'Language', steps: [
+          { n:'🇮🇳', text:'Switch to Hindi — all navigation labels change to Hindi.' },
+          { n:'💬', text:'You can also translate any comment by tapping the Translate button on a comment.' },
+        ]},
+      ]
+    }
+  },
+
+};
+
+// Default guide for pages not listed
+const DEFAULT_GUIDE = {
+  _all: {
+    title: 'Quick Guide',
+    sections: [
+      { heading: 'Getting around', steps: [
+        { n:'☰', text:'Tap the menu icon (top left) to open the full navigation.' },
+        { n:'⊞', text:'Bottom bar — quick access to your most used pages.' },
+        { n:'⟳', text:'Tap Refresh on any page to get the latest data.' },
+      ]},
+      { heading: 'Need help?', steps: [
+        { n:'🤖', text:'Tap the Nino button and ask anything — how to do a task, your data, anything.' },
+        { n:'❓', text:'Tap the ? Guide button on any page for context-specific help.' },
+      ]},
+    ]
+  }
+};
+
+function renderGuideContent(){
+  const body = document.getElementById('guide-body');
+  if(!body) return;
+  const role = session?.role || 'outlet';
+  const page = currentPage || 'dashboard';
+
+  // Get guide for this page + role
+  const pageGuide = PAGE_GUIDE[page] || DEFAULT_GUIDE;
+  const guide = pageGuide[role] || pageGuide['_all'] || pageGuide[Object.keys(pageGuide)[0]];
+
+  const label = document.getElementById('guide-role-label');
+  if(label) label.textContent = guide.title || 'Guide';
+
+  body.innerHTML = guide.sections.map(s => `
+    <div style="margin-bottom:1.5rem">
+      <div style="font-size:11px;font-weight:700;color:#7A7060;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #E8E0D0">${s.heading}</div>
+      ${s.steps.map(step => `
+        <div style="display:flex;gap:12px;margin-bottom:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:6px;background:#F5DFA8;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#1B4332;flex-shrink:0;line-height:1">${step.n}</div>
+          <div style="font-size:13px;color:#1C1C1A;line-height:1.5;padding-top:4px">${step.text}</div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('') + `
+    <div style="margin-top:1rem;padding:12px;background:#F5DFA8;border-radius:8px;font-size:12px;color:#1B4332;text-align:center;font-weight:600">
+      🤖 Still need help? Tap Nino and ask anything
+    </div>
+  `;
+}
+
+function toggleGuide(){
+  const p = document.getElementById('guide-panel');
+  if(!p) return;
+  const showing = p.style.display === 'flex';
+  p.style.display = showing ? 'none' : 'flex';
+  if(!showing) renderGuideContent();
+}
+function renderRecurring(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
+    <div>${recurringSchedules.map(r=>{
+      const locs=r.locationIds.map(id=>getLoc(id));
+      const byS={};locs.forEach(l=>{const s=l.city||l.name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
+      return`<div class="card" style="margin-bottom:10px">
+        <div class="card-top"><span class="card-title">↺ ${r.title}</span>${['admin','manager'].includes(session.role)?`<label class="tgl"><input type="checkbox" ${r.on?'checked':''} onchange="toggleR('${r.id}',this.checked)"><span class="tgl-s"></span></label>`:''}</div>
+        <div class="card-meta"><span>Every ${r.freq}</span><span class="badge ${r.priority==='High'?'b-high':r.priority==='Low'?'b-low':'b-med'}">${r.priority}</span><span>${r.category}</span><span>📅 Next: ${r.next}</span></div>
+        <div style="font-size:12px;color:#888;margin-top:6px">${Object.entries(byS).map(([s,ls])=>`${s}: ${ls.join(', ')}`).join('  ')}</div>
+        ${['admin','manager'].includes(session.role)?`<div class="card-actions"><button class="btn sm" onclick="genNow('${r.id}')">▶ Generate now</button><button class="btn sm danger" onclick="delR('${r.id}')">🗑</button></div>`:''}
+      </div>`;
+    }).join('')||'<div class="empty">No recurring schedules</div>'}</div>`;
+}
+function toggleR(id,v){const r=recurringSchedules.find(x=>x.id===id);if(r)r.on=v;}
+function genNow(id){const r=recurringSchedules.find(x=>x.id===id);if(!r)return;const ts=nowTs();r.locationIds.forEach(lid=>{const loc=getLoc(lid);tickets.unshift({id:'T'+String(tickets.length+1).padStart(3,'0'),locationId:lid,stateId:loc.stateId,category:r.category,title:r.title,desc:'Auto-generated.',priority:r.priority,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:r.next,comments:[]});});LOG('Recurring generated',r.title+' - '+r.locationIds.length+' tickets','b');alert('Created '+r.locationIds.length+' tickets for: '+r.title);renderRecurring();}
+function delR(id){if(confirm('Remove?')){recurringSchedules=recurringSchedules.filter(x=>x.id!==id);renderRecurring();}}
+function openAddRecurring(){
+  document.getElementById('m-title').textContent='New recurring schedule';
+  document.getElementById('m-body').innerHTML=`
+    <div class="fg"><label>Task name</label><input type="text" id="rt" placeholder="e.g. AC servicing"></div>
+    <div class="frow"><div class="fg"><label>Category</label><select id="rc">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Frequency</label><select id="rf"><option>1 month</option><option>3 months</option><option selected>6 months</option><option>1 year</option></select></div></div>
+    <div class="fg"><label>Urgency</label><select id="rp"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+    <div class="fg"><label>Locations</label><div style="max-height:150px;overflow-y:auto;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px">${states.map(s=>`<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;margin:5px 0 3px">${s.name}</div>${locations.filter(l=>l.stateId===s.id).map(l=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0"><input type="checkbox" value="${l.id}" checked> ${locLabel(l)}</label>`).join('')}`).join('')}</div></div>
+    <div class="fg"><label>Next due date</label><input type="date" id="rd"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveR()">Save</button></div>`;
+  openModal();
+}
+function saveR(){const t=document.getElementById('rt').value.trim();if(!t)return;const lids=[...document.querySelectorAll('#m-body input[type=checkbox]:checked')].map(c=>c.value);const raw=document.getElementById('rd').value;let nd='TBD';if(raw){const[y,m,d]=raw.split('-');nd=`${d}/${m}/${y}`;}recurringSchedules.push({id:'r'+Date.now(),title:t,locationIds:lids,freq:document.getElementById('rf').value,category:document.getElementById('rc').value,priority:document.getElementById('rp').value,next:nd,on:true});closeModal();renderRecurring();}
+
+function renderNotifications(){
+  const esc=tickets.filter(isESC),od=tickets.filter(t=>isOD(t)&&!isESC(t)),unass=tickets.filter(t=>t.status==='Open'&&!t.assignedTo);
+  const amcAlerts=amcRecords.filter(a=>amcSt(a)!=='active');
+  let h='';
+  if(esc.length){h+=`<p style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠ Escalated</p>`;esc.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`*ESCALATED TICKET*\n\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority} · Due: ${t.dueDate} (${dAgo(t.dueDate)}d overdue)\n${tech?'Assigned: '+tech.name:'No technician assigned'}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-esc','Escalated');});}
+  if(od.length){h+=`<p style="font-size:13px;font-weight:700;color:#d97706;margin:1rem 0 8px">⏰ Overdue</p>`;od.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`Hi${tech?' '+tech.name:''},\n\nFollow-up: ${t.id} - *${t.title}*\n${state.name} › ${loc.name}\nDue: ${t.dueDate} (${dAgo(t.dueDate)} days overdue)\n\nPlease update.\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-ov','Overdue');});}
+  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','To be assigned');});}
+  if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n- MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
+  if(!h)h='<div class="empty">OK All clear - no notifications needed</div>';
+  document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>${h}`;
+}
+function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
+
+function renderMyTasks(){
+  const mine=tickets.filter(t=>t.assignedTo===session.id);
+  const open=mine.filter(t=>!['Resolved','Closed'].includes(t.status));
+  const done=mine.filter(t=>['Resolved','Closed'].includes(t.status));
+  const unassigned=tickets.filter(t=>!t.assignedTo&&!['Resolved','Closed'].includes(t.status));
+
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">My tasks</div><div class="page-sub">${open.length} active · ${unassigned.length} available to pick up</div></div></div>
+    <div class="tab-btns">
+      <button class="tab-btn active" onclick="showMTTab('mto','mtu','mtd',this)">My active (${open.length})</button>
+      <button class="tab-btn" id="avail-tab-btn" onclick="showMTTab('mtu','mto','mtd',this)">Available to take (${unassigned.length})</button>
+      <button class="tab-btn" onclick="showMTTab('mtd','mto','mtu',this)">Resolved (${done.length})</button>
+    </div>
+    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">OK No active tasks assigned to you</div>'}</div>
+    <div id="mtu" style="display:none">
+      ${unassigned.length?`
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px">
+          💡 These tickets have no technician assigned. Tap <strong>"Assign to me"</strong> to take ownership.
+        </div>
+        ${unassigned.map(t=>ticketCard(t)).join('')}
+      `:'<div class="empty">OK No unassigned tickets right now</div>'}
+    </div>
+    <div id="mtd" style="display:none">${done.length?done.map(t=>ticketCard(t)).join(''):'<div class="empty">None resolved yet</div>'}</div>`;
+}
+
+function showMTTab(show,h1,h2,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  [show,h1,h2].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=i===0?'':'none';
+  });
+}
+function renderRaise(){
+  // For outlet: fixed to their location
+  // For manager/admin/technician: can pick any location
+  const canPickLocation = ['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role);
+  const visLocs = canPickLocation ? visibleLocationIds() : [];
+  const locOptions = canPickLocation
+    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')
+    : '';
+  const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
+  const fixedState = fixedLoc ? getState(fixedLoc.stateId) : null;
+  const subTitle = fixedLoc
+    ? `${fixedState.name} › ${fixedLoc.name} · ${fixedLoc.type==='central_kitchen'?'Central Kitchen':'Outlet'}`
+    : 'Select a location below';
+
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">Raise a ticket</div><div class="page-sub">${subTitle}</div></div></div>
+    <div style="max-width:560px"><div class="card">
+      ${canPickLocation ? `<div class="fg"><label>Location</label><select id="ri-loc"><option value="">Select location...</option>${locOptions}</select></div>` : ''}
+      <div class="fg"><label>Raised by <span style="color:#dc2626;font-weight:600">*</span></label>
+        <input type="text" id="ri-name" 
+          value="${['outlet','central_kitchen'].includes(session.role)?'':session.name||''}"
+          placeholder="${['outlet','central_kitchen'].includes(session.role)?'Enter your full name':session.name||'Your name'}"
+          ${['outlet','central_kitchen'].includes(session.role)?'':'readonly'}
+          style="border-color:var(--tan);${['outlet','central_kitchen'].includes(session.role)?'':'background:var(--cream);color:var(--text-muted);cursor:not-allowed'}">
+        ${!['outlet','central_kitchen'].includes(session.role)?'<div style="font-size:11px;color:var(--text-muted);margin-top:3px">Auto-filled from your account</div>':''}
+      </div>
+      <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
+      <div class="frow">
+        <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label>Urgency <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+      </div>
+      <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
+      <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
+      <div class="fg"><label>Attach photo / video <span style="color:#888;font-weight:400">(optional)</span></label>
+        <input type="file" id="raise-file" accept="image/*,video/*" style="border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;width:100%">
+      </div>
+      <button class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="submitTicket()">＋ Submit ticket</button>
+    </div></div>`;
+}
+function submitTicket(){
+  const title=document.getElementById('ri-t').value.trim();if(!title){alert('Enter a title');return;}
+  const raw=document.getElementById('ri-dd').value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=`${d}/${m}/${y}`;}
+  const ts=nowTs(),id='T'+String(tickets.length+1).padStart(3,'0'),loc=getLoc(session.locationId);
+  tickets.unshift({id,locationId:session.locationId,stateId:loc.stateId,category:document.getElementById('ri-c').value,title,desc:document.getElementById('ri-d').value,priority:document.getElementById('ri-p').value,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:dd,comments:[]});
+  LOG('Ticket raised',id+' '+title+' - '+loc.name,'p');alert('Issue '+id+' submitted!');navTo('my-tickets');
+}
+function renderMyTickets(){
+  const mine=tickets.filter(t=>t.raisedBy===session.id);
+  const loc=getLoc(session.locationId),state=getState(loc.stateId);
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div><div class="page-title">My tickets</div><div class="page-sub">${state.name} › ${loc.name} · ${mine.length} tickets</div></div><button class="btn primary" onclick="navTo('raise')">＋ Raise new</button></div>
+    ${mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty">No issues raised yet.<br><br><button class="btn primary" onclick="navTo(\'raise\')"> Raise your first issue</button></div>'}`;
+}
+function renderLog(){
+  document.getElementById('main-content').innerHTML=`
+    <div class="page-hdr"><div class="page-title">Audit log</div><button class="btn danger" onclick="auditLog=[];renderLog()">🗑 Clear</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>Details</th></tr></thead><tbody>
+      ${auditLog.map(e=>`<tr><td style="color:#aaa;font-size:12px;white-space:nowrap">${e.t}</td><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{g:'#059669',r:'#dc2626',w:'#d97706',p:'#7c3aed',b:'#2563eb'}[e.c]||'#aaa'};margin-right:7px;vertical-align:middle"></span>${e.a}</td><td style="color:#555">${e.d}</td></tr>`).join('')}
+      ${!auditLog.length?'<tr><td colspan="3" style="text-align:center;color:#aaa;padding:2rem">No activity yet</td></tr>':''}
+    </tbody></table></div>`;
+}
+
+</script>
 <script>
 // ============================================================
 // SUPABASE LIVE CONNECTION
