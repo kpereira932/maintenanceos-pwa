@@ -11,7 +11,7 @@
 <meta name="description" content="Multi-location restaurant maintenance management">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
-<title>MaintenanceOS v2.1</title>
+<title>MaintenanceOS v2.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -853,7 +853,13 @@ function renderDashboard(){
 function renderTickets(){
   const vis=visT();
   document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Tickets</div><div class="page-sub">${vis.length} tickets</div></div></div>
+    <div class="page-hdr">
+      <div><div class="page-title">Tickets</div><div class="page-sub">${vis.length} tickets</div></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn sm" onclick="refreshPage()">&#8635;</button>
+        <button class="btn primary" onclick="openRaiseTicketModal()">+ Raise</button>
+      </div>
+    </div>
     <div style="display:flex;gap:7px;margin-bottom:1rem;flex-wrap:wrap">
       <select id="tf-st" style="display:none" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">City</option>${(session.stateId?states.filter(s=>s.id===session.stateId):states).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
       <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')}</select>
@@ -4677,7 +4683,7 @@ function setLoginLang(lang) {
 
 
 window.addEventListener('load', async () => {
-  console.log('MaintenanceOS v2.1 loaded - ' + new Date().toISOString());
+  console.log('MaintenanceOS v2.2 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
