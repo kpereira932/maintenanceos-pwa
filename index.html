@@ -11,7 +11,7 @@
 <meta name="description" content="Multi-location restaurant maintenance management">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
-<title>MaintenanceOS</title>
+<title>MaintenanceOS v2.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -4456,6 +4456,7 @@ function setLoginLang(lang) {
 
 
 window.addEventListener('load', async () => {
+  console.log('MaintenanceOS v2.1 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
