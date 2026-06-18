@@ -3401,6 +3401,76 @@ async function callClaude(prompt, systemPrompt=null) {
     return null;
   }
 }
+
+// ============================================================
+// AI CHAT MANAGER — Nino
+// ============================================================
+let _chatHistory = [];
+let _chatOpen = false;
+
+function toggleAIChat() {
+  const panel = document.getElementById('ai-chat-panel');
+  if (!panel) return;
+  _chatOpen = !_chatOpen;
+  panel.style.display = _chatOpen ? 'flex' : 'none';
+  if (_chatOpen) {
+    setTimeout(repositionNinoPanel, 10);
+    // Render quick questions
+    const qc = document.getElementById('ai-quick-btns');
+    if (qc && !qc.children.length) {
+      qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,3).map(q =>
+        `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:var(--cream);border:1px solid var(--tan);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--charcoal);flex-shrink:0">${q.slice(0,28)}...</button>`
+      ).join('');
+    }
+    if (_chatHistory.length === 0) {
+      addChatMessage('ai', "Hi! I'm Nino! \ud83e\udd16\n\nI know MaintenanceOS inside out. Ask me anything:\n\n\u2022 How to raise a ticket\n\u2022 How to assign or resolve\n\u2022 Your live data and reports\n\u2022 Anything in Hindi or English\n\u2022 Or tap the mic and speak!\n\nWhat can I help you with?");
+    }
+    const input = document.getElementById('ai-chat-input');
+    if (input) input.focus();
+  }
+}
+
+function addChatMessage(role, text) {
+  _chatHistory.push({ role, text, time: new Date().toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) });
+  renderChatMessages();
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  container.innerHTML = _chatHistory.map(m => `
+    <div style="display:flex;flex-direction:column;align-items:${m.role==='user'?'flex-end':'flex-start'};margin-bottom:12px">
+      <div style="max-width:85%;background:${m.role==='user'?'var(--amber)':'var(--cream)'};color:${m.role==='user'?'#fff':'var(--charcoal)'};border-radius:${m.role==='user'?'12px 12px 2px 12px':'12px 12px 12px 2px'};padding:10px 14px;font-size:13px;line-height:1.5;white-space:pre-wrap;border:1px solid ${m.role==='user'?'transparent':'var(--tan)'}">
+        ${m.text}
+      </div>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${m.time}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearAIChat() {
+  _chatHistory = [];
+  renderChatMessages();
+}
+
+function aiChatKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendAIChat();
+  }
+}
+
+const AI_QUICK_QUESTIONS = [
+  'How do I raise a ticket?',
+  'How do I assign a ticket?',
+  'Which outlet has most open tickets?',
+  'How do I approve an expense?',
+  'What are the SLA rules?',
+  'How do I resolve a ticket?',
+];
+
+
 async function sendAIChat() {
   const input = document.getElementById('ai-chat-input');
   const question = input?.value?.trim();
@@ -3541,6 +3611,103 @@ function clearNinoKey(){
   localStorage.removeItem('nino_api_key');
   closeModal();
   showToast('Nino API key cleared');
+}
+
+
+// ============================================================
+// WELCOME MESSAGE — shown on login for human accounts
+// ============================================================
+function showWelcomeMessage(user) {
+  // Skip for outlets, CKs, system accounts
+  const skipEmails = ['bandra','juhu','chowpatty','gk2','nck','ock','central',
+    'admin','hr.mumbai','hr.delhi','sup.juhu','sup.bandra','sup.chowpatty','sup.gk2'];
+  const skipRoles = ['outlet','welfare'];
+
+  if (skipEmails.includes(user.email) || skipRoles.includes(user.role)) return;
+
+  // Get first name only
+  const firstName = (user.name || '').trim().split(' ')[0];
+  if (!firstName || firstName.length < 2) return;
+
+  // Pick greeting based on time of day
+  const hour = new Date().getHours();
+  let greeting, sub;
+  if (hour < 12) {
+    greeting = 'Good morning';
+    sub = 'Have a productive day!';
+  } else if (hour < 17) {
+    greeting = 'Good afternoon';
+    sub = 'Hope the day is going well.';
+  } else {
+    greeting = 'Good evening';
+    sub = 'Thanks for checking in.';
+  }
+
+  // Role-specific message
+  const roleMessages = {
+    founder: 'Here is your overview across all locations.',
+    admin: 'Everything is ready for you.',
+    manager: 'Check your dashboard for any unassigned tickets.',
+    supervisor: 'Check your open tickets for today.',
+    technician: 'Check My Tasks for your assigned jobs.',
+    'tech-manager': 'Check your dashboard and assigned jobs.',
+    'design-manager': 'Check for new site visit lists to review.',
+    'design-poc': 'Ready to log a new site visit?',
+  };
+  const roleSub = roleMessages[user.role] || sub;
+
+  // Create welcome overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'welcome-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(15,45,31,0.92);
+    animation:fadeInWelcome .4s ease;
+    cursor:pointer;
+  `;
+
+  overlay.innerHTML = `
+    <div style="text-align:center;padding:2rem;max-width:340px" onclick="dismissWelcome()">
+      <div style="font-family:'Lora',Georgia,serif;font-size:13px;color:rgba(245,223,168,.7);letter-spacing:2px;margin-bottom:16px;text-transform:lowercase">benne</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:8px;letter-spacing:.5px">${greeting}</div>
+      <div style="font-family:'Georgia',serif;font-size:42px;font-weight:700;color:#F5DFA8;line-height:1.1;margin-bottom:12px">
+        Namaskara,<br>${firstName}
+      </div>
+      <div style="width:40px;height:2px;background:var(--amber);margin:0 auto 16px;border-radius:2px"></div>
+      <div style="font-size:14px;color:rgba(255,255,255,.75);line-height:1.6">${roleSub}</div>
+      <div style="margin-top:32px;font-size:11px;color:rgba(255,255,255,.3);letter-spacing:.5px">Tap anywhere to continue</div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Add animation style
+  if (!document.getElementById('welcome-style')) {
+    const style = document.createElement('style');
+    style.id = 'welcome-style';
+    style.textContent = `
+      @keyframes fadeInWelcome {
+        from { opacity:0; transform:scale(1.02); }
+        to   { opacity:1; transform:scale(1); }
+      }
+      @keyframes fadeOutWelcome {
+        from { opacity:1; }
+        to   { opacity:0; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Auto-dismiss after 3 seconds
+  setTimeout(dismissWelcome, 3000);
+}
+
+function dismissWelcome() {
+  const el = document.getElementById('welcome-overlay');
+  if (!el) return;
+  el.style.animation = 'fadeOutWelcome .3s ease forwards';
+  setTimeout(() => el.remove(), 300);
 }
 
 function renderRecurring(){
@@ -3910,6 +4077,7 @@ window.doLogin = async function() {
     buildNav();
     navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
     checkAssetQRLink();
+    setTimeout(() => showWelcomeMessage(session), 400);
     // Ask for notification permission after login
     setTimeout(askNotificationPermission, 2000);
     setTimeout(showInstallBanner, 5000);
