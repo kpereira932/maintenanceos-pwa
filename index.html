@@ -512,6 +512,54 @@ function buildNav(){
     return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}');closeSidebar()"><span class="ni">${i.i}</span>${i.l}</div>`;
   }).join('');
 }
+
+// Stub redirects for missing render functions
+function renderSLA(){ 
+  document.getElementById('main-content').innerHTML = renderSLAPage(); 
+}
+function renderSLAPage(){
+  const vis = visT();
+  const active = vis.filter(t=>!['Resolved','Closed'].includes(t.status));
+  const breached = active.filter(t=>isOD(t)&&t.priority==='High').length;
+  const ok = active.length - breached;
+  return `<div class="page-hdr"><div><div class="page-title">SLA Tracker</div><div class="page-sub">Service level compliance</div></div><button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button></div>
+  <div class="metrics">
+    <div class="met"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">Within SLA</div><div class="mv g">${ok}</div></div>
+    <div class="met"><div class="met-bar" style="background:var(--red)"></div><div class="ml">SLA breached</div><div class="mv r">${breached}</div></div>
+    <div class="met"><div class="met-bar" style="background:var(--blue)"></div><div class="ml">Active tickets</div><div class="mv b">${active.length}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="section-title" style="margin-bottom:12px">SLA Rules</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+      <div style="border:1.5px solid var(--tan);border-radius:8px;padding:12px;border-top:3px solid var(--red)"><div style="font-weight:700;color:var(--red);margin-bottom:6px">High</div><div style="font-size:12px;color:var(--text-muted)">Assign within <strong>4h</strong></div><div style="font-size:12px;color:var(--text-muted)">Resolve within <strong>24h</strong></div></div>
+      <div style="border:1.5px solid var(--tan);border-radius:8px;padding:12px;border-top:3px solid var(--amber)"><div style="font-weight:700;color:var(--amber);margin-bottom:6px">Medium</div><div style="font-size:12px;color:var(--text-muted)">Assign within <strong>8h</strong></div><div style="font-size:12px;color:var(--text-muted)">Resolve within <strong>48h</strong></div></div>
+      <div style="border:1.5px solid var(--tan);border-radius:8px;padding:12px;border-top:3px solid var(--green-mid)"><div style="font-weight:700;color:var(--green-mid);margin-bottom:6px">Low</div><div style="font-size:12px;color:var(--text-muted)">Assign within <strong>24h</strong></div><div style="font-size:12px;color:var(--text-muted)">Resolve within <strong>72h</strong></div></div>
+    </div>
+  </div>
+  <div class="section-title" style="margin-bottom:10px">Active tickets</div>
+  ${active.map(t=>ticketCard(t,true)).join('')||'<div class="empty">No active tickets</div>'}`;
+}
+function renderAssets(){
+  document.getElementById('main-content').innerHTML = `<div class="page-hdr"><div><div class="page-title">Asset Register</div><div class="page-sub">${assets.length} assets</div></div><div style="display:flex;gap:8px"><button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openAddAsset()">+ Add asset</button>':''}</div></div>${assets.length?assets.map(a=>assetCard(a)).join(''):'<div class="empty">No assets yet.<br>Add equipment to start tracking.</div>'}`;
+}
+function renderTechPerformance(){
+  const techs = users.filter(u=>['technician','supervisor','tech-manager'].includes(u.role));
+  const rows = techs.map(u=>{
+    const assigned = tickets.filter(t=>(t.assignedTo||t.assigned_to)===u.id);
+    const resolved = assigned.filter(t=>['Resolved','Closed'].includes(t.status));
+    const rate = assigned.length>0?Math.round(resolved.length/assigned.length*100):0;
+    return `<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div>${u.name}</div></td><td>${roleBadge(u.role)}</td><td>${assigned.length}</td><td>${resolved.length}</td><td><strong style="color:${rate>=70?'var(--green-mid)':'var(--amber)'}">${rate}%</strong></td></tr>`;
+  }).join('');
+  document.getElementById('main-content').innerHTML = `<div class="page-hdr"><div><div class="page-title">Team Performance</div></div><button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button></div><div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Role</th><th>Assigned</th><th>Resolved</th><th>Rate</th></tr></thead><tbody>${rows||'<tr><td colspan=5 class=empty>No technicians found</td></tr>'}</tbody></table></div>`;
+}
+function renderWhatsAppSetup(){
+  document.getElementById('main-content').innerHTML = `<div class="page-hdr"><div><div class="page-title">WhatsApp</div><div class="page-sub">Raise tickets via WhatsApp</div></div></div><div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:12px">Manager WhatsApp numbers</div>${users.filter(u=>['manager','supervisor'].includes(u.role)&&u.whatsapp).map(u=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--tan)"><div><div style="font-weight:600">${u.name}</div><div style="font-size:11px;color:var(--text-muted)">${roleLabel(u.role)}</div></div><a href="https://wa.me/${(u.whatsapp||'').replace(/[^0-9]/g,'')}" target="_blank" class="btn sm wa">WhatsApp</a></div>`).join('')||'<div style="font-size:12px;color:var(--text-muted)">No WhatsApp numbers set. Managers can add in My Profile.</div>'}</div>`;
+}
+function renderBudgets(){
+  const visLocs = visibleLocationIds();
+  document.getElementById('main-content').innerHTML = `<div class="page-hdr"><div><div class="page-title">Budget Control</div></div><div style="display:flex;gap:8px"><button class="btn sm" onclick="refreshPage()">&#8635;</button>${['admin','manager','founder'].includes(session.role)?'<button class="btn primary" onclick="openSetBudget()">Set budget</button>':''}</div></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px">${visLocs.map(id=>{const l=getLoc(id);const spent=expenses.filter(e=>{const t=tickets.find(x=>x.id===(e.ticketId||e.ticket_id));return t&&(t.locationId||t.location_id)===id;}).reduce((s,e)=>s+Number(e.amount),0);return`<div class="card"><div style="font-weight:700;margin-bottom:6px">${l.city?l.city+' - ':''}${l.name}</div><div style="font-size:13px;color:var(--amber);font-weight:600">${fc(spent)} spent</div><button class="btn sm" style="margin-top:8px" onclick="openSetBudget('${id}')">Set budget</button></div>`;}).join('')}</div>`;
+}
+
 function navTo(p){
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
