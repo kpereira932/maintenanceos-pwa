@@ -231,21 +231,64 @@ tr:hover td{background:var(--cream)}
 
   <!-- AI CHAT PANEL -->
   <!-- GUIDE BUTTON -->
-  <button id="guide-btn" onclick="toggleGuide()" style="position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:9980;background:var(--amber);color:#fff;border:none;border-radius:8px 0 0 8px;padding:10px 6px;font-size:11px;font-weight:800;letter-spacing:1px;cursor:pointer;writing-mode:vertical-rl;font-family:inherit;box-shadow:-2px 2px 12px rgba(0,0,0,.2)">? Guide</button>
-
-  <!-- GUIDE PANEL -->
-  <div id="guide-panel" style="position:fixed;top:0;right:-400px;width:340px;max-width:100vw;height:100vh;background:var(--warm-white);z-index:9981;box-shadow:-4px 0 30px rgba(0,0,0,.15);transition:right .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;border-left:1px solid var(--tan)">
-    <div style="background:var(--green);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+  <button onclick="toggleGuide()" style="position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:9980;background:var(--amber);color:#fff;border:none;border-radius:8px 0 0 8px;padding:10px 6px;font-size:11px;font-weight:800;cursor:pointer;writing-mode:vertical-rl;font-family:inherit;box-shadow:-2px 2px 12px rgba(0,0,0,.2)">? Guide</button>
+  <div id="guide-panel" style="position:fixed;top:0;right:0;width:320px;max-width:100vw;height:100vh;background:#FAF7F2;z-index:9981;box-shadow:-4px 0 30px rgba(0,0,0,.2);display:none;flex-direction:column;border-left:1px solid #E8E0D0">
+    <div style="background:#1B4332;color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div>
         <div style="font-size:16px;font-weight:700">Quick Guide</div>
         <div style="font-size:11px;opacity:.7" id="guide-role-label">How to use MaintenanceOS</div>
       </div>
-      <button onclick="toggleGuide()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:32px;height:32px;font-size:20px;cursor:pointer">×</button>
+      <button onclick="toggleGuide()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;width:32px;height:32px;font-size:20px;cursor:pointer;line-height:1">×</button>
     </div>
-    <div class="guide-body" id="guide-body" style="flex:1;overflow-y:auto;padding:18px;-webkit-overflow-scrolling:touch"></div>
+    <div id="guide-body" style="flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch"></div>
   </div>
 
-  <!-- NINO AI BUTTON -->
+    <!-- NINO AI BUTTON -->
+  <button id="ai-chat-btn" title="Ask Nino"
+    style="position:fixed;bottom:130px;right:16px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:58px;height:58px;cursor:pointer;box-shadow:0 4px 20px rgba(27,67,50,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none;flex-direction:column;gap:1px">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="4"/><path d="M8 8h-2a2 2 0 0 0-2 2v1h16v-1a2 2 0 0 0-2-2h-2"/>
+      <rect x="9" y="11" width="6" height="6" rx="1"/>
+      <line x1="9" y1="16" x2="7" y2="19"/><line x1="15" y1="16" x2="17" y2="19"/>
+      <circle cx="10" cy="8" r=".5" fill="currentColor"/><circle cx="14" cy="8" r=".5" fill="currentColor"/>
+    </svg>
+    <span style="font-size:8px;font-weight:800;letter-spacing:.5px;line-height:1">NINO</span>
+  </button>
+
+  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;width:100%;height:70vh;z-index:9995;background:#FAF7F2;border-radius:16px 16px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.2);border:1px solid #E8E0D0;flex-direction:column;overflow:hidden">
+    <div style="background:#1B4332;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;flex-shrink:0">
+      <div>
+        <div style="font-weight:700;font-size:15px">Ask Nino Anything 🤖</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Clear</button>
+        <button onclick="toggleAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer;line-height:1">×</button>
+      </div>
+    </div>
+    <div id="ai-quick-btns" style="padding:8px;border-bottom:1px solid #E8E0D0;display:flex;gap:6px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch"></div>
+    <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch"></div>
+    <div style="padding:10px;border-top:1px solid #E8E0D0;display:flex;gap:6px;flex-shrink:0;align-items:flex-end;background:#FAF7F2">
+      <textarea id="ai-chat-input" onkeydown="aiChatKeydown(event)" placeholder="Ask Nino anything..." style="flex:1;border:1.5px solid #E8E0D0;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:none;height:40px;max-height:80px;line-height:1.4;background:#fff"></textarea>
+      <button id="nino-voice-btn" onclick="startNinoVoice()" style="background:#FAF7F2;color:#1C1C1A;border:1.5px solid #E8E0D0;border-radius:8px;padding:8px;font-size:18px;cursor:pointer;flex-shrink:0;height:40px;width:40px;display:flex;align-items:center;justify-content:center">🎙️</button>
+      <button onclick="sendAIChat()" style="background:#C48524;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;flex-shrink:0;height:40px;display:flex;align-items:center;justify-content:center">➤</button>
+    </div>
+  </div>
+
+  
+  <!-- GUIDE BUTTON -->
+  <button onclick="toggleGuide()" style="position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:9980;background:var(--amber);color:#fff;border:none;border-radius:8px 0 0 8px;padding:10px 6px;font-size:11px;font-weight:800;cursor:pointer;writing-mode:vertical-rl;font-family:inherit;box-shadow:-2px 2px 12px rgba(0,0,0,.2)">? Guide</button>
+  <div id="guide-panel" style="position:fixed;top:0;right:0;width:320px;max-width:100vw;height:100vh;background:#FAF7F2;z-index:9981;box-shadow:-4px 0 30px rgba(0,0,0,.2);display:none;flex-direction:column;border-left:1px solid #E8E0D0">
+    <div style="background:#1B4332;color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-size:16px;font-weight:700">Quick Guide</div>
+        <div style="font-size:11px;opacity:.7" id="guide-role-label">How to use MaintenanceOS</div>
+      </div>
+      <button onclick="toggleGuide()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;width:32px;height:32px;font-size:20px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div id="guide-body" style="flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch"></div>
+  </div>
+
+    <!-- NINO AI BUTTON -->
   <button id="ai-chat-btn" title="Ask Nino"
     style="position:fixed;bottom:130px;right:16px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:58px;height:58px;cursor:pointer;box-shadow:0 4px 20px rgba(27,67,50,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none;flex-direction:column;gap:1px">
     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -3521,35 +3564,21 @@ let _chatHistory = [];
 let _chatOpen = false;
 
 function toggleAIChat() {
-  const panel = document.getElementById('ai-chat-panel');
-  if (!panel) return;
+  const p = document.getElementById('ai-chat-panel');
+  if(!p) return;
   _chatOpen = !_chatOpen;
+  p.style.display = _chatOpen ? 'flex' : 'none';
   if(_chatOpen){
-    // Position panel properly on mobile
-    const isMobile = window.innerWidth <= 768;
-    if(isMobile){
-      panel.style.cssText = 'display:flex;position:fixed;bottom:0;left:0;right:0;width:100%;height:70vh;max-height:70vh;z-index:9995;border-radius:16px 16px 0 0;flex-direction:column;overflow:hidden;background:var(--warm-white);border:1px solid var(--tan);box-shadow:0 -4px 30px rgba(0,0,0,.2)';
-    } else {
-      panel.style.display = 'flex';
-      setTimeout(repositionNinoPanel, 10);
-    }
-  } else {
-    panel.style.display = 'none';
-  }
-  if (_chatOpen) {
-    setTimeout(repositionNinoPanel, 10);
-    // Render quick questions
     const qc = document.getElementById('ai-quick-btns');
-    if (qc && !qc.children.length) {
-      qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,3).map(q =>
-        `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:var(--cream);border:1px solid var(--tan);border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:var(--charcoal);flex-shrink:0">${q.slice(0,28)}...</button>`
+    if(qc && !qc.children.length){
+      qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,3).map(q=>
+        `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:#FAF7F2;border:1px solid #E8E0D0;border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:#1C1C1A;flex-shrink:0">${q.slice(0,26)}...</button>`
       ).join('');
     }
-    if (_chatHistory.length === 0) {
-      addChatMessage('ai', "Hi! I'm Nino! \ud83e\udd16\n\nI know MaintenanceOS inside out. Ask me anything:\n\n\u2022 How to raise a ticket\n\u2022 How to assign or resolve\n\u2022 Your live data and reports\n\u2022 Anything in Hindi or English\n\u2022 Or tap the mic and speak!\n\nWhat can I help you with?");
+    if(_chatHistory.length===0){
+      addChatMessage('ai',"Hi! I'm Nino! 🤖\n\nAsk me anything about MaintenanceOS or your live data. I speak English and Hindi!\n\nWhat can I help you with?");
     }
-    const input = document.getElementById('ai-chat-input');
-    if (input) input.focus();
+    setTimeout(()=>{ const i=document.getElementById('ai-chat-input'); if(i)i.focus(); },300);
   }
 }
 
@@ -3852,115 +3881,12 @@ function renderGuideContent(){
 }
 
 function toggleGuide(){
-  const panel = document.getElementById('guide-panel');
-  if(!panel) return;
-  const isMobile = window.innerWidth <= 768;
-  if(isMobile){
-    // On mobile slide up from bottom
-    const isOpen = panel.style.bottom === '0px';
-    if(isOpen){
-      panel.style.bottom = '-100vh';
-      setTimeout(()=>{ panel.style.display='none'; }, 300);
-    } else {
-      panel.style.cssText = 'display:flex;position:fixed;bottom:0;left:0;right:0;width:100%;height:80vh;max-width:100vw;background:var(--warm-white);z-index:9981;box-shadow:0 -4px 30px rgba(0,0,0,.2);transition:bottom .3s ease;flex-direction:column;border-radius:16px 16px 0 0;border-top:1px solid var(--tan)';
-      setTimeout(()=>{ panel.style.bottom='0px'; renderGuideContent(); }, 10);
-    }
-  } else {
-    const isOpen = panel.style.right === '0px';
-    panel.style.right = isOpen ? '-400px' : '0px';
-    if(!isOpen) renderGuideContent();
-  }
+  const p = document.getElementById('guide-panel');
+  if(!p) return;
+  const showing = p.style.display === 'flex';
+  p.style.display = showing ? 'none' : 'flex';
+  if(!showing) renderGuideContent();
 }
-
-
-const GUIDE_CONTENT = {
-  outlet: [
-    { section: 'Raising a ticket', items: [
-      { icon: '📸', color: '#FDF0D5', title: 'Take a photo first', desc: 'Always take a clear photo of the problem. It is mandatory.' },
-      { icon: '✍️', color: '#FDF0D5', title: 'Describe clearly', desc: 'Write exactly what the problem is. AC not cooling is better than AC problem.' },
-      { icon: '🚨', color: '#FEE2E2', title: 'Set correct urgency', desc: 'High = affects service now. Medium = needs fixing soon. Low = minor.' },
-    ]},
-    { section: 'Ticket status', items: [
-      { icon: '🟡', color: '#FEF3C7', title: 'Open', desc: 'Ticket raised, waiting to be assigned.' },
-      { icon: '🔵', color: '#DBEAFE', title: 'In Progress', desc: 'Technician assigned and working on it.' },
-      { icon: '🟢', color: '#DCFCE7', title: 'Resolved', desc: 'Issue fixed. Please confirm.' },
-      { icon: '⏸', color: '#F3F4F6', title: 'On Hold', desc: 'Waiting for parts or approval.' },
-    ]},
-  ],
-  welfare: [
-    { section: 'Raising a maintenance request', items: [
-      { icon: '📸', color: '#FDF0D5', title: 'Photo required', desc: 'Take a clear photo of the issue in the staff quarters.' },
-      { icon: '📝', color: '#FDF0D5', title: 'Be specific', desc: 'Mention the room and exact problem.' },
-      { icon: '🚨', color: '#FEE2E2', title: 'Urgency', desc: 'High = safety issue. Medium = needs fixing soon. Low = minor.' },
-    ]},
-  ],
-  technician: [
-    { section: 'Daily flow', items: [
-      { icon: '1️⃣', color: '#FDF0D5', title: 'Check My Tasks', desc: 'Check for jobs assigned to you.' },
-      { icon: '2️⃣', color: '#FDF0D5', title: 'Tap On my way', desc: 'When leaving for a job, tap On my way.' },
-      { icon: '3️⃣', color: '#DCFCE7', title: 'Fix and resolve', desc: 'Take a photo of the fix. Tap Resolve and upload the photo.' },
-    ]},
-    { section: 'Expenses', items: [
-      { icon: '📋', color: '#FDF0D5', title: 'Submit estimate first', desc: 'Before buying anything, submit an estimate and wait for approval.' },
-      { icon: '💰', color: '#DCFCE7', title: 'Log expense after approval', desc: 'Once approved, the Expense button appears.' },
-    ]},
-  ],
-  supervisor: [
-    { section: 'Your responsibilities', items: [
-      { icon: '👥', color: '#FDF0D5', title: 'Assign tickets', desc: 'Open a ticket and tap Assign to assign a technician.' },
-      { icon: '✅', color: '#DCFCE7', title: 'Resolve tickets', desc: 'You can resolve tickets once the work is done.' },
-    ]},
-    { section: 'SLA rules', items: [
-      { icon: '🔴', color: '#FEE2E2', title: 'High', desc: 'Assign within 4h, resolve within 24h.' },
-      { icon: '🟡', color: '#FEF3C7', title: 'Medium', desc: 'Assign within 8h, resolve within 48h.' },
-      { icon: '🟢', color: '#DCFCE7', title: 'Low', desc: 'Assign within 24h, resolve within 72h.' },
-    ]},
-  ],
-  manager: [
-    { section: 'Daily checklist', items: [
-      { icon: '🔴', color: '#FEE2E2', title: 'Check unassigned tickets', desc: 'A red banner shows if tickets have no technician. Assign them immediately.' },
-      { icon: '💰', color: '#FDF0D5', title: 'Approve expenses', desc: 'Open any ticket with a pending expense and approve or reject.' },
-    ]},
-    { section: 'SLA rules', items: [
-      { icon: '🔴', color: '#FEE2E2', title: 'High', desc: 'Assign within 4h, resolve within 24h.' },
-      { icon: '🟡', color: '#FEF3C7', title: 'Medium', desc: 'Assign within 8h, resolve within 48h.' },
-      { icon: '🟢', color: '#DCFCE7', title: 'Low', desc: 'Assign within 24h, resolve within 72h.' },
-    ]},
-  ],
-  admin: [
-    { section: 'Admin responsibilities', items: [
-      { icon: '👥', color: '#FDF0D5', title: 'Manage users', desc: 'Add, edit or remove users under Users & Roles.' },
-      { icon: '📍', color: '#FDF0D5', title: 'Manage locations', desc: 'Add new outlets, CKs or staff quarters under Locations.' },
-    ]},
-  ],
-  founder: [
-    { section: 'What you can see', items: [
-      { icon: '📊', color: '#FDF0D5', title: 'Full dashboard', desc: 'Health scores for every outlet across all locations.' },
-      { icon: '🚨', color: '#FEE2E2', title: 'Raise a concern', desc: 'Open any ticket and tap Raise concern to notify all staff.' },
-      { icon: '🤖', color: '#D5E8F5', title: 'Ask Nino', desc: 'Tap Nino to ask anything about your data.' },
-    ]},
-  ],
-  'design-manager': [
-    { section: 'Your workflow', items: [
-      { icon: '📋', color: '#FDF0D5', title: 'Review site visit lists', desc: 'Go to Site Visit Lists to see lists from the Design POC.' },
-      { icon: '✅', color: '#DCFCE7', title: 'Approve or reject', desc: 'Approve or reject each item. Approved items become tickets.' },
-    ]},
-  ],
-  'design-poc': [
-    { section: 'Site visit process', items: [
-      { icon: '1️⃣', color: '#FDF0D5', title: 'New site visit', desc: 'Tap New Site Visit, select the outlet.' },
-      { icon: '2️⃣', color: '#FDF0D5', title: 'Add items with photos', desc: 'Every item needs a photo.' },
-      { icon: '3️⃣', color: '#DCFCE7', title: 'Submit to manager', desc: 'Tap Submit to Design Manager for review.' },
-    ]},
-  ],
-  'tech-manager': [
-    { section: 'Your dual role', items: [
-      { icon: '📋', color: '#FDF0D5', title: 'As manager', desc: 'Assign tickets, approve expenses, view reports.' },
-      { icon: '🔧', color: '#D5E8F5', title: 'As technician', desc: 'Check My Tasks for jobs assigned to you.' },
-    ]},
-  ],
-};
-
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
     <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
