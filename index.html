@@ -4014,7 +4014,7 @@ function toggleAIChat() {
     ).join('');
   }
   if (_chatOpen && _chatHistory.length === 0) {
-    addChatMessage('ai', 'Hi! I\'m Nino! Your AI maintenance advisor.\n\nAsk me anything about your data:\n\u2022 Why is Chowpatty cost high?\n\u2022 Which tech is performing best?\n\u2022 Which outlet needs attention?');
+    addChatMessage('ai', 'Hi! I\'m Nino! \ud83e\udd16\n\nI know MaintenanceOS inside out. Ask me anything:\n\n\u2022 How to raise a ticket\n\u2022 How to assign or resolve\n\u2022 Your live data and reports\n\u2022 Anything in Hindi or English\n\u2022 Or tap the mic and speak!\n\nWhat can I help you with?');
   }
   const input = document.getElementById('ai-chat-input');
   if (input && _chatOpen) input.focus();
@@ -4057,18 +4057,12 @@ async function sendAIChat() {
   // Build context from live data
   const vis = visT();
   const context = buildDataContext();
+  const fullSystem = NINO_SYSTEM_PROMPT + '\n\nLIVE DATA:\n' + context;
 
-  const systemPrompt = `You are an AI maintenance advisor for Benne, a restaurant chain in India. You have access to real maintenance data and answer questions concisely and helpfully. Always be specific with numbers. Format your answers clearly with line breaks. Keep answers under 200 words unless asked for more detail.
-
-Current data context:
-${context}`;
-
-  const conversationMessages = [
-    ..._chatHistory.slice(-6).filter(m=>m.role!=='ai' || _chatHistory.indexOf(m)>0).map(m => ({
-      role: m.role === 'ai' ? 'assistant' : 'user',
-      content: m.text
-    }))
-  ];
+  const conversationMessages = _chatHistory.slice(-8).map(m => ({
+    role: m.role === 'ai' ? 'assistant' : 'user',
+    content: m.text
+  }));
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -4077,8 +4071,8 @@ ${context}`;
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
-        system: systemPrompt,
-        messages: conversationMessages
+        system: fullSystem,
+        messages: conversationMessages.length ? conversationMessages : [{role:'user',content: question}]
       })
     });
     const data = await res.json();
@@ -4173,12 +4167,16 @@ function aiChatKeydown(e) {
 
 // Quick question buttons
 const AI_QUICK_QUESTIONS = [
-  'Which outlet has the most open tickets?',
-  'What is our most common issue category?',
-  'Which technician has the best performance?',
-  'What is our total maintenance spend?',
-  'Which tickets are escalated right now?',
-  'Show a summary of this month\'s activity',
+  'How do I raise a ticket?',
+  'How do I assign a ticket?',
+  'Which outlet has most open tickets?',
+  'How do I approve an expense?',
+  'What are the SLA rules?',
+  'How do I resolve a ticket?',
+  'Which technician is performing best?',
+  'How do I add a voice note?',
+  'टिकट कैसे उठाएं?',
+  'What is our total spend this month?',
 ];
 
 
@@ -4843,6 +4841,72 @@ function repositionNinoPanel(){
   panel.style.width = pw + 'px';
 }
 
+
+
+// ============================================================
+// NINO VOICE INPUT
+// ============================================================
+let _ninoVoiceRecorder = null;
+let _ninoVoiceChunks = [];
+let _ninoVoiceActive = false;
+
+async function startNinoVoice(){
+  const btn = document.getElementById('nino-voice-btn');
+  if(_ninoVoiceActive){
+    // Stop recording
+    if(_ninoVoiceRecorder && _ninoVoiceRecorder.state !== 'inactive'){
+      _ninoVoiceRecorder.stop();
+      _ninoVoiceRecorder.stream.getTracks().forEach(t=>t.stop());
+    }
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    _ninoVoiceChunks = [];
+    _ninoVoiceRecorder = new MediaRecorder(stream, {mimeType: MediaRecorder.isTypeSupported('audio/webm')?'audio/webm':'audio/mp4'});
+    _ninoVoiceRecorder.ondataavailable = e => { if(e.data.size>0) _ninoVoiceChunks.push(e.data); };
+    _ninoVoiceRecorder.onstop = ninoVoiceStopped;
+    _ninoVoiceRecorder.start(100);
+    _ninoVoiceActive = true;
+    if(btn){ btn.textContent='⏹'; btn.style.background='#FEE2E2'; btn.style.borderColor='var(--red)'; }
+    // Auto stop after 30 seconds
+    setTimeout(()=>{ if(_ninoVoiceActive) startNinoVoice(); }, 30000);
+  } catch(e){
+    alert('Microphone access denied. Please allow microphone in browser settings.');
+  }
+}
+
+async function ninoVoiceStopped(){
+  _ninoVoiceActive = false;
+  const btn = document.getElementById('nino-voice-btn');
+  if(btn){ btn.textContent='🎙️'; btn.style.background='var(--cream)'; btn.style.borderColor='var(--tan)'; }
+
+  const mimeType = _ninoVoiceChunks[0]?.type || 'audio/webm';
+  const blob = new Blob(_ninoVoiceChunks, {type:mimeType});
+
+  // Show transcribing in input
+  const input = document.getElementById('ai-chat-input');
+  if(input){ input.value='Transcribing...'; input.style.color='var(--text-muted)'; }
+
+  // Transcribe using Claude
+  const reader = new FileReader();
+  reader.onload = async function(ev){
+    const result = await callClaude(
+      'Transcribe this voice message accurately. The person is asking a question about a maintenance app called MaintenanceOS. They may be speaking in English or Hindi. Return ONLY the transcribed text, nothing else.',
+      'You are a transcription assistant. Transcribe the voice message exactly as spoken. Support both English and Hindi.'
+    );
+    if(input){
+      input.value = result || '';
+      input.style.color = 'var(--charcoal)';
+      input.focus();
+      // Auto-send if we got a transcript
+      if(result && result.length > 2) {
+        setTimeout(sendAIChat, 500);
+      }
+    }
+  };
+  reader.readAsDataURL(blob);
+}
 
 function renderRecurring(){
   document.getElementById('main-content').innerHTML=`
