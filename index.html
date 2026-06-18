@@ -187,6 +187,10 @@ tr:hover td{background:var(--cream)}
 }
 @media(min-width:769px){
   .mobile-topbar{display:none}
+body:not(.logged-in) .mobile-topbar{display:none!important}
+body:not(.logged-in) .mobile-bottom-nav{display:none!important}
+body:not(.logged-in) #float-refresh{display:none!important}
+
   .sidebar-overlay{display:none!important}
   .sidebar{left:0!important}
 }
@@ -445,7 +449,7 @@ function doLogin(){
   document.getElementById('sb-loc').textContent=locStr;
   buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
 }
-function doLogout(){session=null;document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
+function doLogout(){session=null;document.body.classList.remove('logged-in');document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
 
 const NAV={
   admin:[
@@ -4205,6 +4209,7 @@ window.doLogin = async function() {
     session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName, user_code: userData.user_code};
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
+    document.body.classList.add('logged-in');
     document.getElementById('sb-name').textContent=session.name;
     document.getElementById('sb-role').innerHTML=roleBadge(session.role);
     let locStr='Locations';
