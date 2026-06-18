@@ -25,20 +25,20 @@
 }
 body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);font-size:14px;min-height:100vh}
 .auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem;background:var(--cream);background-image:radial-gradient(circle at 20% 50%,rgba(27,67,50,.06) 0%,transparent 60%),radial-gradient(circle at 80% 20%,rgba(200,144,10,.06) 0%,transparent 60%)}
-.auth-card{background:var(--warm-white);border-radius:4px;padding:2.5rem;width:400px;max-width:100%;box-shadow:0 2px 40px rgba(27,67,50,.12);border:1px solid var(--tan)}
+.auth-card{background:var(--warm-white);border-radius:12px;padding:2.5rem;width:400px;max-width:100%;box-shadow:0 4px 40px rgba(27,67,50,.15);border:1px solid var(--tan)}
 .auth-logo{font-size:24px;font-weight:700;margin-bottom:4px;letter-spacing:.5px;color:#C48524;font-family:'Georgia',serif}
 .auth-sub{font-size:12px;color:var(--text-muted);margin-bottom:2rem;letter-spacing:.5px;text-transform:uppercase}
 .auth-roles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.5rem}
 .role-btn{padding:12px 8px;border-radius:4px;border:1.5px solid var(--tan);background:var(--warm-white);cursor:pointer;text-align:center;font-size:12px;font-weight:600;color:var(--text-muted);font-family:inherit;transition:all .15s}
 .role-btn.selected,.role-btn:hover{border-color:#C48524;background:#C48524;color:#fff}
 .role-icon{font-size:22px;display:block;margin-bottom:5px}
-.inp{width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:10px 12px;font-size:13px;font-family:inherit;background:var(--warm-white);color:var(--charcoal);margin-bottom:10px;transition:border-color .15s}
+.inp{width:100%;border:1.5px solid var(--tan);border-radius:6px;padding:10px 12px;font-size:13px;font-family:inherit;background:var(--warm-white);color:var(--charcoal);margin-bottom:10px;transition:border-color .15s}
 .inp:focus{outline:none;border-color:#C48524}
 .btn-full{width:100%;padding:13px;border-radius:4px;border:none;background:#C48524;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.3px;transition:background .15s}
 .btn-full:hover{background:#C48524}
 .demo-hint{font-size:11px;color:var(--text-muted);text-align:center;margin-top:1rem;line-height:1.8;white-space:pre-line}
 .app{display:flex;min-height:100vh}
-.sidebar{width:240px;background:#A06B18;color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:50;overflow-y:auto;border-right:1px solid rgba(196,133,36,.15)}
+.sidebar{width:240px;background:#1B4332;color:#fff;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:50;overflow-y:auto;border-right:1px solid rgba(196,133,36,.15)}
 .sidebar-logo{padding:1.25rem 1.5rem;font-size:18px;font-weight:700;letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.08);font-family:'Georgia',serif;color:#F5DFA8}
 .sidebar-user{padding:.9rem 1.5rem;border-bottom:1px solid rgba(255,255,255,.08)}
 .sb-name{font-weight:600;color:rgba(255,255,255,.9);font-size:13px}
@@ -62,9 +62,9 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .logout-btn:hover{color:rgba(255,255,255,.7)}
 .main{margin-left:240px;flex:1;padding:2rem;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 .page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;flex-wrap:wrap;gap:10px}
-.page-title{font-size:22px;font-weight:700;letter-spacing:-.2px;color:#C48524;font-family:'Georgia',serif}
+.page-title{font-size:22px;font-weight:700;letter-spacing:-.2px;color:var(--green);font-family:'Georgia',serif}
 .page-sub{font-size:12px;color:var(--text-muted);margin-top:3px;letter-spacing:.2px}
-.btn{padding:7px 16px;border-radius:4px;border:1.5px solid var(--tan);background:var(--warm-white);color:var(--charcoal);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap;text-decoration:none;font-weight:500;transition:all .12s}
+.btn{padding:7px 16px;border-radius:6px;border:1.5px solid var(--tan);background:var(--warm-white);color:var(--charcoal);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap;text-decoration:none;font-weight:500;transition:all .12s}
 .btn:hover{background:var(--cream);border-color:var(--tan-dark)}
 .btn.primary{background:#C48524;color:#fff;border-color:transparent}
 .btn.primary:hover{background:#C48524}
@@ -75,18 +75,18 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .btn.warning{background:var(--amber-pale);color:var(--amber);border-color:#F6CC6A}
 .btn.sm{padding:4px 10px;font-size:11px;border-radius:3px}
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:1.75rem}
-.met{background:var(--warm-white);border-radius:4px;padding:16px 18px;border:1px solid var(--tan);position:relative;overflow:hidden}
+.met{background:var(--warm-white);border-radius:8px;padding:16px 18px;border:1px solid var(--tan);position:relative;overflow:hidden;transition:box-shadow .15s}.met:hover{box-shadow:0 2px 12px rgba(27,67,50,.08)}
 .met-bar{position:absolute;top:0;left:0;bottom:0;width:4px}
 .ml{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:700}
 .mv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-family:'Georgia',serif}
 .mv.r{color:var(--red)}.mv.w{color:var(--amber)}.mv.g{color:var(--green-mid)}.mv.b{color:var(--blue)}.mv.p{color:var(--purple)}
-.card{background:var(--warm-white);border-radius:4px;border:1px solid var(--tan);padding:16px 18px;margin-bottom:10px}
+.card{background:var(--warm-white);border-radius:8px;border:1px solid var(--tan);padding:16px 18px;margin-bottom:10px;transition:box-shadow .15s}
 .card.ov{border-left:4px solid #FCA5A5}
 .card.es{border-left:4px solid var(--red);background:#FFFAFA}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
 .card-title{font-size:13px;font-weight:600;flex:1;line-height:1.4;color:var(--charcoal)}
 .badges{display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0}
-.badge{font-size:10px;padding:2px 8px;border-radius:3px;font-weight:700;white-space:nowrap;letter-spacing:.3px;text-transform:uppercase}
+.badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;white-space:nowrap;letter-spacing:.3px;text-transform:uppercase}
 .b-open{background:var(--amber-pale);color:var(--amber)}
 .b-wip{background:#DBEAFE;color:#1E40AF}
 .b-done{background:#FDF6E3;color:#A06B18}
@@ -104,17 +104,17 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .card-note{font-size:12px;color:var(--text-muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--cream);line-height:1.5}
 .overlay{display:none;position:fixed;inset:0;background:rgba(15,45,31,.6);z-index:200;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
 .overlay.open{display:flex}
-.modal{background:var(--warm-white);border-radius:4px;padding:2rem;width:600px;max-width:100%;border:1px solid var(--tan);box-shadow:0 20px 60px rgba(27,67,50,.2)}
+.modal{background:var(--warm-white);border-radius:12px;padding:2rem;width:600px;max-width:100%;border:1px solid var(--tan);box-shadow:0 20px 60px rgba(27,67,50,.2)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--tan)}
 .modal-title{font-size:16px;font-weight:700;color:#C48524;font-family:'Georgia',serif}
 .fg{margin-bottom:12px}
 .fg label{font-size:11px;color:var(--text-muted);font-weight:700;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
-.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--warm-white);color:var(--charcoal)}
+.fg input,.fg select,.fg textarea{width:100%;border:1.5px solid var(--tan);border-radius:6px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--warm-white);color:var(--charcoal)}
 .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:#C48524}
 .fg textarea{min-height:70px;resize:vertical}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-.tbl-wrap{background:var(--warm-white);border-radius:4px;border:1px solid var(--tan);overflow:hidden;margin-bottom:1.5rem}
+.tbl-wrap{background:var(--warm-white);border-radius:8px;border:1px solid var(--tan);overflow:hidden;margin-bottom:1.5rem}
 table{width:100%;border-collapse:collapse}
 th{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;background:var(--cream);border-bottom:1px solid var(--tan);text-align:left}
 td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--cream);vertical-align:middle}
@@ -229,88 +229,25 @@ tr:hover td{background:var(--cream)}
 <div class="app" id="app" style="display:none">
   <button id="float-refresh" onclick="refreshPage()" style="background:var(--amber);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.2);display:none;align-items:center;justify-content:center">&#8635;</button>
 
-  <!-- AI CHAT PANEL -->
-  <!-- GUIDE BUTTON -->
-  <button onclick="toggleGuide()" style="position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:9980;background:var(--amber);color:#fff;border:none;border-radius:8px 0 0 8px;padding:10px 6px;font-size:11px;font-weight:800;cursor:pointer;writing-mode:vertical-rl;font-family:inherit;box-shadow:-2px 2px 12px rgba(0,0,0,.2)">? Guide</button>
-  <div id="guide-panel" style="position:fixed;top:0;right:0;width:320px;max-width:100vw;height:100vh;background:#FAF7F2;z-index:9981;box-shadow:-4px 0 30px rgba(0,0,0,.2);display:none;flex-direction:column;border-left:1px solid #E8E0D0">
-    <div style="background:#1B4332;color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div>
-        <div style="font-size:16px;font-weight:700">Quick Guide</div>
-        <div style="font-size:11px;opacity:.7" id="guide-role-label">How to use MaintenanceOS</div>
-      </div>
-      <button onclick="toggleGuide()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;width:32px;height:32px;font-size:20px;cursor:pointer;line-height:1">×</button>
-    </div>
-    <div id="guide-body" style="flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch"></div>
-  </div>
-
-    <!-- NINO AI BUTTON -->
-  <button id="ai-chat-btn" title="Ask Nino"
-    style="position:fixed;bottom:130px;right:16px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:58px;height:58px;cursor:pointer;box-shadow:0 4px 20px rgba(27,67,50,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none;flex-direction:column;gap:1px">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="8" r="4"/><path d="M8 8h-2a2 2 0 0 0-2 2v1h16v-1a2 2 0 0 0-2-2h-2"/>
-      <rect x="9" y="11" width="6" height="6" rx="1"/>
-      <line x1="9" y1="16" x2="7" y2="19"/><line x1="15" y1="16" x2="17" y2="19"/>
-      <circle cx="10" cy="8" r=".5" fill="currentColor"/><circle cx="14" cy="8" r=".5" fill="currentColor"/>
-    </svg>
-    <span style="font-size:8px;font-weight:800;letter-spacing:.5px;line-height:1">NINO</span>
-  </button>
-
-  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;width:100%;height:70vh;z-index:9995;background:#FAF7F2;border-radius:16px 16px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.2);border:1px solid #E8E0D0;flex-direction:column;overflow:hidden">
+    <!-- NINO AI - hidden -->
+  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;width:100%;height:72vh;z-index:9995;background:#FAF7F2;border-radius:16px 16px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.2);flex-direction:column;overflow:hidden">
     <div style="background:#1B4332;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;flex-shrink:0">
-      <div>
-        <div style="font-weight:700;font-size:15px">Ask Nino Anything 🤖</div>
-      </div>
+      <div style="font-weight:700;font-size:15px">Ask Nino Anything</div>
       <div style="display:flex;gap:8px">
         <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Clear</button>
-        <button onclick="toggleAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer;line-height:1">×</button>
+        <button onclick="toggleAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer">x</button>
       </div>
     </div>
-    <div id="ai-quick-btns" style="padding:8px;border-bottom:1px solid #E8E0D0;display:flex;gap:6px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch"></div>
+    <div id="ai-quick-btns" style="padding:8px;border-bottom:1px solid #E8E0D0;display:flex;gap:6px;overflow-x:auto;flex-shrink:0"></div>
     <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch"></div>
     <div style="padding:10px;border-top:1px solid #E8E0D0;display:flex;gap:6px;flex-shrink:0;align-items:flex-end;background:#FAF7F2">
       <textarea id="ai-chat-input" onkeydown="aiChatKeydown(event)" placeholder="Ask Nino anything..." style="flex:1;border:1.5px solid #E8E0D0;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:none;height:40px;max-height:80px;line-height:1.4;background:#fff"></textarea>
-      <button id="nino-voice-btn" onclick="startNinoVoice()" style="background:#FAF7F2;color:#1C1C1A;border:1.5px solid #E8E0D0;border-radius:8px;padding:8px;font-size:18px;cursor:pointer;flex-shrink:0;height:40px;width:40px;display:flex;align-items:center;justify-content:center">🎙️</button>
-      <button onclick="sendAIChat()" style="background:#C48524;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:18px;cursor:pointer;flex-shrink:0;height:40px;display:flex;align-items:center;justify-content:center">➤</button>
+      <button onclick="sendAIChat()" style="background:#C48524;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:20px;cursor:pointer;flex-shrink:0;height:40px">&#9658;</button>
     </div>
   </div>
+  <button id="ai-chat-btn" style="display:none" onclick="toggleAIChat()"></button>
 
-  
-  <!-- GUIDE BUTTON -->
-  <button onclick="toggleGuide()" style="position:fixed;top:50%;right:0;transform:translateY(-50%);z-index:9980;background:var(--amber);color:#fff;border:none;border-radius:8px 0 0 8px;padding:10px 6px;font-size:11px;font-weight:800;cursor:pointer;writing-mode:vertical-rl;font-family:inherit;box-shadow:-2px 2px 12px rgba(0,0,0,.2)">? Guide</button>
-  <div id="guide-panel" style="position:fixed;top:0;right:0;width:320px;max-width:100vw;height:100vh;background:#FAF7F2;z-index:9981;box-shadow:-4px 0 30px rgba(0,0,0,.2);display:none;flex-direction:column;border-left:1px solid #E8E0D0">
-    <div style="background:#1B4332;color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-      <div>
-        <div style="font-size:16px;font-weight:700">Quick Guide</div>
-        <div style="font-size:11px;opacity:.7" id="guide-role-label">How to use MaintenanceOS</div>
-      </div>
-      <button onclick="toggleGuide()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;width:32px;height:32px;font-size:20px;cursor:pointer;line-height:1">×</button>
-    </div>
-    <div id="guide-body" style="flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch"></div>
-  </div>
 
-    <!-- NINO AI BUTTON -->
-  <button id="ai-chat-btn" title="Ask Nino"
-    style="position:fixed;bottom:130px;right:16px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:58px;height:58px;cursor:pointer;box-shadow:0 4px 20px rgba(27,67,50,.5);display:flex;align-items:center;justify-content:center;font-family:inherit;user-select:none;-webkit-user-select:none;touch-action:none;flex-direction:column;gap:1px">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="8" r="4"/><path d="M8 8h-2a2 2 0 0 0-2 2v1h16v-1a2 2 0 0 0-2-2h-2"/>
-      <rect x="9" y="11" width="6" height="6" rx="1"/>
-      <line x1="9" y1="16" x2="7" y2="19"/><line x1="15" y1="16" x2="17" y2="19"/>
-      <circle cx="10" cy="8" r=".5" fill="currentColor"/><circle cx="14" cy="8" r=".5" fill="currentColor"/>
-    </svg>
-    <span style="font-size:8px;font-weight:800;letter-spacing:.5px;line-height:1">NINO</span>
-  </button>
-
-  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:190px;right:16px;z-index:995;width:340px;max-width:calc(100vw - 32px);height:480px;max-height:60vh;background:var(--warm-white);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.2);border:1px solid var(--tan);flex-direction:column;overflow:hidden">
-    <!-- Header -->
-    <div style="background:var(--green);color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0">
-      <div>
-        <div style="font-weight:700;font-size:15px">Ask Nino Anything 🤖</div>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Clear</button>
-        <button onclick="toggleAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:16px;cursor:pointer;line-height:1">×</button>
-      </div>
-    </div>
     <!-- Quick questions -->
     <div id="ai-quick-btns" style="padding:8px;border-bottom:1px solid var(--tan);display:flex;gap:6px;overflow-x:auto;flex-shrink:0"></div>
     <!-- Messages -->
@@ -334,7 +271,10 @@ tr:hover td{background:var(--cream)}
   <!-- Mobile bottom navigation -->
   <nav class="mobile-bottom-nav" id="mobile-bottom-nav"></nav>
   <div class="sidebar" id="main-sidebar">
-    <div class="sidebar-logo">Benne &mdash; MaintenanceOS</div>
+    <div class="sidebar-logo">
+      <span style="font-size:11px;font-weight:400;letter-spacing:1.5px;opacity:.5;text-transform:lowercase;display:block;margin-bottom:2px">benne</span>
+      MaintenanceOS
+    </div>
     <div class="sidebar-user">
       <div class="sb-name" id="sb-name"></div>
       <div class="sb-loc" id="sb-loc"></div>
@@ -4308,9 +4248,7 @@ function toggleGuide(){
   p.style.display = showing ? 'none' : 'flex';
   if(!showing) renderGuideContent();
 }
-function renderRecurring(){
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
+</div>
     <div>${recurringSchedules.map(r=>{
       const locs=r.locationIds.map(id=>getLoc(id));
       const byS={};locs.forEach(l=>{const s=l.city||l.name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
@@ -4322,129 +4260,22 @@ function renderRecurring(){
       </div>`;
     }).join('')||'<div class="empty">No recurring schedules</div>'}</div>`;
 }
-function toggleR(id,v){const r=recurringSchedules.find(x=>x.id===id);if(r)r.on=v;}
-function genNow(id){const r=recurringSchedules.find(x=>x.id===id);if(!r)return;const ts=nowTs();r.locationIds.forEach(lid=>{const loc=getLoc(lid);tickets.unshift({id:'T'+String(tickets.length+1).padStart(3,'0'),locationId:lid,stateId:loc.stateId,category:r.category,title:r.title,desc:'Auto-generated.',priority:r.priority,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:r.next,comments:[]});});LOG('Recurring generated',r.title+' - '+r.locationIds.length+' tickets','b');alert('Created '+r.locationIds.length+' tickets for: '+r.title);renderRecurring();}
-function delR(id){if(confirm('Remove?')){recurringSchedules=recurringSchedules.filter(x=>x.id!==id);renderRecurring();}}
-function openAddRecurring(){
-  document.getElementById('m-title').textContent='New recurring schedule';
-  document.getElementById('m-body').innerHTML=`
-    <div class="fg"><label>Task name</label><input type="text" id="rt" placeholder="e.g. AC servicing"></div>
-    <div class="frow"><div class="fg"><label>Category</label><select id="rc">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div><div class="fg"><label>Frequency</label><select id="rf"><option>1 month</option><option>3 months</option><option selected>6 months</option><option>1 year</option></select></div></div>
-    <div class="fg"><label>Urgency</label><select id="rp"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
-    <div class="fg"><label>Locations</label><div style="max-height:150px;overflow-y:auto;border:1.5px solid #e8e8e4;border-radius:8px;padding:8px">${states.map(s=>`<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;margin:5px 0 3px">${s.name}</div>${locations.filter(l=>l.stateId===s.id).map(l=>`<label style="display:flex;align-items:center;gap:7px;font-size:13px;padding:3px 0"><input type="checkbox" value="${l.id}" checked> ${locLabel(l)}</label>`).join('')}`).join('')}</div></div>
-    <div class="fg"><label>Next due date</label><input type="date" id="rd"></div>
-    <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveR()">Save</button></div>`;
-  openModal();
-}
-function saveR(){const t=document.getElementById('rt').value.trim();if(!t)return;const lids=[...document.querySelectorAll('#m-body input[type=checkbox]:checked')].map(c=>c.value);const raw=document.getElementById('rd').value;let nd='TBD';if(raw){const[y,m,d]=raw.split('-');nd=`${d}/${m}/${y}`;}recurringSchedules.push({id:'r'+Date.now(),title:t,locationIds:lids,freq:document.getElementById('rf').value,category:document.getElementById('rc').value,priority:document.getElementById('rp').value,next:nd,on:true});closeModal();renderRecurring();}
 
-function renderNotifications(){
-  const esc=tickets.filter(isESC),od=tickets.filter(t=>isOD(t)&&!isESC(t)),unass=tickets.filter(t=>t.status==='Open'&&!t.assignedTo);
-  const amcAlerts=amcRecords.filter(a=>amcSt(a)!=='active');
-  let h='';
-  if(esc.length){h+=`<p style="font-size:13px;font-weight:700;color:#dc2626;margin-bottom:8px">⚠ Escalated</p>`;esc.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`*ESCALATED TICKET*\n\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority} · Due: ${t.dueDate} (${dAgo(t.dueDate)}d overdue)\n${tech?'Assigned: '+tech.name:'No technician assigned'}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-esc','Escalated');});}
-  if(od.length){h+=`<p style="font-size:13px;font-weight:700;color:#d97706;margin:1rem 0 8px">⏰ Overdue</p>`;od.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const tech=t.assignedTo?getUser(t.assignedTo):null;const msg=`Hi${tech?' '+tech.name:''},\n\nFollow-up: ${t.id} - *${t.title}*\n${state.name} › ${loc.name}\nDue: ${t.dueDate} (${dAgo(t.dueDate)} days overdue)\n\nPlease update.\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-ov','Overdue');});}
-  if(unass.length){h+=`<p style="font-size:13px;font-weight:700;color:#555;margin:1rem 0 8px">👤 ${unass.length} unassigned</p>`;unass.forEach(t=>{const loc=getLoc(t.locationId),state=getState(loc.stateId);const msg=`Ticket needs assignment:\n${t.id} - ${t.title}\n${state.name} › ${loc.name}\nPriority: ${t.priority}\n\n- MaintenanceOS`;h+=nPanel(t.id,t.title,msg,'b-open','To be assigned');});}
-  if(amcAlerts.length){h+=`<p style="font-size:13px;font-weight:700;color:#7c3aed;margin:1rem 0 8px">📄 AMC alerts</p>`;amcAlerts.forEach(a=>{const st=amcSt(a),days=amcDaysLeft(a.endDate);const msg=`AMC ${st==='expired'?'EXPIRED':'Expiring Soon'}: ${a.vendor}\nEquipment: ${a.equipment}\nEnd date: ${a.endDate}\n${days<0?'EXPIRED':'Days left: '+days}\nValue: ${fc(a.amount)}/yr\n\nPlease arrange renewal.\n\n- MaintenanceOS`;h+=`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge b-amc" style="margin-right:6px">${st==='expired'?'Expired':'Expiring'}</span><strong>${a.vendor}</strong></div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('an-${a.id}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="an-${a.id}">${msg}</div></div>`;});}
-  if(!h)h='<div class="empty">OK All clear - no notifications needed</div>';
-  document.getElementById('main-content').innerHTML=`<div class="page-hdr"><div><div class="page-title">Notifications<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>${h}`;
-}
+
+
+
+
+
+
 function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
 
-function renderMyTasks(){
-  const mine=tickets.filter(t=>t.assignedTo===session.id);
-  const open=mine.filter(t=>!['Resolved','Closed'].includes(t.status));
-  const done=mine.filter(t=>['Resolved','Closed'].includes(t.status));
-  const unassigned=tickets.filter(t=>!t.assignedTo&&!['Resolved','Closed'].includes(t.status));
 
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">My tasks</div><div class="page-sub">${open.length} active · ${unassigned.length} available to pick up</div></div></div>
-    <div class="tab-btns">
-      <button class="tab-btn active" onclick="showMTTab('mto','mtu','mtd',this)">My active (${open.length})</button>
-      <button class="tab-btn" id="avail-tab-btn" onclick="showMTTab('mtu','mto','mtd',this)">Available to take (${unassigned.length})</button>
-      <button class="tab-btn" onclick="showMTTab('mtd','mto','mtu',this)">Resolved (${done.length})</button>
-    </div>
-    <div id="mto">${open.length?open.map(t=>ticketCard(t)).join(''):'<div class="empty">OK No active tasks assigned to you</div>'}</div>
-    <div id="mtu" style="display:none">
-      ${unassigned.length?`
-        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:13px">
-          💡 These tickets have no technician assigned. Tap <strong>"Assign to me"</strong> to take ownership.
-        </div>
-        ${unassigned.map(t=>ticketCard(t)).join('')}
-      `:'<div class="empty">OK No unassigned tickets right now</div>'}
-    </div>
-    <div id="mtd" style="display:none">${done.length?done.map(t=>ticketCard(t)).join(''):'<div class="empty">None resolved yet</div>'}</div>`;
-}
 
-function showMTTab(show,h1,h2,btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  [show,h1,h2].forEach((id,i)=>{
-    const el=document.getElementById(id);
-    if(el) el.style.display=i===0?'':'none';
-  });
-}
-function renderRaise(){
-  // For outlet: fixed to their location
-  // For manager/admin/technician: can pick any location
-  const canPickLocation = ['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role);
-  const visLocs = canPickLocation ? visibleLocationIds() : [];
-  const locOptions = canPickLocation
-    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')
-    : '';
-  const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
-  const fixedState = fixedLoc ? getState(fixedLoc.stateId) : null;
-  const subTitle = fixedLoc
-    ? `${fixedState.name} › ${fixedLoc.name} · ${fixedLoc.type==='central_kitchen'?'Central Kitchen':'Outlet'}`
-    : 'Select a location below';
 
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">Raise a ticket</div><div class="page-sub">${subTitle}</div></div></div>
-    <div style="max-width:560px"><div class="card">
-      ${canPickLocation ? `<div class="fg"><label>Location</label><select id="ri-loc"><option value="">Select location...</option>${locOptions}</select></div>` : ''}
-      <div class="fg"><label>Raised by <span style="color:#dc2626;font-weight:600">*</span></label>
-        <input type="text" id="ri-name" 
-          value="${['outlet','central_kitchen'].includes(session.role)?'':session.name||''}"
-          placeholder="${['outlet','central_kitchen'].includes(session.role)?'Enter your full name':session.name||'Your name'}"
-          ${['outlet','central_kitchen'].includes(session.role)?'':'readonly'}
-          style="border-color:var(--tan);${['outlet','central_kitchen'].includes(session.role)?'':'background:var(--cream);color:var(--text-muted);cursor:not-allowed'}">
-        ${!['outlet','central_kitchen'].includes(session.role)?'<div style="font-size:11px;color:var(--text-muted);margin-top:3px">Auto-filled from your account</div>':''}
-      </div>
-      <div class="fg"><label>Issue title</label><input type="text" id="ri-t" placeholder="e.g. AC not cooling, Gas pipe leaking..."></div>
-      <div class="frow">
-        <div class="fg"><label>Category</label><select id="ri-c">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label>Urgency <span style="color:#dc2626;font-weight:600">*</span></label><select id="ri-p"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
-      </div>
-      <div class="fg"><label>Description</label><textarea id="ri-d" placeholder="Describe the problem clearly. When did it start? Is it affecting operations?"></textarea></div>
-      <div class="fg"><label>Preferred resolution date</label><input type="date" id="ri-dd"></div>
-      <div class="fg"><label>Attach photo / video <span style="color:#888;font-weight:400">(optional)</span></label>
-        <input type="file" id="raise-file" accept="image/*,video/*" style="border:1.5px solid #e8e8e4;border-radius:8px;padding:8px 10px;font-size:13px;width:100%">
-      </div>
-      <button class="btn primary" style="width:100%;justify-content:center;padding:11px" onclick="submitTicket()">＋ Submit ticket</button>
-    </div></div>`;
-}
-function submitTicket(){
-  const title=document.getElementById('ri-t').value.trim();if(!title){alert('Enter a title');return;}
-  const raw=document.getElementById('ri-dd').value;let dd='';if(raw){const[y,m,d]=raw.split('-');dd=`${d}/${m}/${y}`;}
-  const ts=nowTs(),id='T'+String(tickets.length+1).padStart(3,'0'),loc=getLoc(session.locationId);
-  tickets.unshift({id,locationId:session.locationId,stateId:loc.stateId,category:document.getElementById('ri-c').value,title,desc:document.getElementById('ri-d').value,priority:document.getElementById('ri-p').value,status:'Open',raisedBy:session.id,assignedTo:null,createdAt:ts,updatedAt:ts,dueDate:dd,comments:[]});
-  LOG('Ticket raised',id+' '+title+' - '+loc.name,'p');alert('Issue '+id+' submitted!');navTo('my-tickets');
-}
-function renderMyTickets(){
-  const mine=tickets.filter(t=>t.raisedBy===session.id);
-  const loc=getLoc(session.locationId),state=getState(loc.stateId);
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div><div class="page-title">My tickets</div><div class="page-sub">${state.name} › ${loc.name} · ${mine.length} tickets</div></div><button class="btn primary" onclick="navTo('raise')">＋ Raise new</button></div>
-    ${mine.length?mine.map(t=>ticketCard(t)).join(''):'<div class="empty">No issues raised yet.<br><br><button class="btn primary" onclick="navTo(\'raise\')"> Raise your first issue</button></div>'}`;
-}
-function renderLog(){
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr"><div class="page-title">Audit log</div><button class="btn danger" onclick="auditLog=[];renderLog()">🗑 Clear</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Time</th><th>Action</th><th>Details</th></tr></thead><tbody>
-      ${auditLog.map(e=>`<tr><td style="color:#aaa;font-size:12px;white-space:nowrap">${e.t}</td><td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${{g:'#059669',r:'#dc2626',w:'#d97706',p:'#7c3aed',b:'#2563eb'}[e.c]||'#aaa'};margin-right:7px;vertical-align:middle"></span>${e.a}</td><td style="color:#555">${e.d}</td></tr>`).join('')}
-      ${!auditLog.length?'<tr><td colspan="3" style="text-align:center;color:#aaa;padding:2rem">No activity yet</td></tr>':''}
-    </tbody></table></div>`;
-}
+
+
+
+
 
 </script>
 <script>
