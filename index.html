@@ -744,7 +744,7 @@ function renderTickets(){
     <div class="page-hdr"><div><div class="page-title">Tickets</div><div class="page-sub">${vis.length} tickets</div></div></div>
     <div style="display:flex;gap:7px;margin-bottom:1rem;flex-wrap:wrap">
       <select id="tf-st" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">States</option>${(session.stateId?states.filter(s=>s.id===session.stateId):states).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')}</select>
+      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')}</select>
       <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option><option value="staff_quarters">Staff Quarters</option></select>
       <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
       <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Urgency</option><option>High</option><option>Medium</option><option>Low</option></select>
@@ -1747,8 +1747,7 @@ function filterAndRenderUsers(){
           ${roleBadge(u.role)}
         </div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
-          ${s&&s.name?'📍 '+s.name:''}
-          ${l&&l.name&&l.name!=='-'?' · '+l.name:''}
+          ${u.cityName||u.city_name?'📍 '+(u.cityName||u.city_name):''}${l&&l.name&&l.name!=='-'?' · '+l.name:''}
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn sm" style="flex:1;justify-content:center" onclick="openEditUser('${u.id}')">✏️ Edit</button>
@@ -1758,7 +1757,7 @@ function filterAndRenderUsers(){
     }).join('');
   } else {
     tbl.innerHTML = `<div class="tbl-wrap"><table>
-      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>City</th><th>Location</th><th>Actions</th></tr></thead>
       <tbody>${page.map(u=>{
         const s=getState(u.stateId||u.state_id||'');
         const l=getLoc(u.locationId||u.location_id||'');
@@ -1766,7 +1765,7 @@ function filterAndRenderUsers(){
           <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div><div><div>${u.name}</div>${u.user_code?`<div style="font-size:10px;color:var(--amber);font-weight:600">${u.user_code}</div>`:''}</div></div></td>
           <td style="color:var(--text-muted);font-size:12px">${u.email}</td>
           <td>${roleBadge(u.role)}</td>
-          <td style="font-size:12px">${s&&s.name?s.name:'-'}</td>
+          <td style="font-size:12px">${u.cityName||u.city_name||(u.stateId||u.state_id?getState(u.stateId||u.state_id).name:'-')}</td>
           <td style="font-size:12px">${l&&l.name&&l.name!=='-'?l.name:'-'}</td>
           <td><div style="display:flex;gap:5px">
             <button class="btn sm" onclick="openEditUser('${u.id}')">Edit</button>
@@ -1808,7 +1807,7 @@ function goUserPage(p){
 // filterUsers replaced by filterAndRenderUsers
 function userTable(list){
   if(!list.length)return'<div class="empty">No users</div>';
-  return`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>State</th><th>Location</th><th>Actions</th></tr></thead><tbody>${list.map(u=>{
+  return`<div class="tbl-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>City</th><th>Location</th><th>Actions</th></tr></thead><tbody>${list.map(u=>{
     const s=u.stateId?getState(u.stateId):{name:'-'},l=u.locationId?getLoc(u.locationId):{name:'-',type:null};
     return`<tr><td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div>${u.name}</div></td><td style="color:#555">${u.email}</td><td>${roleBadge(u.role)}</td><td style="color:#555">${s.name}</td><td style="color:#555">${l.name!=='-'?locLabel(l):'-'}</td><td><div style="display:flex;gap:5px"><button class="btn sm" onclick="openEditUser('${u.id}')">✏ Edit</button>${u.id!==session.id?`<button class="btn sm danger" onclick="deleteUser('${u.id}')">🗑</button>`:'<span style="font-size:11px;color:#aaa">(you)</span>'}</div></td></tr>`;
   }).join('')}</tbody></table></div>`;
@@ -2476,7 +2475,7 @@ function renderSuperUsersTable(list){
       <td><strong>${u.name}</strong></td>
       <td style="font-size:12px;color:var(--text-muted)">${u.email}</td>
       <td>${roleBadge(u.role)}</td>
-      <td style="font-size:12px">${u.stateId||u.state_id?getState(u.stateId||u.state_id).name:'All'}</td>
+      <td style="font-size:12px">${u.cityName||u.city_name||'-'}</td>
       <td style="font-size:12px">${u.cityName||u.city_name||'-'}</td>
       <td>${u.telegram_id?'<span class="badge b-done">Yes</span>':'<span class="badge b-grey">No</span>'}</td>
       <td>${u.whatsapp?'<span class="badge b-done">Yes</span>':'<span class="badge b-grey">No</span>'}</td>
@@ -3303,7 +3302,7 @@ function openRaiseTicketModal(){
   const visLocs = canPickLocation ? visibleLocationIds() : [];
   const locOptions = visLocs.map(id=>{
     const l=getLoc(id);const s=getState(l.stateId||l.state_id);
-    return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;
+    return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;
   }).join('');
 
   document.getElementById('m-title').textContent = 'Raise a ticket';
@@ -3642,7 +3641,7 @@ function renderSLA() {
         <tbody>${byLoc.map(({l,pct,breached,warning,ok,total}) => {
           const color = pct>=80?'var(--green-mid)':pct>=60?'var(--amber)':'var(--red)';
           return `<tr>
-            <td><strong>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':''}</strong></td>
+            <td><strong>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</strong></td>
             <td><span style="font-weight:700;color:${color}">${pct}%</span></td>
             <td style="color:var(--red);font-weight:600">${breached||'-'}</td>
             <td style="color:var(--amber);font-weight:600">${warning||'-'}</td>
@@ -4926,7 +4925,7 @@ function renderRaise(){
   const canPickLocation = ['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role);
   const visLocs = canPickLocation ? visibleLocationIds() : [];
   const locOptions = canPickLocation
-    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${s.name}${l.city?' - '+l.city:''} - ${l.name}${l.type==='central_kitchen'?' (CK)':''}</option>`;}).join('')
+    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')
     : '';
   const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
   const fixedState = fixedLoc ? getState(fixedLoc.stateId) : null;
@@ -5913,7 +5912,7 @@ async function tgNotifyUser(userId, message) {
 // ---- NOTIFICATION TRIGGERS ----
 
 async function tgOnTicketRaised(ticket, loc, state, raiser, locationId) {
-  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} - ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  const msg = `🔔 <b>New Ticket Raised</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\nRaised by: ${raiser}\n\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
   await tgNotifyRole('manager', msg, ticket.raised_by || ticket.raisedBy, locationId);
   await tgNotifyRole('supervisor', msg, ticket.raised_by || ticket.raisedBy, locationId);
   await tgNotifyRole('admin', msg, ticket.raised_by || ticket.raisedBy, locationId);
@@ -5922,23 +5921,23 @@ async function tgOnTicketRaised(ticket, loc, state, raiser, locationId) {
 async function tgOnTicketAssigned(ticket, techId, loc, state, locationId) {
   const tech = getUser(techId);
   if (!tech) return;
-  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} - ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
+  const msg = `👷 <b>Ticket Assigned to You</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${loc}\nCategory: ${ticket.category}\nPriority: ${ticket.priority}\n${ticket.due_date||ticket.dueDate?'Due: '+(ticket.due_date||ticket.dueDate)+'\n':''}\nTap to open and update:\n<a href="https://maintenanceos-pwa.vercel.app">MaintenanceOS</a>`;
   await tgNotifyUser(techId, msg);
-  const mgrMsg = `<b>Ticket Assigned</b>\n${ticket.id} assigned to ${tech.name}\n${state} - ${loc}`;
+  const mgrMsg = `<b>Ticket Assigned</b>\n${ticket.id} assigned to ${tech.name}\n${loc}`;
   await tgNotifyRole('manager', mgrMsg, null, locationId);
   await tgNotifyRole('supervisor', mgrMsg, null, locationId);
 }
 
 async function tgOnTicketResolved(ticket, loc, state, resolvedBy, locationId) {
   const raiser = getUser(ticket.raised_by || ticket.raisedBy);
-  const msg = `<b>Ticket Resolved</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${state} - ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
+  const msg = `<b>Ticket Resolved</b>\n\n<b>${ticket.id} - ${ticket.title}</b>\nLocation: ${loc}\nResolved by: ${resolvedBy}\n\nPlease confirm everything is working.\n<a href="https://maintenanceos-pwa.vercel.app">Open MaintenanceOS</a>`;
   if (raiser) await tgNotifyUser(raiser.id, msg);
   await tgNotifyRole('manager', msg, null, locationId);
   await tgNotifyRole('supervisor', msg, null, locationId);
 }
 
 async function tgOnCommentAdded(ticket, commenterName, commentText, loc, state, locationId) {
-  const msg = `<b>Update on Ticket ${ticket.id}</b>\n\n${ticket.title}\n${state} - ${loc}\n\n<b>${commenterName}:</b> ${commentText}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  const msg = `<b>Update on Ticket ${ticket.id}</b>\n\n${ticket.title}\n${loc}\n\n<b>${commenterName}:</b> ${commentText}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
   await tgNotifyRole('manager', msg, session.id, locationId);
   await tgNotifyRole('supervisor', msg, session.id, locationId);
   if (['manager','admin','supervisor'].includes(session.role) && (ticket.assigned_to || ticket.assignedTo)) {
@@ -5966,7 +5965,7 @@ async function tgOnExpenseApproved(expense, approverName) {
 }
 
 async function tgOnSelfAssigned(ticket, techName, loc, state, locationId) {
-  const msg = `<b>Ticket Self-Assigned</b>\n\n${ticket.id} - ${ticket.title}\n${state} - ${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
+  const msg = `<b>Ticket Self-Assigned</b>\n\n${ticket.id} - ${ticket.title}\n${loc}\nTaken by: ${techName}\n\n<a href="https://maintenanceos-pwa.vercel.app">View in MaintenanceOS</a>`;
   await tgNotifyRole('manager', msg, null, locationId);
   await tgNotifyRole('supervisor', msg, null, locationId);
 }
