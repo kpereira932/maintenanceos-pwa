@@ -442,8 +442,9 @@ function doLogin(){
   document.getElementById('sb-name').textContent=u.name;
   document.getElementById('sb-role').innerHTML=roleBadge(u.role);
   let locStr='Locations';
-  if(u.locationId){const l=getLoc(u.locationId);locStr=getState(l.stateId).name+'  '+l.name;}
-  else if(u.stateId){locStr=getState(u.stateId).name+' region';}
+  if(u.locationId){const l=getLoc(u.locationId);locStr=(l.city||l.name)+(l.city?' - '+l.name:'');}
+  else if(u.cityName){locStr=u.cityName;}
+  else if(u.stateId){locStr='';}
   document.getElementById('sb-loc').textContent=locStr;
   buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
 }
@@ -867,7 +868,7 @@ function openAssignModal(id){
   document.getElementById('m-title').textContent='Assign: '+t.title;
   document.getElementById('m-body').innerHTML=`
     <p style="font-size:13px;color:#666;margin-bottom:1rem">${state.name} › ${loc.name} · ${t.category} · ${t.priority}</p>
-    <div class="fg"><label>Technician</label><select id="at-t"><option value="">Select</option>${techs.map(u=>`<option value="${u.id}"${t.assignedTo===u.id?' selected':''}>${u.name}${u.specialty?' ('+u.specialty+')':''} - ${u.stateId?getState(u.stateId).name:'All'}</option>`).join('')}</select></div>
+    <div class="fg"><label>Technician</label><select id="at-t"><option value="">Select</option>${techs.map(u=>`<option value="${u.id}"${t.assignedTo===u.id?' selected':''}>${u.name}${u.specialty?' ('+u.specialty+')':''}${u.cityName||u.city_name?' - '+(u.cityName||u.city_name):''}</option>`).join('')}</select></div>
     <div class="fg"><label>Due date</label><input type="date" id="at-d" value="${t.dueDate?t.dueDate.split('/').reverse().join('-'):''}"></div>
     <div class="fg"><label>Notes for technician</label><textarea id="at-n" placeholder="Any special instructions..."></textarea></div>
     <div id="at-prev"></div>
@@ -1521,7 +1522,7 @@ function expenseReport(){
     const le=expenses.filter(e=>lt.some(t=>t.id===e.ticketId));
     const tot=le.reduce((s,e)=>s+Number(e.amount),0);
     if(!tot)return null;
-    return{loc:locLabel(l),state:getState(l.stateId).name,tot,appr:le.filter(e=>e.approved).reduce((s,e)=>s+Number(e.amount),0),pend:le.filter(e=>!e.approved).reduce((s,e)=>s+Number(e.amount),0),n:le.length};
+    return{loc:locLabel(l),state:l.city||l.name,tot,appr:le.filter(e=>e.approved).reduce((s,e)=>s+Number(e.amount),0),pend:le.filter(e=>!e.approved).reduce((s,e)=>s+Number(e.amount),0),n:le.length};
   }).filter(Boolean).sort((a,b)=>b.tot-a.tot);
   const grand=expenses.reduce((s,e)=>s+Number(e.amount),0);
   return`<div class="report-wrap">
@@ -1622,7 +1623,7 @@ function openAddLocation(pre){
     <div style="display:flex;gap:7px;justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveLocation()">Add location</button></div>`;
   openModal();
 }
-function saveLocation(){const n=document.getElementById('ln').value.trim();if(!n)return;const sid=document.getElementById('ls').value,type=document.getElementById('lt').value;locations.push({id:'l'+Date.now(),stateId:sid,name:n,type});LOG('Location added',n+' ('+type+') - '+getState(sid).name,'p');closeModal();renderLocations();}
+function saveLocation(){const n=document.getElementById('ln').value.trim();if(!n)return;const sid=document.getElementById('ls').value,type=document.getElementById('lt').value;locations.push({id:'l'+Date.now(),stateId:sid,name:n,type});LOG('Location added',n+' ('+type+')','p');closeModal();renderLocations();}
 function openEditLocation(id){
   const l=locations.find(x=>x.id===id);
   document.getElementById('m-title').textContent='Edit location';
@@ -1765,7 +1766,7 @@ function filterAndRenderUsers(){
           <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:${roleColor(u.role)};color:#fff">${u.avatar||'?'}</div><div><div>${u.name}</div>${u.user_code?`<div style="font-size:10px;color:var(--amber);font-weight:600">${u.user_code}</div>`:''}</div></div></td>
           <td style="color:var(--text-muted);font-size:12px">${u.email}</td>
           <td>${roleBadge(u.role)}</td>
-          <td style="font-size:12px">${u.cityName||u.city_name||(u.stateId||u.state_id?getState(u.stateId||u.state_id).name:'-')}</td>
+          <td style="font-size:12px">${u.cityName||u.city_name||'-'}</td>
           <td style="font-size:12px">${l&&l.name&&l.name!=='-'?l.name:'-'}</td>
           <td><div style="display:flex;gap:5px">
             <button class="btn sm" onclick="openEditUser('${u.id}')">Edit</button>
@@ -1814,7 +1815,7 @@ function userTable(list){
 }
 function userFormHTML(u){
   const sOpts=`<option value="">- None -</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
-  const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${getState(l.stateId).name} › ${locLabel(l)}</option>`).join('');
+  const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`).join('');
   return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet','founder','design-manager','design-poc','welfare'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
   ${u.user_code?`<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">User ID: <strong style="color:var(--amber)">${u.user_code}</strong></div>`:''}
@@ -4848,7 +4849,7 @@ function renderRecurring(){
     <div class="page-hdr"><div><div class="page-title">Recurring tasks<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>${['admin','manager'].includes(session.role)?`<button class="btn primary" onclick="openAddRecurring()">＋ Add</button>`:''}</div>
     <div>${recurringSchedules.map(r=>{
       const locs=r.locationIds.map(id=>getLoc(id));
-      const byS={};locs.forEach(l=>{const s=getState(l.stateId).name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
+      const byS={};locs.forEach(l=>{const s=l.city||l.name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
       return`<div class="card" style="margin-bottom:10px">
         <div class="card-top"><span class="card-title">↺ ${r.title}</span>${['admin','manager'].includes(session.role)?`<label class="tgl"><input type="checkbox" ${r.on?'checked':''} onchange="toggleR('${r.id}',this.checked)"><span class="tgl-s"></span></label>`:''}</div>
         <div class="card-meta"><span>Every ${r.freq}</span><span class="badge ${r.priority==='High'?'b-high':r.priority==='Low'?'b-low':'b-med'}">${r.priority}</span><span>${r.category}</span><span>📅 Next: ${r.next}</span></div>
@@ -5200,8 +5201,9 @@ window.doLogin = async function() {
     document.getElementById('sb-name').textContent=session.name;
     document.getElementById('sb-role').innerHTML=roleBadge(session.role);
     let locStr='Locations';
-    if(session.locationId){const l=getLoc(session.locationId);locStr=getState(l.stateId||l.state_id).name+'  '+l.name;}
-    else if(session.stateId){locStr=getState(session.stateId).name+' region';}
+    if(session.locationId){const l=getLoc(session.locationId);locStr=(l.city||l.name)+(l.city?' - '+l.name:'');}
+    else if(session.cityName){locStr=session.cityName;}
+    else if(session.stateId){locStr='';}
     document.getElementById('sb-loc').textContent=locStr;
     await loadLiveData();
     // Auto-assign user codes to anyone missing one
