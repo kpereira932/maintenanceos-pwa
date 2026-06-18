@@ -156,10 +156,6 @@ tr:hover td{background:var(--cream)}
 .progress-bar{height:6px;border-radius:3px;background:var(--tan);overflow:hidden;margin-top:6px}
 .progress-fill{height:100%;border-radius:3px}
 .alert-banner{display:flex;align-items:center;gap:8px;border-radius:4px;padding:10px 14px;margin-bottom:1rem;font-size:13px;font-weight:500;cursor:pointer}
-/* Hide app chrome on login screen */
-body:not(.logged-in) .mobile-topbar{display:none!important}
-body:not(.logged-in) .mobile-bottom-nav{display:none!important}
-body:not(.logged-in) #float-refresh{display:none!important}
 @media print{.sidebar,.page-hdr .btn,.card-actions,.tab-btns,#overlay{display:none!important}.main{margin-left:0!important;padding:0!important}body{background:#fff}}
 @media(max-width:768px){.sidebar{width:100%;position:relative;height:auto}.main{margin-left:0}.two-col,.frow,.frow3{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}}
 
@@ -199,6 +195,15 @@ body:not(.logged-in) #float-refresh{display:none!important}
 </style>
 </head>
 <body>
+
+<!-- Mobile topbar - shown after login via JS -->
+<div class="mobile-topbar" id="mobile-topbar-el" style="display:none">
+  <button class="hamburger" onclick="toggleSidebar()" id="hamburger-btn">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="mobile-topbar-title">MaintenanceOS</div>
+  <div style="width:30px"></div>
+</div>
 
 <div id="toast"></div>
 
@@ -264,18 +269,10 @@ body:not(.logged-in) #float-refresh{display:none!important}
       <button onclick="sendAIChat()" style="background:var(--amber);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:16px;cursor:pointer;flex-shrink:0">➤</button>
     </div>
   </div>
-  <!-- Mobile top bar -->
-  <div class="mobile-topbar">
-    <button class="hamburger" onclick="toggleSidebar()" id="hamburger-btn">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="mobile-topbar-title">MaintenanceOS</div>
-    <div style="width:30px"></div>
-  </div>
+
   <!-- Sidebar overlay (dark bg when sidebar open) -->
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-  <!-- Mobile bottom navigation -->
-  <nav class="mobile-bottom-nav" id="mobile-bottom-nav"></nav>
+
   <div class="sidebar" id="main-sidebar">
     <div class="sidebar-logo">
       <span style="font-size:11px;font-weight:400;letter-spacing:1.5px;opacity:.5;text-transform:lowercase;display:block;margin-bottom:2px">benne</span>
@@ -293,6 +290,9 @@ body:not(.logged-in) #float-refresh{display:none!important}
     </div>
   </div>
   <div class="main" id="main-content"></div>
+
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none"></nav>
+
 </div>
 
 <!-- MODAL -->
@@ -451,7 +451,9 @@ function doLogin(){
   document.getElementById('sb-loc').textContent=locStr;
   buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
 }
-function doLogout(){session=null;document.body.classList.remove('logged-in');document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
+function doLogout(){session=null;document.body.classList.remove('logged-in');
+  const _tb=document.getElementById('mobile-topbar-el');if(_tb)_tb.style.display='none';
+  const _mbn=document.getElementById('mobile-bottom-nav');if(_mbn)_mbn.style.display='none';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
 
 const NAV={
   admin:[
@@ -4212,6 +4214,10 @@ window.doLogin = async function() {
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     document.body.classList.add('logged-in');
+    const _tb = document.getElementById('mobile-topbar-el');
+    if(_tb) _tb.style.display='';
+    const _mbn = document.getElementById('mobile-bottom-nav');
+    if(_mbn) _mbn.style.display='';
     document.getElementById('sb-name').textContent=session.name;
     document.getElementById('sb-role').innerHTML=roleBadge(session.role);
     let locStr='Locations';
