@@ -14,7 +14,7 @@
 <meta http-equiv="Expires" content="0">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
-<title>MaintenanceOS v2.4</title>
+<title>MaintenanceOS v2.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -778,6 +778,27 @@ function overallHealthScore() {
   const scores = visLocs.map(id => calcHealthScore(id));
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 }
+
+// SLA ENGINE
+const SLA_RULES = {High:{resolveHours:24},Medium:{resolveHours:48},Low:{resolveHours:72}};
+function slaStatus(t){
+  if(['Resolved','Closed'].includes(t.status)) return {pct:100,resolveStatus:'ok',hoursLeft:0};
+  const rule=SLA_RULES[t.priority]||SLA_RULES.Medium;
+  const created=t.createdAt||t.created_at;
+  const hoursOpen=created?Math.max(0,(Date.now()-new Date(created).getTime())/(1000*60*60)):0;
+  const pct=Math.min(100,Math.round(hoursOpen/rule.resolveHours*100));
+  const hoursLeft=Math.max(0,rule.resolveHours-hoursOpen);
+  const resolveStatus=hoursOpen>rule.resolveHours?'breached':hoursOpen>rule.resolveHours*.75?'warning':'ok';
+  return{pct,resolveStatus,hoursLeft:Math.round(hoursLeft),hoursOpen:Math.round(hoursOpen),breached:resolveStatus==='breached'};
+}
+function slaBar(t){
+  if(['Resolved','Closed'].includes(t.status)) return '';
+  const s=slaStatus(t);
+  const c=s.breached?'var(--red)':s.resolveStatus==='warning'?'var(--amber)':'var(--green-mid)';
+  const lbl=s.breached?'SLA breached':s.resolveStatus==='warning'?'At risk':'Within SLA';
+  return '<div style="margin-top:6px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px"><span style="color:'+c+';font-weight:600">'+lbl+'</span><span style="color:var(--text-muted)">'+(s.hoursLeft>0?s.hoursLeft+'h left':s.hoursOpen+'h open')+'</span></div><div style="height:3px;background:var(--tan);border-radius:2px"><div style="height:100%;width:'+s.pct+'%;background:'+c+';border-radius:2px"></div></div></div>';
+}
+
 
 function renderDashboard(){
   const all=sortByUrgency(visT());
@@ -4637,7 +4658,7 @@ window.addEventListener('load', async () => {
     const keys = await caches.keys();
     await Promise.all(keys.map(k => caches.delete(k)));
   }
-  console.log('MaintenanceOS v2.4 loaded - ' + new Date().toISOString());
+  console.log('MaintenanceOS v2.5 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
