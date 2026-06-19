@@ -19,15 +19,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* Hide all app chrome until logged in */
-.sidebar, #mobile-topbar-el, .mobile-bottom-nav, #float-refresh, #ai-chat-btn, #ai-chat-panel {
+.sidebar, #mobile-topbar-el, .mobile-bottom-nav, #float-refresh {
   visibility: hidden !important;
 }
 body.logged-in .sidebar,
 body.logged-in #mobile-topbar-el,
 body.logged-in .mobile-bottom-nav,
-body.logged-in #float-refresh,
-body.logged-in #ai-chat-btn,
-body.logged-in #ai-chat-panel {
+body.logged-in #float-refresh {
   visibility: visible !important;
 }
 
@@ -4025,7 +4023,7 @@ function renderLog(){
 
 
 
-
+function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
 
 
 
