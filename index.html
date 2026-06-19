@@ -14,10 +14,23 @@
 <meta http-equiv="Expires" content="0">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
-<title>MaintenanceOS v2.3</title>
+<title>MaintenanceOS v2.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+/* Hide all app chrome until logged in */
+.sidebar, #mobile-topbar-el, .mobile-bottom-nav, #float-refresh, #ai-chat-btn, #ai-chat-panel {
+  visibility: hidden !important;
+}
+body.logged-in .sidebar,
+body.logged-in #mobile-topbar-el,
+body.logged-in .mobile-bottom-nav,
+body.logged-in #float-refresh,
+body.logged-in #ai-chat-btn,
+body.logged-in #ai-chat-panel {
+  visibility: visible !important;
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --green:#1B4332;--green-dark:#1B4332;--green-mid:#2D6A4F;--green-light:#95D5B2;
@@ -445,6 +458,7 @@ function doLogin(){
   session=u;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
+  document.body.classList.add('logged-in');
   document.getElementById('sb-name').textContent=u.name;
   document.getElementById('sb-role').innerHTML=roleBadge(u.role);
   let locStr='Locations';
@@ -4613,7 +4627,7 @@ function setLoginLang(lang) {
 
 
 window.addEventListener('load', async () => {
-  console.log('MaintenanceOS v2.3 loaded - ' + new Date().toISOString());
+  console.log('MaintenanceOS v2.4 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
