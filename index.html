@@ -19,13 +19,12 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* Hide all app chrome until logged in */
-.sidebar, #mobile-topbar-el, .mobile-bottom-nav, #float-refresh {
+.sidebar, #mobile-topbar-el, .mobile-bottom-nav {
   visibility: hidden !important;
 }
 body.logged-in .sidebar,
 body.logged-in #mobile-topbar-el,
-body.logged-in .mobile-bottom-nav,
-body.logged-in #float-refresh {
+body.logged-in .mobile-bottom-nav {
   visibility: visible !important;
 }
 
@@ -252,25 +251,12 @@ tr:hover td{background:var(--cream)}
 
 <!-- APP -->
 <div class="app" id="app" style="display:none">
-  <button id="float-refresh" onclick="refreshPage()" style="background:var(--amber);color:#fff;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,.2);display:none;align-items:center;justify-content:center">&#8635;</button>
+
 
     <!-- NINO AI - hidden -->
-  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;width:100%;height:72vh;z-index:9995;background:#FAF7F2;border-radius:16px 16px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.2);flex-direction:column;overflow:hidden">
-    <div style="background:#1B4332;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;flex-shrink:0">
-      <div style="font-weight:700;font-size:15px">Ask Nino Anything</div>
-      <div style="display:flex;gap:8px">
-        <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer">Clear</button>
-        <button onclick="toggleAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;width:28px;height:28px;font-size:18px;cursor:pointer">x</button>
-      </div>
-    </div>
-    <div id="ai-quick-btns" style="padding:8px;border-bottom:1px solid #E8E0D0;display:flex;gap:6px;overflow-x:auto;flex-shrink:0"></div>
-    <div id="ai-chat-messages" style="flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch"></div>
-    <div style="padding:10px;border-top:1px solid #E8E0D0;display:flex;gap:6px;flex-shrink:0;align-items:flex-end;background:#FAF7F2">
-      <textarea id="ai-chat-input" onkeydown="aiChatKeydown(event)" placeholder="Ask Nino anything..." style="flex:1;border:1.5px solid #E8E0D0;border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;resize:none;height:40px;max-height:80px;line-height:1.4;background:#fff"></textarea>
-      <button onclick="sendAIChat()" style="background:#C48524;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:20px;cursor:pointer;flex-shrink:0;height:40px">&#9658;</button>
-    </div>
-  </div>
   <button id="ai-chat-btn" style="display:none" onclick="toggleAIChat()"></button>
+  <div id="ai-chat-panel" style="display:none"></div>
+
 
 
     <!-- Quick questions -->
