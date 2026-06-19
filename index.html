@@ -14,7 +14,7 @@
 <meta http-equiv="Expires" content="0">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
-<title>MaintenanceOS v2.5</title>
+<title>MaintenanceOS v2.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -664,7 +664,7 @@ function ticketCard(t,compact=false){
       ${assignee?`<span style="color:var(--green-mid);font-weight:600">🔧 ${assignee.name}</span>`:'<span style="color:var(--red);font-weight:500">To be assigned</span>'}
       ${t.raised_by_name||t.raisedByName?`<span style="color:var(--text-muted)">by ${t.raised_by_name||t.raisedByName}</span>`:''}
     </div>
-    ${slaBar(t)}
+    ${typeof slaBar === "function" ? slaBar(t) : ""}
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:${(['Resolved','Closed'].includes(t.status))?'8':'6'}px" onclick="event.stopPropagation()">
       ${isTechSup?`
         ${(t.assignedTo===session.id||t.assigned_to===session.id||t.supervisor_id===session.id)&&!['Resolved','Closed','On Hold'].includes(t.status)?`
@@ -778,45 +778,6 @@ function overallHealthScore() {
   const scores = visLocs.map(id => calcHealthScore(id));
   return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 }
-
-
-// ============================================================
-// SLA ENGINE
-// ============================================================
-const SLA_RULES = { High:{assignHours:4,resolveHours:24}, Medium:{assignHours:8,resolveHours:48}, Low:{assignHours:24,resolveHours:72} };
-
-function slaRule(priority){ return SLA_RULES[priority] || SLA_RULES.Medium; }
-
-function hoursElapsed(fromTs){
-  if(!fromTs) return 0;
-  const from = new Date(fromTs).getTime();
-  return Math.max(0, (Date.now() - from) / (1000*60*60));
-}
-
-function slaStatus(ticket){
-  const rule = slaRule(ticket.priority);
-  const created = ticket.createdAt || ticket.created_at;
-  const assigned = ticket.assignedTo || ticket.assigned_to;
-  const resolved = ['Resolved','Closed'].includes(ticket.status);
-  const hoursOpen = hoursElapsed(created);
-  let resolveStatus = 'ok';
-  if(!resolved){
-    if(hoursOpen > rule.resolveHours) resolveStatus = 'breached';
-    else if(hoursOpen > rule.resolveHours * 0.75) resolveStatus = 'warning';
-  }
-  const pct = resolved ? 100 : Math.min(100, Math.round((hoursOpen / rule.resolveHours) * 100));
-  const hoursLeft = resolved ? 0 : Math.max(0, rule.resolveHours - hoursOpen);
-  return { resolveStatus, hoursOpen: Math.round(hoursOpen*10)/10, hoursLeft: Math.round(hoursLeft*10)/10, pct, breached: resolveStatus==='breached', warning: resolveStatus==='warning' };
-}
-
-function slaBar(ticket){
-  if(['Resolved','Closed'].includes(ticket.status)) return '';
-  const s = slaStatus(ticket);
-  const color = s.breached ? 'var(--red)' : s.warning ? 'var(--amber)' : 'var(--green-mid)';
-  const label = s.breached ? 'SLA breached' : s.warning ? 'At risk' : 'Within SLA';
-  return '<div style="margin-top:6px"><div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:3px"><span style="color:'+color+';font-weight:600">'+label+'</span><span>'+(s.hoursLeft>0?s.hoursLeft+'h left':s.hoursOpen+'h open')+'</span></div><div style="height:4px;background:var(--tan);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+s.pct+'%;background:'+color+';border-radius:2px"></div></div></div>';
-}
-
 
 function renderDashboard(){
   const all=sortByUrgency(visT());
@@ -4666,7 +4627,17 @@ function setLoginLang(lang) {
 
 
 window.addEventListener('load', async () => {
-  console.log('MaintenanceOS v2.5 loaded - ' + new Date().toISOString());
+  // Force reload if service worker has old content
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const reg of regs) await reg.unregister();
+  }
+  // Clear all caches
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+  }
+  console.log('MaintenanceOS v2.4 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
