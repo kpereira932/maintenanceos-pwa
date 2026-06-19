@@ -4025,7 +4025,7 @@ function renderLog(){
 
 
 
-function nPanel(tid,title,msg,cls,label){const nid='np'+tid+'x'+Math.random().toString(36).slice(2,5);return`<div class="card" style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px"><div><span class="badge ${cls}" style="margin-right:6px">${label}</span><strong>${tid}</strong> ${title}</div><div style="display:flex;gap:5px"><button class="btn sm" onclick="cpText('${nid}')">📋 Copy</button><a href="https://wa.me/?text=${encodeURIComponent(msg)}" class="btn sm wa" target="_blank">WhatsApp</a></div></div><div class="notif-box" id="${nid}">${msg}</div></div>`;}
+
 
 
 
