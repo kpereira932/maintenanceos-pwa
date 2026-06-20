@@ -264,7 +264,7 @@ tr:hover td{background:var(--cream)}
     </svg>
     <span style="font-size:8px;font-weight:800;letter-spacing:.5px">NINO</span>
   </button>
-  <di  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:90px;right:16px;width:340px;max-width:calc(100vw - 32px);height:460px;max-height:65vh;z-index:9995;background:#FAF7F2;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.25);flex-direction:column;overflow:hidden;border:1px solid #E8E0D0">
+  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;width:100%;height:72vh;z-index:9995;background:#FAF7F2;border-radius:16px 16px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.2);flex-direction:column;overflow:hidden">
     <div style="background:#1B4332;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;flex-shrink:0">
       <div style="font-weight:700;font-size:15px">&#129302; Ask Nino Anything</div>
       <div style="display:flex;gap:8px">
@@ -3551,14 +3551,14 @@ function toggleAIChat() {
   if(_chatOpen){
     const qc = document.getElementById('ai-quick-btns');
     if(qc && !qc.children.length){
-      qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,4).map(q=>
-        `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:#FAF7F2;border:1px solid #E8E0D0;border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:#1C1C1A;flex-shrink:0">${q.slice(0,28)}</button>`
+      qc.innerHTML = AI_QUICK_QUESTIONS.slice(0,3).map(q=>
+        `<button onclick="document.getElementById('ai-chat-input').value=this.dataset.q;sendAIChat()" data-q="${q.replace(/"/g,'&quot;')}" style="background:#FAF7F2;border:1px solid #E8E0D0;border-radius:20px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap;font-family:inherit;color:#1C1C1A;flex-shrink:0">${q.slice(0,26)}...</button>`
       ).join('');
     }
     if(_chatHistory.length===0){
-      addChatMessage('ai',"Hi! I'm Nino 🤖\n\nI have access to your live ticket data, expenses, and locations. Ask me anything!\n\nExamples:\n• How many open tickets today?\n• Which outlet has the most issues?\n• What expenses are pending approval?");
+      addChatMessage('ai',"Hi! I'm Nino! 🤖\n\nAsk me anything about MaintenanceOS or your live data. I speak English and Hindi!\n\nWhat can I help you with?");
     }
-    setTimeout(()=>{ const i=document.getElementById('ai-chat-input'); if(i)i.focus(); },200);
+    setTimeout(()=>{ const i=document.getElementById('ai-chat-input'); if(i)i.focus(); },300);
   }
 }
 
@@ -3610,60 +3610,68 @@ async function sendAIChat() {
   input.value = '';
   addChatMessage('user', question);
 
-  // Show typing indicator
+  const apiKey = window._ninoKey || GROQ_API_KEY;
+  if (!apiKey) {
+    addChatMessage('ai', 'No API key set. Go to My Profile to add your Groq key.');
+    return;
+  }
+
   const container = document.getElementById('ai-chat-messages');
   const typingId = 'typing-' + Date.now();
   if (container) {
-    container.innerHTML += `<div id="${typingId}" style="display:flex;align-items:flex-start;margin-bottom:12px"><div style="background:var(--cream);border:1px solid var(--tan);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;color:var(--text-muted)">Nino is thinking...</div></div>`;
+    container.innerHTML += '<div id="'+typingId+'" style="display:flex;align-items:flex-start;margin-bottom:12px"><div style="background:var(--cream);border:1px solid var(--tan);border-radius:12px 12px 12px 2px;padding:10px 14px;font-size:13px;color:var(--text-muted)">Nino is thinking...</div></div>';
     container.scrollTop = container.scrollHeight;
   }
 
-  // Build short live data context
   const visTix = visT();
-  const liveData = [
-    'Tickets - Total:' + visTix.length + ' Open:' + visTix.filter(t=>t.status==='Open').length + ' InProgress:' + visTix.filter(t=>t.status==='In Progress').length + ' Escalated:' + visTix.filter(isESC).length,
-    'Unassigned:' + visTix.filter(t=>!t.assignedTo&&!t.assigned_to&&!["Resolved","Closed"].includes(t.status)).length,
-    'Total spend: ' + fc(expenses.reduce((s,e)=>s+Number(e.amount),0)),
-    'Locations: ' + visibleLocationIds().map(id=>locDisplay(getLoc(id))).join(', '),
-    'User role: ' + roleLabel(session.role),
-  ].join('. ');
+  const totalExp = expenses.reduce((s,e)=>s+Number(e.amount),0);
+  const pendExp = expenses.filter(e=>!e.approved).reduce((s,e)=>s+Number(e.amount),0);
+  const locSummary = visibleLocationIds().map(id=>{
+    const l=getLoc(id);
+    const lt=visTix.filter(t=>(t.locationId||t.location_id)===id&&!['Resolved','Closed'].includes(t.status));
+    return l.name+':'+lt.length+' open';
+  }).join(', ');
+  const recentTix = visTix.slice(0,10).map(t=>{
+    const l=getLoc(t.locationId||t.location_id);
+    return t.id+' - '+t.title+' ('+l.name+', '+t.status+', '+t.priority+')';
+  }).join('; ');
 
-  const fullSystem = NINO_SYSTEM_PROMPT + '\n\nLIVE DATA: ' + liveData;
+  const liveData = 'LIVE DATA: User='+session.name+' ('+roleLabel(session.role)+'). '
+    +'Tickets: '+visTix.length+' total, '+visTix.filter(t=>t.status==='Open').length+' open, '
+    +visTix.filter(t=>t.status==='In Progress').length+' in progress, '
+    +visTix.filter(isESC).length+' escalated, '
+    +visTix.filter(t=>isOD(t)&&!isESC(t)).length+' overdue, '
+    +visTix.filter(t=>!t.assignedTo&&!t.assigned_to&&!['Resolved','Closed'].includes(t.status)).length+' unassigned. '
+    +'Expenses: '+fc(totalExp)+' total, '+fc(pendExp)+' pending. '
+    +'AMC alerts: '+amcRecords.filter(a=>amcSt(a)!=='active').length+'. '
+    +'Locations: '+locSummary+'. '
+    +'Recent tickets: '+recentTix;
 
-  // Build conversation for context
-  const msgs = _chatHistory.slice(-6).map(m => ({
-    role: m.role === 'ai' ? 'assistant' : 'user',
-    content: m.text
-  }));
-  if (!msgs.length || msgs[msgs.length-1].role !== 'user') {
-    msgs.push({ role: 'user', content: question });
-  }
+  const msgs = _chatHistory.slice(-8).map(m=>({role:m.role==='ai'?'assistant':'user',content:m.text}));
+  if(!msgs.length||msgs[msgs.length-1].role!=='user') msgs.push({role:'user',content:question});
 
   try {
     const res = await fetch(GROQ_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY
-      },
-      body: JSON.stringify({
-        model: 'llama3-8b-8192',
-        max_tokens: 500,
-        messages: [
-          { role: 'system', content: fullSystem },
-          ...msgs.slice(-6)
-        ]
-      })
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+      body:JSON.stringify({model:'llama3-8b-8192',max_tokens:600,messages:[{role:'system',content:NINO_SYSTEM_PROMPT+'\n\n'+liveData},...msgs.slice(-8)]})
     });
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond. Please try again.';
+    let data;
+    try { data = await res.json(); } catch(e) { data = {}; }
     const typingEl = document.getElementById(typingId);
-    if (typingEl) typingEl.remove();
+    if(typingEl) typingEl.remove();
+    if(!res.ok){
+      const errMsg = data && data.error ? data.error.message : 'HTTP '+res.status;
+      const hint = res.status===401 ? ' Your key is expired. Go to My Profile to update it.' : '';
+      addChatMessage('ai', 'Error: '+errMsg+hint);
+      return;
+    }
+    const reply = data.choices&&data.choices[0]&&data.choices[0].message ? data.choices[0].message.content : 'Sorry, no response.';
     addChatMessage('ai', reply);
   } catch(e) {
     const typingEl = document.getElementById(typingId);
-    if (typingEl) typingEl.remove();
-    addChatMessage('ai', 'Connection error. Please check your internet and try again.');
+    if(typingEl) typingEl.remove();
+    addChatMessage('ai', 'Network error. Please check your connection.');
   }
 }
 async function ninoVoiceStopped(){
