@@ -3989,47 +3989,7 @@ function renderLog(){
 
 
 </body>
-</html
-// ============================================================
-// CONTEXT-AWARE GUIDE — changes per page + role
-// ============================================================
 
-
-// Default guide for pages not listed
-
-
-
-
-</div>
-    <div>${recurringSchedules.map(r=>{
-      const locs=r.locationIds.map(id=>getLoc(id));
-      const byS={};locs.forEach(l=>{const s=l.city||l.name;if(!byS[s])byS[s]=[];byS[s].push(locLabel(l));});
-      return`<div class="card" style="margin-bottom:10px">
-        <div class="card-top"><span class="card-title">↺ ${r.title}</span>${['admin','manager'].includes(session.role)?`<label class="tgl"><input type="checkbox" ${r.on?'checked':''} onchange="toggleR('${r.id}',this.checked)"><span class="tgl-s"></span></label>`:''}</div>
-        <div class="card-meta"><span>Every ${r.freq}</span><span class="badge ${r.priority==='High'?'b-high':r.priority==='Low'?'b-low':'b-med'}">${r.priority}</span><span>${r.category}</span><span>📅 Next: ${r.next}</span></div>
-        <div style="font-size:12px;color:#888;margin-top:6px">${Object.entries(byS).map(([s,ls])=>`${s}: ${ls.join(', ')}`).join('  ')}</div>
-        ${['admin','manager'].includes(session.role)?`<div class="card-actions"><button class="btn sm" onclick="genNow('${r.id}')">▶ Generate now</button><button class="btn sm danger" onclick="delR('${r.id}')">🗑</button></div>`:''}
-      </div>`;
-    }).join('')||'<div class="empty">No recurring schedules</div>'}</div>`;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</script>
 <script>
 // ============================================================
 // SUPABASE LIVE CONNECTION
