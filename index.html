@@ -58,13 +58,13 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .sb-name{font-weight:600;color:rgba(255,255,255,.9);font-size:13px}
 .sb-loc{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
 .sb-role{font-size:10px;padding:2px 8px;border-radius:3px;display:inline-block;margin-top:5px;letter-spacing:.3px;text-transform:uppercase;font-weight:700}
-.r-admin{background:rgba(109,40,217,.3);color:#c4b5fd}
-.r-manager{background:rgba(196,133,36,.2);color:#F5DFA8}
-.r-tech{background:rgba(200,144,10,.2);color:#F5DFA8}
-.r-outlet{background:rgba(185,28,28,.2);color:#fca5a5}
-.r-founder{background:rgba(196,133,36,.35);color:#F5DFA8}
-.r-design{background:rgba(107,114,128,.3);color:#D1D5DB}
-.r-welfare{background:rgba(14,116,144,.3);color:#A5F3FC}
+.r-admin{background:#6D28D9;color:#fff}
+.r-manager{background:#1B4332;color:#F5DFA8}
+.r-tech{background:#065F46;color:#A7F3D0}
+.r-outlet{background:#B91C1C;color:#FEE2E2}
+.r-founder{background:#C48524;color:#fff}
+.r-design{background:#374151;color:#F9FAFB}
+.r-welfare{background:#0E7490;color:#E0F2FE}
 .sidebar-nav{flex:1;padding:.5rem 0}
 .nav-section{font-size:9px;color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:2px;padding:16px 1.5rem 5px;font-weight:400;border-top:1px solid rgba(255,255,255,.05);margin-top:4px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.5rem;font-size:13px;color:rgba(255,255,255,.5);cursor:pointer;border-left:3px solid transparent;transition:all .12s;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
@@ -264,8 +264,8 @@ tr:hover td{background:var(--cream)}
     </svg>
     <span style="font-size:8px;font-weight:800;letter-spacing:.5px">NINO</span>
   </button>
-  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:0;left:0;right:0;width:100%;height:72vh;z-index:9995;background:#FAF7F2;border-radius:16px 16px 0 0;box-shadow:0 -4px 30px rgba(0,0,0,.2);flex-direction:column;overflow:hidden">
-    <div style="background:#1B4332;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-radius:16px 16px 0 0;flex-shrink:0">
+  <div id="ai-chat-panel" style="display:none;position:fixed;bottom:90px;right:16px;width:360px;max-width:calc(100vw - 32px);height:500px;max-height:70vh;z-index:9995;background:#FAF7F2;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.25);flex-direction:column;overflow:hidden;border:1px solid #E8E0D0">
+    <div style="background:#1B4332;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
       <div style="font-weight:700;font-size:15px">&#129302; Ask Nino Anything</div>
       <div style="display:flex;gap:8px">
         <button onclick="clearAIChat()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:inherit">Clear</button>
@@ -3655,7 +3655,15 @@ async function sendAIChat() {
         ]
       })
     });
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); } catch(e) { data = {}; }
+    if(!res.ok) {
+      const errMsg = data?.error?.message || ('HTTP ' + res.status);
+      const typingEl2 = document.getElementById(typingId);
+      if(typingEl2) typingEl2.remove();
+      addChatMessage('ai', '⚠️ ' + errMsg);
+      return;
+    }
     const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond. Please try again.';
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
@@ -3663,7 +3671,8 @@ async function sendAIChat() {
   } catch(e) {
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
-    addChatMessage('ai', 'Connection error. Please check your internet and try again.');
+    const errMsg = data?.error?.message || 'API error';
+      addChatMessage('ai', '⚠️ Nino error: ' + errMsg + '\n\nTip: The Groq API key may need updating. Go to My Profile → Configure Nino API key.');
   }
 }
 async function ninoVoiceStopped(){
