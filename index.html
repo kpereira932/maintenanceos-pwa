@@ -1336,7 +1336,7 @@ function renderReports(){
         <div class="tbl-wrap"><table>
           <thead><tr><th>Location</th><th>Open</th><th>Resolved</th><th>Spend</th></tr></thead>
           <tbody>${Object.entries(byLoc).map(([lid,data])=>{
-            const l=getLoc(lid);
+            const loc=getLoc(lid);
             return `<tr>
               <td><strong>${loc.city?loc.city+' - ':''}${loc.name}</strong></td>
               <td style="color:var(--amber)">${data.open}</td>
