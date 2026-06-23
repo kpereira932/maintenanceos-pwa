@@ -370,11 +370,11 @@ function getSupervisors(stateId){
   });
 }
 function locLabel(l){
-  const suffix = l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':'';
+  const suffix = l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':'';
   return (l.city?l.city+' - ':'')+l.name+suffix;
 }
 function locDisplay(l){
-  const suffix = l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':'';
+  const suffix = l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':'';
   return l.city ? l.city+' - '+l.name+suffix : l.name+suffix;
 }
 function roleClass(r){return{admin:'r-admin',manager:'r-manager',supervisor:'r-manager',technician:'r-tech',outlet:'r-outlet',superadmin:'r-admin',founder:'r-founder','design-manager':'r-design','design-poc':'r-design',welfare:'r-welfare'}[r]||'';}
@@ -885,8 +885,8 @@ function renderTickets(){
     </div>
     <div style="display:flex;gap:7px;margin-bottom:1rem;flex-wrap:wrap">
       <select id="tf-st" style="display:none" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">City</option>${(session.stateId?states.filter(s=>s.id===session.stateId):states).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}</select>
-      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')}</select>
-      <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option><option value="staff_quarters">Staff Quarters</option></select>
+      <select id="tf-lo" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Locations</option>${visibleLocationIds().map(id=>{const l=getLoc(id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':''}</option>`;}).join('')}</select>
+      <select id="tf-ty" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Types</option><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option><option value="staff_quarters">Accommodation</option><option value="staff_quarters">Accommodation</option></select>
       <select id="tf-s" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Status</option><option>Open</option><option>In Progress</option><option>Resolved</option></select>
       <select id="tf-p" onchange="applyTF()" style="font-size:12px;padding:6px 10px;border:1.5px solid #e8e8e4;border-radius:8px"><option value="">Urgency</option><option>High</option><option>Medium</option><option>Low</option></select>
     </div>
@@ -1737,7 +1737,7 @@ function locListHTML(){
             <div style="display:flex;align-items:center;gap:10px">
               <span style="font-size:20px">${l.type==='central_kitchen'?'':''}</span>
               <div><div style="font-weight:600;font-size:13px">${l.name}</div>
-              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':'Outlet'}${l.city?'  '+l.city:''} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
+              <div style="font-size:11px;color:#aaa">${l.type==='central_kitchen'?'Central Kitchen':l.type==='staff_quarters'?'Accommodation':'Outlet'}${l.city?'  '+l.city:''} · ${lt} open · ${lu?lu.email:'(no login assigned)'}</div></div>
             </div>
             <div style="display:flex;gap:5px">
               <button class="btn sm" onclick="openEditLocation('${l.id}')">✏</button>
@@ -1756,7 +1756,7 @@ function deleteState(id){if(locations.filter(l=>l.stateId===id).length){alert('R
 function openAddLocation(pre){
   document.getElementById('m-title').textContent='Add location';
   document.getElementById('m-body').innerHTML=`
-    <div class="frow"><div class="fg"><label>State</label><select id="ls">${states.map(s=>`<option value="${s.id}"${s.id===pre?' selected':''}>${s.name}</option>`).join('')}</select></div><div class="fg"><label>Type</label><select id="lt"><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option><option value="staff_quarters">Staff Quarters</option></select></div></div>
+    <div class="frow"><div class="fg"><label>State</label><select id="ls">${states.map(s=>`<option value="${s.id}"${s.id===pre?' selected':''}>${s.name}</option>`).join('')}</select></div><div class="fg"><label>Type</label><select id="lt"><option value="outlet">Outlet</option><option value="central_kitchen">Central Kitchen</option><option value="staff_quarters">Accommodation</option><option value="staff_quarters">Accommodation</option></select></div></div>
     <div class="fg"><label>Location name</label><input type="text" id="ln" placeholder="e.g. Linking Road, Sector 18..."></div>
     <div class="fg"><label>City</label><input type="text" id="lc" placeholder="e.g. Mumbai, Pune, Delhi..."></div>
     <div style="background:#f4f3ef;border-radius:8px;padding:10px;font-size:12px;color:#666;margin-bottom:12px">💡 After adding, go to <strong>Users & Roles</strong> to create a login for this location.</div>
@@ -1955,7 +1955,7 @@ function userTable(list){
 }
 function userFormHTML(u){
   const sOpts=`<option value="">- None -</option>`+states.map(s=>`<option value="${s.id}"${u.stateId===s.id?' selected':''}>${s.name}</option>`).join('');
-  const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`).join('');
+  const lOpts=`<option value="">- None -</option>`+locations.map(l=>`<option value="${l.id}"${u.locationId===l.id?' selected':''}>${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':''}</option>`).join('');
   return`<div class="frow"><div class="fg"><label>Full name</label><input type="text" id="un" value="${u.name||''}"></div><div class="fg"><label>Role</label><select id="ur" onchange="toggleUF()">${['admin','manager','supervisor','technician','outlet','founder','design-manager','design-poc','welfare'].map(r=>`<option value="${r}"${u.role===r?' selected':''}>${roleLabel(r)}</option>`).join('')}</select></div></div>
   <div class="fg"><label>Login username / email <span style="color:#888;font-weight:400">(can be anything, e.g. bandra.outlet or john@benne.in)</span></label><input type="text" id="ue" value="${u.email||''}"></div>
   ${u.user_code?`<div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">User ID: <strong style="color:var(--amber)">${u.user_code}</strong></div>`:''}
@@ -3456,7 +3456,7 @@ function openRaiseTicketModal(){
 
   const locOptions = visLocs.map(id=>{
     const l=getLoc(id);
-    return '<option value="'+id+'">'+(l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':'')+'</option>';
+    return '<option value="'+id+'">'+(l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':'')+'</option>';
   }).join('');
 
   const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
@@ -4111,7 +4111,7 @@ function renderRaise(){
   const canPickLocation = ['admin','manager','technician','founder','design-manager','design-poc','supervisor'].includes(session.role);
   const visLocs = canPickLocation ? visibleLocationIds() : [];
   const locOptions = canPickLocation
-    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (SQ)':''}</option>`;}).join('')
+    ? visLocs.map(id=>{const l=getLoc(id);const s=getState(l.stateId||l.state_id);return`<option value="${id}">${l.city?l.city+' - ':''}${l.name}${l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':''}</option>`;}).join('')
     : '';
   const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
   const fixedState = fixedLoc ? getState(fixedLoc.stateId) : null;
