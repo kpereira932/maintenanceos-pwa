@@ -3451,150 +3451,298 @@ function useRaiseVoiceTranscript() {
 }
 
 function openRaiseTicketModal(){
-  const canPickLocation = !['outlet','welfare'].includes(session.role);
-  const visLocs = canPickLocation ? visibleLocationIds() : [];
-
-  const locOptions = visLocs.map(id=>{
+  const canPickLoc = !['outlet','welfare'].includes(session.role);
+  const visLocs = canPickLoc ? visibleLocationIds() : [];
+  const locOpts = visLocs.map(id=>{
     const l=getLoc(id);
-    return '<option value="'+id+'">'+(l.city?l.city+' - ':'')+l.name+(l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':'')+'</option>';
+    return '<option value="'+id+'">'+(l.city?l.city+' \u2014 ':'')+l.name+(l.type==='central_kitchen'?' (CK)':l.type==='staff_quarters'?' (ACC)':'')+'</option>';
   }).join('');
-
-  const fixedLoc = !canPickLocation ? getLoc(session.locationId) : null;
-  const fixedState = fixedLoc ? getState(fixedLoc.stateId||fixedLoc.state_id) : null;
-  const locDisplay2 = fixedLoc ? (fixedLoc.city||fixedState.name)+' — '+fixedLoc.name : '';
+  const fixedLoc = !canPickLoc ? getLoc(session.locationId||'') : null;
+  const fixedLocStr = fixedLoc ? ((fixedLoc.city||'')+' \u2014 '+fixedLoc.name) : '';
 
   document.getElementById('m-title').innerHTML = '';
   document.getElementById('m-body').innerHTML = `
-    <style>
-    .rt-loc-banner{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#E1F5EE;border-radius:8px;margin-bottom:14px;font-size:12px;color:#0F6E56;font-weight:500}
-    .rt-loc-banner select{background:transparent;border:none;color:#0F6E56;font-size:12px;font-weight:600;outline:none;cursor:pointer;font-family:inherit;flex:1}
-    .rt-loc-change{font-size:11px;color:#1D9E75;cursor:pointer;margin-left:auto;white-space:nowrap}
-    .rt-section-label{font-size:10px;font-weight:700;color:#7A7060;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-    .rt-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-    @media(max-width:500px){.rt-tiles{grid-template-columns:repeat(3,1fr)}}
-    .rt-tile{padding:10px 6px;border:1.5px solid var(--tan);border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;background:var(--warm-white);transition:all .12s;user-select:none}
-    .rt-tile:hover{border-color:#1D9E75;background:#E1F5EE}
-    .rt-tile.selected{border-color:#1B4332;background:#E1F5EE}
-    .rt-tile-icon{font-size:22px}
-    .rt-tile-label{font-size:10px;font-weight:600;color:var(--text-muted);text-align:center}
-    .rt-tile.selected .rt-tile-label{color:#1B4332}
-    .rt-input-row{display:flex;gap:8px;margin-bottom:10px}
-    .rt-method-btn{flex:1;padding:8px 4px;border:1.5px solid var(--tan);border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--warm-white);cursor:pointer;transition:all .12s}
-    .rt-method-btn.active{border-color:#1B4332;background:#E1F5EE}
-    .rt-method-btn:hover{border-color:#1D9E75}
-    .rt-method-icon{font-size:18px}
-    .rt-method-label{font-size:9px;font-weight:600;color:var(--text-muted)}
-    .rt-method-btn.active .rt-method-label{color:#1B4332}
-    .rt-ai-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
-    .rt-ai-badge{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:all .12s}
-    .rt-ai-badge.cat{background:#E1F5EE;color:#0F6E56;border:1px solid #5DCAA5}
-    .rt-ai-badge.urg-high{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5}
-    .rt-ai-badge.urg-med{background:#FEF3C7;color:#92400E;border:1px solid #FCD34D}
-    .rt-ai-badge.urg-low{background:#DCFCE7;color:#166534;border:1px solid #86EFAC}
-    .rt-photo-area{border:2px dashed var(--tan);border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;margin-bottom:12px;background:var(--cream);transition:border-color .12s}
-    .rt-photo-area:hover{border-color:#1D9E75}
-    .rt-photo-area.has-photo{border-style:solid;border-color:#1D9E75;background:#E1F5EE}
-    .rt-photo-icon{font-size:28px;color:var(--text-muted)}
-    .rt-photo-area.has-photo .rt-photo-icon{color:#0F6E56}
-    .rt-photo-label{font-size:11px;color:var(--text-muted);font-weight:600}
-    .rt-photo-sub{font-size:10px;color:var(--text-muted)}
-    .rt-desc{width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit;background:var(--warm-white);color:var(--charcoal);min-height:60px;resize:vertical;display:none}
-    .rt-desc:focus{outline:none;border-color:#1B4332}
-    .rt-submit{width:100%;padding:13px;border-radius:10px;border:none;background:#1B4332;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.2px}
-    .rt-submit:hover{background:#2D6A4F}
-    .rt-submit:disabled{background:#ccc;cursor:not-allowed}
-    .rt-progress{display:flex;gap:4px;margin-bottom:14px}
-    .rt-prog-step{height:3px;flex:1;border-radius:2px;background:var(--tan)}
-    .rt-prog-step.done{background:#1B4332}
-    .rt-prog-step.active{background:#C48524}
-    </style>
+<style>
+#rt-wrap *{box-sizing:border-box}
+#rt-wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+.rt-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.rt-header-title{font-size:17px;font-weight:600;color:var(--charcoal)}
+.rt-header-badge{font-size:10px;color:var(--text-muted);background:var(--cream);padding:3px 8px;border-radius:20px;border:0.5px solid var(--tan)}
+.rt-prog{display:flex;gap:4px;margin-bottom:16px}
+.rt-prog-bar{height:3px;flex:1;border-radius:2px;background:var(--tan);transition:background .2s}
+.rt-prog-bar.done{background:#1B4332}
+.rt-prog-bar.active{background:#C48524}
+.rt-loc{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#E1F5EE;border-radius:10px;margin-bottom:16px}
+.rt-loc-icon{font-size:15px;color:#0F6E56}
+.rt-loc-text{font-size:12px;color:#0F6E56;font-weight:600;flex:1}
+.rt-loc-change{font-size:11px;color:#1D9E75;cursor:pointer;white-space:nowrap}
+.rt-loc select{background:transparent;border:none;color:#0F6E56;font-size:12px;font-weight:600;outline:none;cursor:pointer;font-family:inherit;flex:1;width:100%}
+.rt-step-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:8px}
+.rt-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:14px}
+@media(max-width:480px){.rt-tiles{grid-template-columns:repeat(4,1fr)}}
+.rt-tile{padding:10px 5px;border:1.5px solid var(--tan);border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;background:var(--warm-white);transition:all .12s;-webkit-tap-highlight-color:transparent;user-select:none}
+.rt-tile:active{transform:scale(.96)}
+.rt-tile.sel{border-color:#1B4332;background:#E1F5EE}
+.rt-tile-icon{font-size:22px;line-height:1}
+.rt-tile-lbl{font-size:9px;font-weight:600;color:var(--text-muted);text-align:center;line-height:1.2}
+.rt-tile.sel .rt-tile-lbl{color:#0F6E56}
+.rt-ai-row{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;min-height:26px}
+.rt-ai-pill{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;transition:opacity .15s}
+.rt-ai-pill:hover{opacity:.8}
+.rt-ai-cat{background:#E1F5EE;color:#0F6E56;border:0.5px solid #5DCAA5}
+.rt-ai-urg-high{background:#FEE2E2;color:#991B1B;border:0.5px solid #FCA5A5}
+.rt-ai-urg-med{background:#FEF3C7;color:#92400E;border:0.5px solid #FCD34D}
+.rt-ai-urg-low{background:#DCFCE7;color:#166534;border:0.5px solid #86EFAC}
+.rt-ai-title{background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC}
+.rt-photo-wrap{margin-bottom:12px}
+.rt-photo-area{border:2px dashed var(--tan-dark);border-radius:12px;padding:18px 12px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;background:var(--cream);transition:all .15s;-webkit-tap-highlight-color:transparent}
+.rt-photo-area:hover,.rt-photo-area:focus-within{border-color:#1D9E75;background:#E1F5EE}
+.rt-photo-area.has-file{border-color:#1B4332;border-style:solid;background:#E1F5EE}
+.rt-photo-icon{font-size:28px;color:var(--text-muted);transition:color .15s}
+.rt-photo-area.has-file .rt-photo-icon{color:#0F6E56}
+.rt-photo-main{font-size:12px;font-weight:600;color:var(--charcoal)}
+.rt-photo-sub{font-size:10px;color:var(--text-muted)}
+.rt-photo-area.has-file .rt-photo-sub{color:#0F6E56}
+.rt-secondary-row{display:flex;gap:7px;margin-bottom:14px}
+.rt-sec-btn{flex:1;padding:9px 6px;border:1.5px solid var(--tan);border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:3px;background:var(--warm-white);cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent}
+.rt-sec-btn:hover{border-color:#1D9E75}
+.rt-sec-btn.active{border-color:#1B4332;background:#E1F5EE}
+.rt-sec-icon{font-size:16px;color:var(--text-muted)}
+.rt-sec-btn.active .rt-sec-icon{color:#0F6E56}
+.rt-sec-lbl{font-size:9px;font-weight:600;color:var(--text-muted)}
+.rt-sec-btn.active .rt-sec-lbl{color:#0F6E56}
+.rt-desc{width:100%;padding:9px 11px;border:1.5px solid var(--tan);border-radius:8px;font-size:13px;font-family:inherit;background:var(--warm-white);color:var(--charcoal);min-height:64px;resize:vertical;display:none;margin-bottom:10px}
+.rt-desc:focus{outline:none;border-color:#1B4332}
+.rt-voice-area{display:none;margin-bottom:10px}
+.rt-voice-record{width:100%;padding:10px;border:1.5px solid var(--tan);border-radius:8px;background:var(--cream);font-family:inherit;font-size:12px;color:var(--charcoal);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.rt-voice-record.recording{border-color:#B91C1C;background:#FEE2E2;color:#B91C1C;animation:pulse-rec 1s infinite}
+.rt-voice-transcript{font-size:11px;color:var(--text-muted);margin-top:5px;font-style:italic;min-height:16px}
+@keyframes pulse-rec{0%,100%{opacity:1}50%{opacity:.5}}
+.rt-submit{width:100%;padding:13px;border-radius:11px;border:none;background:#1B4332;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.2px;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.rt-submit:hover{background:#2D6A4F}
+.rt-submit:active{background:#0F3D23;transform:scale(.99)}
+.rt-submit:disabled{background:#ccc;cursor:not-allowed}
+.rt-footer-note{text-align:center;font-size:10px;color:var(--text-muted);margin-top:7px;display:flex;align-items:center;justify-content:center;gap:4px}
+</style>
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="font-size:16px;font-weight:700;color:#1B4332;font-family:'Georgia',serif">Raise an issue</div>
-      <div style="font-size:10px;color:var(--text-muted)">Takes under 30 seconds</div>
+<div id="rt-wrap">
+  <div class="rt-header">
+    <div class="rt-header-title">Report a problem</div>
+    <div class="rt-header-badge">Under 20 seconds</div>
+  </div>
+
+  <div class="rt-prog" id="rt-prog">
+    <div class="rt-prog-bar done" id="rtp-1"></div>
+    <div class="rt-prog-bar active" id="rtp-2"></div>
+    <div class="rt-prog-bar" id="rtp-3"></div>
+  </div>
+
+  ${canPickLoc ? `
+  <div class="rt-loc">
+    <span class="rt-loc-icon">&#128205;</span>
+    <select id="ri-loc" class="rt-loc select">
+      <option value="">Select location...</option>
+      ${locOpts}
+    </select>
+  </div>` : `
+  <div class="rt-loc">
+    <span class="rt-loc-icon">&#128205;</span>
+    <span class="rt-loc-text">${fixedLocStr}</span>
+  </div>`}
+
+  <div class="rt-step-label">What went wrong?</div>
+  <div class="rt-tiles" id="rt-tiles">
+    <div class="rt-tile" onclick="rtTile(this,'Electrical','&#9889;','High')" data-cat="Electrical">
+      <span class="rt-tile-icon">&#9889;</span><span class="rt-tile-lbl">Electrical</span>
     </div>
-
-    <div class="rt-progress">
-      <div class="rt-prog-step done"></div>
-      <div class="rt-prog-step active"></div>
-      <div class="rt-prog-step"></div>
+    <div class="rt-tile" onclick="rtTile(this,'Plumbing','&#128167;','Medium')" data-cat="Plumbing">
+      <span class="rt-tile-icon">&#128167;</span><span class="rt-tile-lbl">Plumbing</span>
     </div>
-
-    ${canPickLocation ? `
-    <div class="rt-loc-banner">
-      <span style="font-size:14px">&#128205;</span>
-      <select id="ri-loc" onchange="rtUpdateLoc()">
-        <option value="">Select location...</option>
-        ${locOptions}
-      </select>
-    </div>` : `
-    <div class="rt-loc-banner">
-      <span style="font-size:14px">&#128205;</span>
-      <span style="flex:1">${locDisplay2}</span>
-    </div>`}
-
-    <div class="rt-section-label">What's the problem?</div>
-    <div class="rt-tiles" id="rt-tiles">
-      <div class="rt-tile" onclick="rtSelectTile(this,'Electrical')" data-cat="Electrical"><span class="rt-tile-icon">&#9889;</span><span class="rt-tile-label">Electrical</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'Plumbing')" data-cat="Plumbing"><span class="rt-tile-icon">&#128167;</span><span class="rt-tile-label">Plumbing</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'HVAC / AC')" data-cat="HVAC / AC"><span class="rt-tile-icon">&#10052;</span><span class="rt-tile-label">AC / HVAC</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'Gas & Appliances')" data-cat="Gas & Appliances"><span class="rt-tile-icon">&#128293;</span><span class="rt-tile-label">Gas</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'Kitchen Equipment')" data-cat="Kitchen Equipment"><span class="rt-tile-icon">&#127859;</span><span class="rt-tile-label">Kitchen</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'Civil / Structural')" data-cat="Civil / Structural"><span class="rt-tile-icon">&#127959;</span><span class="rt-tile-label">Civil</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'Furniture')" data-cat="Furniture"><span class="rt-tile-icon">&#129681;</span><span class="rt-tile-label">Furniture</span></div>
-      <div class="rt-tile" onclick="rtSelectTile(this,'Other')" data-cat="Other"><span class="rt-tile-icon">&#8943;</span><span class="rt-tile-label">Other</span></div>
+    <div class="rt-tile" onclick="rtTile(this,'HVAC / AC','&#10052;','Medium')" data-cat="HVAC / AC">
+      <span class="rt-tile-icon">&#10052;</span><span class="rt-tile-lbl">AC / HVAC</span>
     </div>
-
-    <div id="rt-ai-row" class="rt-ai-row" style="display:none">
-      <div class="rt-ai-badge cat" id="rt-cat-badge" onclick="rtClearTile()">&#10024; <span id="rt-cat-label">Electrical</span> <span style="opacity:.6;font-size:10px">&#10005;</span></div>
-      <div class="rt-ai-badge urg-high" id="rt-urg-badge" onclick="rtCycleUrg()">&#128308; <span id="rt-urg-label">High</span> <span style="opacity:.6;font-size:10px">&#8645;</span></div>
+    <div class="rt-tile" onclick="rtTile(this,'Gas & Appliances','&#128293;','High')" data-cat="Gas & Appliances">
+      <span class="rt-tile-icon">&#128293;</span><span class="rt-tile-lbl">Gas</span>
     </div>
-
-    <div style="margin-bottom:8px">
-      <div class="rt-section-label">Add a photo <span style="color:#B91C1C">*</span> <span style="color:#7A7060;font-weight:400;text-transform:none;letter-spacing:0;font-size:10px">required</span></div>
-      <div class="rt-photo-area" id="rt-photo-area" onclick="document.getElementById('raise-file').click()">
-        <span class="rt-photo-icon" id="rt-photo-icon">&#128247;</span>
-        <span class="rt-photo-label" id="rt-photo-label">Tap to take / upload a photo</span>
-        <span class="rt-photo-sub" id="rt-photo-sub">A clear photo helps fix the issue faster</span>
-      </div>
-      <input type="file" id="raise-file" accept="image/*,video/*" style="display:none" onchange="rtPhotoSelected(this)">
+    <div class="rt-tile" onclick="rtTile(this,'Kitchen Equipment','&#127859;','High')" data-cat="Kitchen Equipment">
+      <span class="rt-tile-icon">&#127859;</span><span class="rt-tile-lbl">Kitchen</span>
     </div>
-
-    <div class="rt-input-row">
-      <div class="rt-method-btn active" id="rt-photo-btn" onclick="rtSetMethod('photo')">
-        <span class="rt-method-icon">&#128247;</span>
-        <span class="rt-method-label">Photo</span>
-      </div>
-      <div class="rt-method-btn" id="rt-voice-btn" onclick="rtSetMethod('voice')">
-        <span class="rt-method-icon">&#127908;</span>
-        <span class="rt-method-label">Voice</span>
-      </div>
-      <div class="rt-method-btn" id="rt-type-btn" onclick="rtSetMethod('type')">
-        <span class="rt-method-icon">&#9000;</span>
-        <span class="rt-method-label">Type</span>
-      </div>
+    <div class="rt-tile" onclick="rtTile(this,'Civil / Structural','&#127959;','Low')" data-cat="Civil / Structural">
+      <span class="rt-tile-icon">&#127959;</span><span class="rt-tile-lbl">Civil</span>
     </div>
-
-    <textarea id="rt-desc" class="rt-desc" placeholder="Describe the issue briefly..."></textarea>
-    <div id="rt-voice-area" style="display:none;margin-bottom:10px">
-      <button onclick="rtStartVoice()" style="width:100%;padding:10px;border:1.5px solid var(--tan);border-radius:8px;background:var(--cream);font-family:inherit;font-size:13px;cursor:pointer;color:var(--charcoal)">&#127908; Tap to record voice description</button>
-      <div id="rt-voice-transcript" style="font-size:12px;color:var(--text-muted);margin-top:4px;font-style:italic"></div>
+    <div class="rt-tile" onclick="rtTile(this,'Furniture','&#129681;','Low')" data-cat="Furniture">
+      <span class="rt-tile-icon">&#129681;</span><span class="rt-tile-lbl">Furniture</span>
     </div>
+    <div class="rt-tile" onclick="rtTile(this,'Other','&#8943;','Medium')" data-cat="Other">
+      <span class="rt-tile-icon">&#8943;</span><span class="rt-tile-lbl">Other</span>
+    </div>
+  </div>
 
-    <input type="hidden" id="ri-name" value="${session.name}">
-    <input type="hidden" id="ri-c" value="">
-    <input type="hidden" id="ri-p" value="Medium">
-    <input type="hidden" id="ri-t" value="">
+  <div class="rt-ai-row" id="rt-ai-row"></div>
 
-    <button class="rt-submit" id="rt-submit-btn" onclick="submitTicket()">
-      &#10003; Submit ticket
+  <div class="rt-photo-wrap">
+    <div class="rt-step-label">Add a photo <span style="color:#B91C1C">*</span></div>
+    <div class="rt-photo-area" id="rt-photo-area" onclick="document.getElementById('raise-file').click()" tabindex="0" role="button" aria-label="Add photo">
+      <span class="rt-photo-icon" id="rt-photo-icon">&#128247;</span>
+      <span class="rt-photo-main" id="rt-photo-main">Tap to take or upload a photo</span>
+      <span class="rt-photo-sub" id="rt-photo-sub">A clear photo gets it fixed faster</span>
+    </div>
+    <input type="file" id="raise-file" accept="image/*,video/*" style="display:none" onchange="rtPhotoAdded(this)">
+  </div>
+
+  <div class="rt-secondary-row">
+    <button class="rt-sec-btn" id="rt-voice-toggle" onclick="rtToggleVoice()">
+      <span class="rt-sec-icon">&#127908;</span>
+      <span class="rt-sec-lbl">Voice note</span>
     </button>
-    <div style="text-align:center;font-size:10px;color:var(--text-muted);margin-top:6px">Manager is notified instantly via Telegram</div>
-  `;
-  openModal();
+    <button class="rt-sec-btn" id="rt-text-toggle" onclick="rtToggleText()">
+      <span class="rt-sec-icon">&#9000;</span>
+      <span class="rt-sec-lbl">Add detail</span>
+    </button>
+    <button class="rt-sec-btn" id="rt-urg-toggle" onclick="rtCycleUrg()" style="display:none">
+      <span class="rt-sec-icon" id="rt-urg-icon">&#128308;</span>
+      <span class="rt-sec-lbl" id="rt-urg-lbl">High</span>
+    </button>
+  </div>
 
-  window._rtUrg = 'High';
+  <div class="rt-voice-area" id="rt-voice-area">
+    <button class="rt-voice-record" id="rt-voice-record-btn" onclick="rtVoiceRecord()">
+      &#127908; Tap to record
+    </button>
+    <div class="rt-voice-transcript" id="rt-voice-transcript"></div>
+  </div>
+
+  <textarea id="rt-desc" class="rt-desc" placeholder="Any extra detail..."></textarea>
+
+  <input type="hidden" id="ri-name" value="${session.name||''}">
+  <input type="hidden" id="ri-c" value="">
+  <input type="hidden" id="ri-p" value="Medium">
+  <input type="hidden" id="ri-t" value="">
+
+  <button class="rt-submit" id="rt-submit" onclick="submitTicket()">
+    &#10003;&nbsp; Submit ticket
+  </button>
+  <div class="rt-footer-note">&#9889; Manager notified instantly via Telegram</div>
+</div>
+`;
+
+  openModal();
+  window._rtUrg = 'Medium';
+  window._rtVoiceActive = false;
 }
+
+function rtTile(el, cat, icon, defaultUrg){
+  document.querySelectorAll('.rt-tile').forEach(t=>t.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('ri-c').value = cat;
+  window._rtUrg = defaultUrg;
+  document.getElementById('ri-p').value = defaultUrg;
+  const locId = document.getElementById('ri-loc')?.value || session.locationId;
+  const loc = getLoc(locId||'');
+  const locName = loc.name || 'outlet';
+  document.getElementById('ri-t').value = cat + ' issue at ' + locName;
+  rtRenderAI(cat, defaultUrg);
+  document.getElementById('rt-urg-toggle').style.display = '';
+  document.getElementById('rtp-2').classList.add('done');
+  document.getElementById('rtp-3').classList.add('active');
+}
+
+function rtRenderAI(cat, urg){
+  const urgClass = urg==='High'?'rt-ai-urg-high':urg==='Low'?'rt-ai-urg-low':'rt-ai-urg-med';
+  const urgDot = urg==='High'?'&#128308;':urg==='Low'?'&#128994;':'&#128993;';
+  const locId = document.getElementById('ri-loc')?.value || session.locationId;
+  const loc = getLoc(locId||'');
+  const title = cat + ' issue at ' + (loc.name||'outlet');
+  document.getElementById('ri-t').value = title;
+  document.getElementById('rt-ai-row').innerHTML =
+    '<div class="rt-ai-pill rt-ai-cat" onclick="rtClearTile()">&#10024; ' + cat + ' <span style="opacity:.5;font-size:10px">&#215;</span></div>' +
+    '<div class="rt-ai-pill ' + urgClass + '" id="rt-urg-pill" onclick="rtCycleUrg()">' + urgDot + ' ' + urg + ' <span style="opacity:.5;font-size:10px">&#8645;</span></div>' +
+    '<div class="rt-ai-pill rt-ai-title" title="' + title + '">&#9998; ' + title.slice(0,28) + (title.length>28?'...':'') + '</div>';
+}
+
+function rtClearTile(){
+  document.querySelectorAll('.rt-tile').forEach(t=>t.classList.remove('sel'));
+  document.getElementById('ri-c').value='';
+  document.getElementById('rt-ai-row').innerHTML='';
+  document.getElementById('rt-urg-toggle').style.display='none';
+  document.getElementById('rtp-3').classList.remove('active');
+}
+
+function rtCycleUrg(){
+  const urgs=['High','Medium','Low'];
+  const idx=urgs.indexOf(window._rtUrg);
+  window._rtUrg=urgs[(idx+1)%3];
+  document.getElementById('ri-p').value=window._rtUrg;
+  const cat=document.getElementById('ri-c').value||'Issue';
+  rtRenderAI(cat, window._rtUrg);
+  const icons={'High':'&#128308;','Medium':'&#128993;','Low':'&#128994;'};
+  const icon=document.getElementById('rt-urg-icon');
+  const lbl=document.getElementById('rt-urg-lbl');
+  if(icon) icon.innerHTML=icons[window._rtUrg];
+  if(lbl) lbl.textContent=window._rtUrg;
+}
+
+function rtPhotoAdded(input){
+  const file=input.files[0]; if(!file) return;
+  const area=document.getElementById('rt-photo-area');
+  area.classList.add('has-file');
+  document.getElementById('rt-photo-icon').textContent='&#9989;';
+  document.getElementById('rt-photo-main').textContent=file.name.length>28?file.name.slice(0,28)+'...':file.name;
+  document.getElementById('rt-photo-sub').textContent='Photo attached — ready to submit';
+  if(!document.getElementById('ri-c').value){
+    document.getElementById('ri-c').value='Other';
+    document.getElementById('ri-t').value='Maintenance issue';
+    document.getElementById('ri-p').value='Medium';
+  }
+  document.getElementById('rtp-2').classList.add('done');
+  document.getElementById('rtp-3').classList.add('active');
+}
+
+function rtToggleVoice(){
+  const btn=document.getElementById('rt-voice-toggle');
+  const area=document.getElementById('rt-voice-area');
+  const isOpen=area.style.display==='block';
+  area.style.display=isOpen?'none':'block';
+  btn.classList.toggle('active',!isOpen);
+  if(!isOpen) document.getElementById('rt-text-area')?.remove();
+}
+
+function rtToggleText(){
+  const btn=document.getElementById('rt-text-toggle');
+  const desc=document.getElementById('rt-desc');
+  const isOpen=desc.style.display==='block';
+  desc.style.display=isOpen?'none':'block';
+  btn.classList.toggle('active',!isOpen);
+  if(!isOpen) desc.focus();
+}
+
+function rtVoiceRecord(){
+  if(window._rtVoiceActive){
+    if(window._rtMediaRecorder) window._rtMediaRecorder.stop();
+    return;
+  }
+  if(!navigator.mediaDevices){showToast('Voice not available on this device');return;}
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    window._rtVoiceActive=true;
+    window._rtChunks=[];
+    const btn=document.getElementById('rt-voice-record-btn');
+    if(btn){btn.classList.add('recording');btn.innerHTML='&#9279; Recording... tap to stop';}
+    const mr=new MediaRecorder(stream);
+    window._rtMediaRecorder=mr;
+    mr.ondataavailable=e=>window._rtChunks.push(e.data);
+    mr.onstop=()=>{
+      window._rtVoiceActive=false;
+      stream.getTracks().forEach(t=>t.stop());
+      if(btn){btn.classList.remove('recording');btn.innerHTML='&#127908; Tap to record';}
+      const blob=new Blob(window._rtChunks,{type:'audio/webm'});
+      const tr=document.getElementById('rt-voice-transcript');
+      if(tr) tr.textContent='Voice note recorded. Transcription requires Nino API.';
+      showToast('Voice note saved');
+    };
+    mr.start();
+  }).catch(()=>showToast('Could not access microphone'));
+}
+
 
 function rtUpdateLoc(){}
 
@@ -4422,25 +4570,27 @@ window.doLogin = async function() {
 
 // Override save operations to write to Supabase
 window.submitTicket = async function() {
-  const raisedByName = (document.getElementById('ri-name')?.value||session.name).trim();
-  let title = document.getElementById('ri-t')?.value?.trim();
-  const desc = document.getElementById('rt-desc')?.value?.trim() || document.getElementById('ri-d')?.value?.trim() || '';
+  const raisedByName = (document.getElementById('ri-name')?.value || session.name || '').trim();
+  let title = (document.getElementById('ri-t')?.value || '').trim();
+  const desc = (document.getElementById('rt-desc')?.value || document.getElementById('ri-d')?.value || '').trim();
   const fileInput = document.getElementById('raise-file');
   const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
-  const category = document.getElementById('ri-c')?.value || 'Other';
-  const priority = document.getElementById('ri-p')?.value || 'Medium';
+  let category = document.getElementById('ri-c')?.value || '';
+  let priority = document.getElementById('ri-p')?.value || 'Medium';
 
-  if(!title && category) title = category + ' issue';
-  if(!title){ showToast('Please select an issue type'); return; }
+  if(!category){ showToast('Please select an issue type'); return; }
   if(!hasFile){ showToast('Please add a photo of the issue'); document.getElementById('rt-photo-area')?.scrollIntoView({behavior:'smooth'}); return; }
+  if(!title) title = category + ' issue';
 
   let locationId = session.locationId;
   const locEl = document.getElementById('ri-loc');
   if(locEl && locEl.value) locationId = locEl.value;
   if(!locationId){ showToast('Please select a location'); return; }
 
+  const submitBtn = document.getElementById('rt-submit');
+  if(submitBtn){ submitBtn.disabled=true; submitBtn.innerHTML='&#8987; Submitting...'; }
+
   const loc = getLoc(locationId);
-  const prioritySLA = {High:'1', Medium:'2', Low:'3'};
   const id = 'T' + Date.now().toString().slice(-6);
   const row = {
     id, location_id: locationId, state_id: loc.stateId||loc.state_id,
@@ -4448,46 +4598,84 @@ window.submitTicket = async function() {
     raised_by: session.id, raised_by_name: raisedByName, due_date: ''
   };
 
+  let saved = true;
   if(isLive){
-    const saved = await dbInsert('tickets', row);
-    if(!saved){ showToast('Error saving ticket. Please try again.'); return; }
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title+' - '+loc.name,user_id:session.id,color:'p'});
+    const result = await dbInsert('tickets', row);
+    if(!result){
+      showToast('Error saving. Please try again.');
+      if(submitBtn){ submitBtn.disabled=false; submitBtn.innerHTML='&#10003;&nbsp; Submit ticket'; }
+      return;
+    }
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket raised',detail:id+' '+title,user_id:session.id,color:'p'});
   } else {
-    tickets.unshift({...row,locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:'',desc:desc,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
+    tickets.unshift({...row,locationId,stateId:loc.stateId,raisedBy:session.id,assignedTo:null,dueDate:'',desc,comments:[],createdAt:nowTs(),updatedAt:nowTs()});
     LOG('Ticket raised',id+' '+title,'p');
   }
 
-  showToast('Ticket '+id+' raised!');
-
   if(hasFile && isLive && supaClient){
     try{
-      const f = fileInput.files[0];
-      const attId = 'att'+Date.now();
-      const fileName = attId+'_'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const{error} = await supaClient.storage.from('ticket-attachments').upload(fileName,f,{cacheControl:'3600',upsert:false});
+      const f=fileInput.files[0];
+      const attId='att'+Date.now();
+      const fileName=attId+'_'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+      const{error}=await supaClient.storage.from('ticket-attachments').upload(fileName,f,{cacheControl:'3600',upsert:false});
       if(!error){
-        const{data:urlData} = supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
+        const{data:urlData}=supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
         await dbInsert('ticket_attachments',{id:attId,ticket_id:id,uploaded_by:session.id,file_name:f.name,file_url:urlData.publicUrl,file_type:f.type,file_size:f.size,caption:'Raised with ticket'});
       }
     }catch(e){ console.warn('Photo upload failed',e); }
   } else if(hasFile){
-    const reader = new FileReader();
-    reader.onload = function(ev){
+    const reader=new FileReader();
+    reader.onload=ev=>{
       attachments.push({id:'att'+Date.now(),ticketId:id,uploadedBy:session.id,fileName:fileInput.files[0].name,fileUrl:ev.target.result,fileType:fileInput.files[0].type,caption:'Raised with ticket',createdAt:nowTs()});
     };
     reader.readAsDataURL(fileInput.files[0]);
   }
 
-  const _state = getState(loc.stateId||loc.state_id);
-  tgOnTicketRaised({id,title,category,priority,raised_by:session.id}, loc.name, _state.name, raisedByName, locationId);
+  const _state=getState(loc.stateId||loc.state_id);
+  tgOnTicketRaised({id,title,category,priority,raised_by:session.id},loc.name,_state.name,raisedByName,locationId);
 
   if(isLive) await loadLiveData();
-  closeModal();
 
-  if(['admin','manager','founder'].includes(session.role)) navTo('tickets');
-  else if(['design-manager','design-poc'].includes(session.role)) navTo('design-tickets');
-  else navTo('my-tickets');
+  const slaMap={'High':'Assign within 4h · Resolve within 24h','Medium':'Assign within 8h · Resolve within 48h','Low':'Assign within 24h · Resolve within 72h'};
+  const urgColor={'High':'#991B1B','Medium':'#92400E','Low':'#166534'};
+  const allTechs=getTechs(loc.stateId||loc.state_id);
+  const assignedTech=allTechs.length?allTechs[0].name:'Pending assignment';
+
+  document.getElementById('m-body').innerHTML = `
+<div style="text-align:center;padding:1.5rem 0 1rem">
+  <div style="width:56px;height:56px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:26px">&#9989;</div>
+  <div style="font-size:18px;font-weight:600;color:#1B4332;margin-bottom:4px">Ticket raised!</div>
+  <div style="font-size:12px;color:var(--text-muted);line-height:1.6">Your team has been notified.<br>A technician will be assigned shortly.</div>
+</div>
+<div style="background:var(--cream);border-radius:10px;padding:14px;margin-bottom:16px;border:0.5px solid var(--tan)">
+  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:0.5px solid var(--tan)">
+    <span style="color:var(--text-muted)">Ticket ID</span>
+    <span style="font-weight:700;color:#C48524">${id}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:0.5px solid var(--tan)">
+    <span style="color:var(--text-muted)">Issue</span>
+    <span style="font-weight:600;color:var(--charcoal)">${category} &mdash; ${loc.name}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:0.5px solid var(--tan)">
+    <span style="color:var(--text-muted)">Urgency</span>
+    <span style="font-weight:700;color:${urgColor[priority]}">${priority}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px;border-bottom:0.5px solid var(--tan)">
+    <span style="color:var(--text-muted)">SLA</span>
+    <span style="font-size:11px;color:var(--charcoal)">${slaMap[priority]}</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:12px">
+    <span style="color:var(--text-muted)">Technician</span>
+    <span style="font-weight:600;color:#0F6E56">${assignedTech}</span>
+  </div>
+</div>
+<div style="display:flex;gap:8px">
+  <button onclick="closeModal();navTo('tickets')" style="flex:1;padding:10px;border-radius:9px;border:1.5px solid var(--tan);background:var(--warm-white);font-size:12px;font-family:inherit;color:var(--charcoal);cursor:pointer">View ticket</button>
+  <button onclick="closeModal()" style="flex:1;padding:10px;border-radius:9px;border:none;background:#1B4332;color:white;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer">Done &#10003;</button>
+</div>
+  `;
 };
+;
 ;
 
 window.addComment = async function(id) {
