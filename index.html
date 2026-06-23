@@ -1338,7 +1338,7 @@ function renderReports(){
           <tbody>${Object.entries(byLoc).map(([lid,data])=>{
             const l=getLoc(lid);
             return `<tr>
-              <td><strong>${l.city?l.city+' - ':''}${l.name}</strong></td>
+              <td><strong>${loc.city?loc.city+' - ':''}${loc.name}</strong></td>
               <td style="color:var(--amber)">${data.open}</td>
               <td style="color:var(--green-mid)">${data.resolved}</td>
               <td style="font-size:12px">${data.exp>0?fc(data.exp):'-'}</td>
@@ -1364,7 +1364,7 @@ function renderReports(){
             return `<tr>
               <td style="font-size:11px;color:var(--amber)">${t.id}</td>
               <td style="font-size:12px">${t.title}</td>
-              <td style="font-size:12px">${l.city?l.city+' - ':''}${loc.name}</td>
+              <td style="font-size:12px">${loc.city?loc.city+' - ':''}${loc.name}</td>
               <td style="font-size:12px">${t.category||'-'}</td>
               <td>${pbadge(t.priority)}</td>
               <td>${sbadge(t)}</td>
