@@ -4370,19 +4370,22 @@ window.doLogin = async function() {
   const email = document.getElementById('login-email')?.value?.trim()?.toLowerCase();
   const pass = document.getElementById('login-pass')?.value?.trim();
   if (isLive) {
-    const { data, error } = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
-    
-    // If not found in Supabase, check local users (superadmin is local-only for security)
-    let userData = data;
-    if (error || !data) {
-      const localUser = users.find(u => u.email === email && u.pass === pass);
-      if (localUser) {
-        userData = localUser;
-      } else {
+    // Always check local hardcoded users first (superadmin, etc.)
+    const hardcodedUser = [
+      {id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'}
+    ].find(u => u.email === email && u.pass === pass);
+
+    let userData = null;
+    if (hardcodedUser) {
+      userData = hardcodedUser;
+    } else {
+      const { data, error } = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
+      if (error || !data) {
         const errEl = document.getElementById('login-error');
         if (errEl) { errEl.textContent = 'Invalid email or password. Please try again.'; errEl.style.display = 'block'; }
         return;
       }
+      userData = data;
     }
     session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName, user_code: userData.user_code};
     document.getElementById('auth-screen').style.display='none';
