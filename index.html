@@ -348,7 +348,7 @@ let recurringSchedules = [];
 let auditLog = [];
 
 const TODAY = new Date('2026-05-29');
-let session = null, currentPage = '', NID = 20;
+let session = null, currentPage = '', NID = 20, userLang = 'english';
 
 function getLoc(id){return locations.find(l=>l.id===id)||{name:'Unknown',type:'outlet',stateId:null};}
 function getState(id){return states.find(s=>s.id===id)||{name:'Unknown'};}
@@ -2015,6 +2015,11 @@ function deleteUser(id){if(!confirm('Delete?'))return;users=users.filter(u=>u.id
 // ============================================================
 // PROFILE - My account + Telegram connect
 // ============================================================
+function setUserLang(lang) {
+  userLang = lang;
+  localStorage.setItem('benne_lang', lang);
+  renderProfile();
+}
 function renderProfile() {
   const tgConnected = session.telegram_id;
   const botUrl = 'https://t.me/BennemaintenanceOSBot?start=' + session.id;
