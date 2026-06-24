@@ -397,33 +397,42 @@ function pbadge(p){
 }
 // Get locations visible to current user based on state/city scope
 function visibleLocationIds(){
-  // Superadmin, admin, founder see everything
+  // Superadmin, admin, founder always see everything
   if(['superadmin','admin','founder'].includes(session.role)) return locations.map(l=>l.id);
 
-  // Outlet / welfare: only their own location
+  // Outlet / welfare: only their own single location
   if(session.locationId) return [session.locationId];
 
-  // City-scoped (manager/supervisor assigned to a city within a state)
-  if(session.stateId && session.cityName){
+  // Senior roles with no state assigned = see everything
+  // (manager, tech-manager, design-manager without a city/state restriction)
+  const seniorRoles = ['manager','tech-manager','design-manager'];
+  const stateId = session.stateId || session.state_id;
+  const cityName = (session.cityName || session.city_name || '').trim().toLowerCase();
+
+  if(seniorRoles.includes(session.role) && !stateId && !cityName){
+    return locations.map(l=>l.id);
+  }
+
+  // City-scoped: has both state and city
+  if(stateId && cityName){
     return locations.filter(l=>{
-      const sameState = (l.stateId||l.state_id) === session.stateId;
-      const sameCity  = (l.city||'').trim().toLowerCase() === (session.cityName||'').trim().toLowerCase();
+      const sameState = (l.stateId||l.state_id) === stateId;
+      const sameCity  = (l.city||'').trim().toLowerCase() === cityName;
       return sameState && sameCity;
     }).map(l=>l.id);
   }
 
-  // State-scoped (manager assigned to a whole state)
-  if(session.stateId){
-    return locations.filter(l=>(l.stateId||l.state_id) === session.stateId).map(l=>l.id);
+  // State-scoped: has state but no specific city
+  if(stateId){
+    return locations.filter(l=>(l.stateId||l.state_id) === stateId).map(l=>l.id);
   }
 
-  // City-only scope (no stateId but has cityName — fallback)
-  if(session.cityName){
-    return locations.filter(l=>(l.city||'').trim().toLowerCase() === (session.cityName||'').trim().toLowerCase()).map(l=>l.id);
+  // City-only scope: no stateId but has cityName
+  if(cityName){
+    return locations.filter(l=>(l.city||'').trim().toLowerCase() === cityName).map(l=>l.id);
   }
 
-  // No scope assigned — safety: return empty so nothing leaks
-  // (Admin should always have no stateId restriction)
+  // Supervisor/technician with no scope = safety empty
   return [];
 }
 
