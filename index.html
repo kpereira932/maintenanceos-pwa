@@ -2178,29 +2178,151 @@ async function checkTelegramAuto() {
 // ============================================================
 // VENDORS
 // ============================================================
-function renderVendors(){
-  const active=vendors.filter(v=>v.active);
-  const inactive=vendors.filter(v=>!v.active);
-  document.getElementById('main-content').innerHTML=`
-    <div class="page-hdr">
-      <div><div class="page-title">Vendors</div><div class="page-sub">${vendors.length} vendors · ${active.length} active<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn" onclick="downloadVendorTemplate()">&#11015; Download template</button>
-        <button class="btn primary" onclick="openImportVendors()">&#128229; Import from Excel / CSV</button>
-        <button class="btn" onclick="openAddVendor()">&#65291; Add single</button>
-        <button class="btn" onclick="exportVendors()">&#128228; Export list</button>
-      </div>
+
+function openAssignVendorModal(ticketId){
+  const canAssign = ['admin','superadmin','founder','manager','tech-manager','design-manager'].includes(session.role);
+  if(!canAssign){ showToast('Only managers and above can assign vendors'); return; }
+  const approvedVendors = vendors.filter(v=>v.active&&v.approved!==false);
+  if(!approvedVendors.length){ showToast('No approved vendors available. Add vendors first.'); return; }
+  const t = tickets.find(x=>x.id===ticketId)||(isLive?{id:ticketId}:{});
+  document.getElementById('m-title').textContent = 'Assign vendor';
+  document.getElementById('m-body').innerHTML = `
+    <div class="fg">
+      <label>Select vendor</label>
+      <select id="av-vendor" style="width:100%;padding:8px;border:1.5px solid var(--tan);border-radius:8px;font-size:13px;font-family:inherit">
+        <option value="">Choose a vendor...</option>
+        ${approvedVendors.map(v=>`<option value="${v.id}">${v.name}${v.category?' ('+v.category+')':''}${v.phone?' · '+v.phone:''}</option>`).join('')}
+      </select>
     </div>
-    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:1rem;font-size:13px">
-      <strong>Bulk import:</strong> Download the template &rarr; fill in your vendor list in Excel or Google Sheets &rarr; save as CSV &rarr; import here.
+    <div class="fg"><label>Instructions for vendor (optional)</label>
+      <textarea id="av-notes" rows="2" placeholder="What needs to be done..."></textarea>
     </div>
-    <div class="tab-btns">
-      <button class="tab-btn active" onclick="showT2('v-active','v-inactive',this)">Active (${active.length})</button>
-      <button class="tab-btn" onclick="showT2('v-inactive','v-active',this)">Inactive (${inactive.length})</button>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveVendorAssignment('${ticketId}')">Assign vendor</button>
     </div>
-    <div id="v-active">${active.length?active.map(v=>vendorCard(v)).join(''):'<div class="empty">No vendors yet.<br><br>Download the template, fill it in, and import.</div>'}</div>
-    <div id="v-inactive" style="display:none">${inactive.length?inactive.map(v=>vendorCard(v)).join(''):'<div class="empty">No inactive vendors</div>'}</div>`;
+  `;
+  openModal();
 }
+
+async function saveVendorAssignment(ticketId){
+  const vendorId = document.getElementById('av-vendor')?.value;
+  const notes = document.getElementById('av-notes')?.value?.trim()||'';
+  if(!vendorId){ showToast('Please select a vendor'); return; }
+  const v = vendors.find(x=>x.id===vendorId);
+  if(!v) return;
+  if(isLive){
+    await supaClient.from('tickets').update({vendor_id:vendorId,vendor_name:v.name,vendor_notes:notes}).eq('id',ticketId);
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Vendor assigned',detail:'Ticket '+ticketId+' assigned to '+v.name,user_id:session.id,color:'b'});
+  } else {
+    const t=tickets.find(x=>x.id===ticketId);
+    if(t){t.vendor_id=vendorId;t.vendor_name=v.name;t.vendor_notes=notes;}
+  }
+  showToast(v.name+' assigned to ticket '+ticketId);
+  closeModal();
+  if(isLive) await loadLiveData();
+  navTo('tickets');
+}
+
+function renderVendors(){
+  const isAdmin = session.role === 'admin' || session.role === 'superadmin';
+  const isManager = ['manager','tech-manager'].includes(session.role);
+  const canAdd = isAdmin || isManager;
+  const canApprove = isAdmin;
+  const canBulk = isAdmin;
+
+  const approved = vendors.filter(v => v.active && v.approved !== false);
+  const pending  = vendors.filter(v => v.approved === false || v.status === 'pending');
+  const inactive = vendors.filter(v => !v.active && v.approved !== false);
+
+  const tabs = [
+    `<button class="tab-btn active" onclick="showVTab('v-approved',this)">Approved (${approved.length})</button>`,
+    canApprove && pending.length ? `<button class="tab-btn" onclick="showVTab('v-pending',this)">Pending approval <span style="background:#B91C1C;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px">${pending.length}</span></button>` : '',
+    `<button class="tab-btn" onclick="showVTab('v-inactive',this)">Inactive (${inactive.length})</button>`,
+  ].filter(Boolean).join('');
+
+  const headerBtns = [
+    canBulk ? `<button class="btn" onclick="downloadVendorTemplate()">&#11015; Template</button>` : '',
+    canBulk ? `<button class="btn primary" onclick="openImportVendors()">&#128229; Bulk import</button>` : '',
+    canAdd  ? `<button class="btn" onclick="openAddVendor()">&#65291; Add vendor</button>` : '',
+    isAdmin ? `<button class="btn" onclick="exportVendors()">&#128228; Export</button>` : '',
+  ].filter(Boolean).join('');
+
+  const pendingSection = canApprove && pending.length ? `
+    <div id="v-pending" style="display:none">
+      ${pending.map(v=>`
+      <div class="card" style="margin-bottom:10px;border-left:3px solid #EF9F27">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:600;font-size:14px">${v.name}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${v.category||'General'} ${v.phone?'· '+v.phone:''}</div>
+            <div style="font-size:11px;color:#854F0B;margin-top:2px">Added by ${v.added_by_name||'Manager'} · Awaiting approval</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn sm" style="background:#E1F5EE;color:#0F6E56;border-color:#5DCAA5" onclick="approveVendor('${v.id}')">&#10003; Approve</button>
+            <button class="btn sm" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5" onclick="rejectVendor('${v.id}')">&#10005; Reject</button>
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>` : '';
+
+  document.getElementById('main-content').innerHTML = `
+    <div class="page-hdr">
+      <div>
+        <div class="page-title">Vendors</div>
+        <div class="page-sub">${approved.length} approved vendors${pending.length&&canApprove?' · <span style="color:#854F0B">'+pending.length+' pending approval</span>':''}
+          <button class="btn sm" onclick="refreshPage()" style="white-space:nowrap;margin-left:6px">&#8635; Refresh</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">${headerBtns}</div>
+    </div>
+    ${isManager&&!isAdmin?`
+    <div style="background:#FAEEDA;border:1px solid #EF9F27;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:12px;color:#854F0B">
+      <strong>Note:</strong> Vendors you add will be sent to Admin for approval before they appear in ticket assignments.
+    </div>`:''}
+    ${isAdmin&&pending.length?`
+    <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:10px 14px;margin-bottom:1rem;font-size:12px;color:#92400E;cursor:pointer" onclick="showVTab('v-pending',document.querySelector('.tab-btn:nth-child(2)'))">
+      &#9888; ${pending.length} vendor${pending.length>1?'s':''} waiting for your approval. Click the Pending tab to review.
+    </div>`:''}
+    <div class="tab-btns">${tabs}</div>
+    <div id="v-approved">${approved.length?approved.map(v=>vendorCard(v,canAdd)).join(''):'<div class="empty">No approved vendors yet.</div>'}</div>
+    ${pendingSection}
+    <div id="v-inactive" style="display:none">${inactive.length?inactive.map(v=>vendorCard(v,canAdd)).join(''):'<div class="empty">No inactive vendors</div>'}</div>
+  `;
+}
+
+function showVTab(id, btn){
+  ['v-approved','v-pending','v-inactive'].forEach(t=>{
+    const el=document.getElementById(t);
+    if(el) el.style.display = t===id ? '' : 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+}
+
+async function approveVendor(id){
+  const v = vendors.find(x=>x.id===id);
+  if(!v) return;
+  if(isLive){
+    await supaClient.from('vendors').update({approved:true,status:'approved'}).eq('id',id);
+  }
+  v.approved = true; v.status = 'approved';
+  showToast('Vendor approved');
+  renderVendors();
+}
+
+async function rejectVendor(id){
+  const reason = prompt('Reason for rejection (optional):') || '';
+  if(!isLive){
+    vendors = vendors.filter(x=>x.id!==id);
+  } else {
+    await supaClient.from('vendors').update({approved:false,status:'rejected',reject_reason:reason}).eq('id',id);
+    vendors = vendors.filter(x=>x.id!==id);
+  }
+  showToast('Vendor rejected');
+  renderVendors();
+}
+
 
 function downloadVendorTemplate(){
   const csv = '"name","phone","email","specialty","address","gstin","notes"\n"Sharma Electricals","+919876543210","sharma@email.com","Electrical","Andheri Mumbai","27AABCS1234Z1Z5","Preferred for wiring"\n"Kumar Plumbing","+919765432109","","Plumbing","Bandra Mumbai","","Available 24/7"';
@@ -2373,10 +2495,65 @@ function vendorForm(v){
   <div class="fg"><label>Notes</label><textarea id="vno">${v.notes||''}</textarea></div>`;
 }
 function openAddVendor(){
-  document.getElementById('m-title').textContent='Add vendor';
-  document.getElementById('m-body').innerHTML=vendorForm({})+`<div style="display:flex;gap:7px;justify-content:flex-end;margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveNewVendor()">Add vendor</button></div>`;
+  const isAdmin = ['admin','superadmin'].includes(session.role);
+  document.getElementById('m-title').textContent = 'Add vendor';
+  document.getElementById('m-body').innerHTML = `
+    ${!isAdmin?'<div style="background:#FAEEDA;border:1px solid #EF9F27;border-radius:8px;padding:8px 12px;font-size:12px;color:#854F0B;margin-bottom:12px">This vendor will be sent to Admin for approval.</div>':''}
+    <div class="fg"><label>Vendor name *</label><input id="vn-name" type="text" placeholder="e.g. Sharma Electricals"></div>
+    <div class="fg"><label>Category</label>
+      <select id="vn-cat">
+        <option value="">Select category</option>
+        <option>Electrical</option><option>Plumbing</option><option>HVAC / AC</option>
+        <option>Gas & Appliances</option><option>Kitchen Equipment</option><option>Civil / Structural</option>
+        <option>Furniture</option><option>IT / AV</option><option>General</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="fg"><label>Phone</label><input id="vn-phone" type="tel" placeholder="98XXXXXXXX"></div>
+      <div class="fg"><label>Email</label><input id="vn-email" type="email" placeholder="vendor@email.com"></div>
+    </div>
+    <div class="fg"><label>Contact person</label><input id="vn-contact" type="text" placeholder="Name"></div>
+    <div class="fg"><label>City</label><input id="vn-city" type="text" placeholder="Mumbai"></div>
+    <div class="fg"><label>Notes</label><textarea id="vn-notes" rows="2" placeholder="Any extra info..."></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveNewVendor()">Save vendor</button>
+    </div>
+  `;
   openModal();
 }
+
+async function saveNewVendor(){
+  const name = document.getElementById('vn-name')?.value?.trim();
+  if(!name){ showToast('Please enter a vendor name'); return; }
+  const isAdmin = ['admin','superadmin'].includes(session.role);
+  const v = {
+    id: 'v'+Date.now(),
+    name,
+    category: document.getElementById('vn-cat')?.value||'General',
+    phone: document.getElementById('vn-phone')?.value?.trim()||'',
+    email: document.getElementById('vn-email')?.value?.trim()||'',
+    contact: document.getElementById('vn-contact')?.value?.trim()||'',
+    city: document.getElementById('vn-city')?.value?.trim()||'',
+    notes: document.getElementById('vn-notes')?.value?.trim()||'',
+    active: true,
+    approved: isAdmin ? true : false,
+    status: isAdmin ? 'approved' : 'pending',
+    added_by: session.id,
+    added_by_name: session.name,
+    created_at: new Date().toISOString(),
+  };
+  if(isLive){
+    const saved = await dbInsert('vendors', v);
+    if(!saved){ showToast('Error saving. Please try again.'); return; }
+  } else {
+    vendors.unshift(v);
+  }
+  showToast(isAdmin ? 'Vendor added!' : 'Vendor submitted for approval');
+  closeModal();
+  renderVendors();
+}
+
 function openEditVendor(id){
   const v=vendors.find(x=>x.id===id);
   document.getElementById('m-title').textContent='Edit vendor';
