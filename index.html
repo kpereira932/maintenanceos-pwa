@@ -5155,7 +5155,15 @@ function setLoginLang(lang) {
         if(session.locationId){ const _l=getLoc(session.locationId); _locStr=(_l.city||_l.name)+(_l.city?' - '+_l.name:''); }
         else if(session.cityName){ _locStr = session.cityName; }
         document.getElementById('sb-loc').textContent = _locStr;
+        // Show loading state while data loads
+        document.getElementById('main-content').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="width:32px;height:32px;border:3px solid var(--tan);border-top-color:#1B4332;border-radius:50%;animation:spin .8s linear infinite"></div><div style="font-size:13px;color:var(--text-muted)">Loading your data...</div></div>';
         (async()=>{
+          // Wait for Supabase to be ready (max 5 seconds)
+          let waited = 0;
+          while(!supaClient && waited < 50){
+            await new Promise(r=>setTimeout(r,100));
+            waited++;
+          }
           await loadLiveData();
           buildNav();
           navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
