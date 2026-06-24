@@ -255,8 +255,8 @@ tr:hover td{background:var(--cream)}
 
 
     <!-- NINO AI CHAT -->
-  <button id="ai-chat-btn" onclick="toggleAIChat()" title="Ask Nino"
-    style="position:fixed;bottom:24px;right:24px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:56px;height:56px;cursor:pointer;box-shadow:0 4px 20px rgba(27,67,50,.4);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;font-family:inherit">
+  <button id="ai-chat-btn" title="Ask Nino"
+    style="position:fixed;bottom:24px;right:24px;z-index:9990;background:var(--green);color:#fff;border:none;border-radius:50%;width:56px;height:56px;cursor:grab;box-shadow:0 4px 20px rgba(27,67,50,.4);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;font-family:inherit;touch-action:none;user-select:none">
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="8" r="4"/><path d="M8 8h-2a2 2 0 0 0-2 2v1h16v-1a2 2 0 0 0-2-2h-2"/>
       <rect x="9" y="11" width="6" height="6" rx="1"/>
@@ -462,7 +462,7 @@ function doLogin(){
   document.getElementById('sb-loc').textContent=locStr;
   buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
 }
-function doLogout(){session=null;document.body.classList.remove('logged-in');
+function doLogout(){session=null;localStorage.removeItem('benne_session');localStorage.removeItem('benne_nino_key');document.body.classList.remove('logged-in');
   const _tb=document.getElementById('mobile-topbar-el');if(_tb)_tb.style.display='none';
   const _mbn=document.getElementById('mobile-bottom-nav');if(_mbn)_mbn.style.display='none';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
 
@@ -4536,6 +4536,7 @@ window.doLogin = async function() {
       userData = data;
     }
     session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName, user_code: userData.user_code};
+    localStorage.setItem('benne_session', JSON.stringify(session));
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='flex';
     document.body.classList.add('logged-in');
@@ -4957,6 +4958,36 @@ function setLoginLang(lang) {
 }
 // Load saved language on startup
 (function() {
+  // Restore session from localStorage on reload
+  const _savedSession = localStorage.getItem('benne_session');
+  if (_savedSession) {
+    try {
+      const _s = JSON.parse(_savedSession);
+      if (_s && _s.id && _s.role) {
+        session = _s;
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'flex';
+        document.body.classList.add('logged-in');
+        const _tb = document.getElementById('mobile-topbar-el');
+        if(_tb) _tb.style.display = '';
+        const _mbn = document.getElementById('mobile-bottom-nav');
+        if(_mbn) _mbn.style.display = '';
+        document.getElementById('sb-name').textContent = session.name;
+        document.getElementById('sb-role').innerHTML = roleBadge(session.role);
+        let _locStr = 'Locations';
+        if(session.locationId){ const _l=getLoc(session.locationId); _locStr=(_l.city||_l.name)+(_l.city?' - '+_l.name:''); }
+        else if(session.cityName){ _locStr = session.cityName; }
+        document.getElementById('sb-loc').textContent = _locStr;
+        (async()=>{
+          await loadLiveData();
+          buildNav();
+          navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
+          startLocalChecks();
+        })();
+      }
+    } catch(e) { localStorage.removeItem('benne_session'); }
+  }
+
   const saved = localStorage.getItem('benne_lang');
   if (saved) { userLang = saved; setTimeout(() => setLoginLang(saved === 'hindi' ? 'hi' : saved), 100); }
 })();
@@ -5368,6 +5399,123 @@ async function tgOnAMCAlert(vendor, equipment, endDate, daysLeft) {
   await tgNotifyRole('manager', msg);
   await tgNotifyRole('admin', msg);
 }
+
+
+// ── DRAGGABLE NINO BUTTON ────────────────────────────────────────────────────
+(function(){
+  function initNinoDrag(){
+    const btn = document.getElementById('ai-chat-btn');
+    if(!btn) return;
+    let dragging=false, startX, startY, origX, origY, moved=false;
+    const SIZE=56, MARGIN=12;
+
+    function getPos(){
+      const r=btn.getBoundingClientRect();
+      return {x: r.left, y: r.top};
+    }
+
+    function clamp(val, min, max){ return Math.max(min, Math.min(max, val)); }
+
+    function applyPos(x, y){
+      const maxX = window.innerWidth - SIZE - MARGIN;
+      const maxY = window.innerHeight - SIZE - MARGIN;
+      btn.style.left = clamp(x, MARGIN, maxX) + 'px';
+      btn.style.top  = clamp(y, MARGIN, maxY) + 'px';
+      btn.style.right = 'auto';
+      btn.style.bottom = 'auto';
+    }
+
+    function savePos(x, y){
+      try { localStorage.setItem('nino_pos', JSON.stringify({x,y})); } catch(e){}
+    }
+
+    function loadPos(){
+      try {
+        const p = JSON.parse(localStorage.getItem('nino_pos')||'null');
+        if(p && typeof p.x==='number') applyPos(p.x, p.y);
+      } catch(e){}
+    }
+
+    loadPos();
+
+    // Mouse
+    btn.addEventListener('mousedown', function(e){
+      dragging=true; moved=false;
+      const pos=getPos();
+      startX=e.clientX; startY=e.clientY;
+      origX=pos.x; origY=pos.y;
+      btn.style.cursor='grabbing';
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e){
+      if(!dragging) return;
+      const dx=e.clientX-startX, dy=e.clientY-startY;
+      if(Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
+      applyPos(origX+dx, origY+dy);
+    });
+    document.addEventListener('mouseup', function(e){
+      if(!dragging) return;
+      dragging=false;
+      btn.style.cursor='grab';
+      const pos=getPos();
+      savePos(pos.x, pos.y);
+      if(!moved) toggleAIChat();
+    });
+
+    // Touch
+    btn.addEventListener('touchstart', function(e){
+      dragging=true; moved=false;
+      const t=e.touches[0];
+      const pos=getPos();
+      startX=t.clientX; startY=t.clientY;
+      origX=pos.x; origY=pos.y;
+      e.preventDefault();
+    },{passive:false});
+    btn.addEventListener('touchmove', function(e){
+      if(!dragging) return;
+      const t=e.touches[0];
+      const dx=t.clientX-startX, dy=t.clientY-startY;
+      if(Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
+      applyPos(origX+dx, origY+dy);
+      e.preventDefault();
+    },{passive:false});
+    btn.addEventListener('touchend', function(e){
+      if(!dragging) return;
+      dragging=false;
+      const pos=getPos();
+      savePos(pos.x, pos.y);
+      if(!moved) toggleAIChat();
+    });
+  }
+
+  // Also update Nino panel position to follow button
+  const _origToggle = window.toggleAIChat;
+  window.toggleAIChat = function(){
+    if(typeof _origToggle === 'function') _origToggle();
+    // Reposition panel near button
+    const btn=document.getElementById('ai-chat-btn');
+    const panel=document.getElementById('ai-chat-panel');
+    if(!btn||!panel) return;
+    const br=btn.getBoundingClientRect();
+    const panelW=360, panelH=480;
+    let left=br.right+8;
+    let top=br.top;
+    if(left+panelW>window.innerWidth-8) left=br.left-panelW-8;
+    if(left<8) left=8;
+    if(top+panelH>window.innerHeight-8) top=window.innerHeight-panelH-8;
+    if(top<8) top=8;
+    panel.style.left=left+'px';
+    panel.style.top=top+'px';
+    panel.style.bottom='auto';
+    panel.style.right='auto';
+  };
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', initNinoDrag);
+  } else {
+    initNinoDrag();
+  }
+})();
 
 </script>
 </body>
