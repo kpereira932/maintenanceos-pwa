@@ -934,74 +934,119 @@ function applyTF(){
 }
 function openTicket(id){
   const t=tickets.find(x=>x.id===id);if(!t)return;
-  const loc=getLoc(t.locationId),state=getState(loc.stateId||t.stateId);
-  const assignee=t.assignedTo?getUser(t.assignedTo):null,raiser=getUser(t.raisedBy);
+  const loc=getLoc(t.locationId||t.location_id),state=getState(loc.stateId||loc.state_id||t.stateId);
+  const assignee=(t.assignedTo||t.assigned_to)?getUser(t.assignedTo||t.assigned_to):null;
+  const raiser=getUser(t.raisedBy||t.raised_by);
   const expTotal=ticketExpTotal(id),expCount=ticketExp(id).length;
+  const isClosed=['Resolved','Closed'].includes(t.status);
+  const isOnHold=t.status==='On Hold';
+  const canManage=['admin','manager','founder','tech-manager'].includes(session.role);
+  const isSupervisor=session.role==='supervisor';
+  const isTech=session.role==='technician';
+  const isMyTicket=(t.assignedTo===session.id||t.assigned_to===session.id);
+  const raisedByName=t.raised_by_name||t.raisedByName||(raiser?raiser.name:'-');
+  const dueDate=t.dueDate||t.due_date||'Not set';
+
+  // Photos attached to this ticket
+  const ticketPhotos=attachments.filter(a=>a.ticketId===id||a.ticket_id===id);
+  const photoHtml=ticketPhotos.length?`
+    <div style="margin-bottom:1rem">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Photos (${ticketPhotos.length})</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${ticketPhotos.map(a=>`<a href="${a.fileUrl||a.file_url}" target="_blank" style="display:block;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--tan);flex-shrink:0"><img src="${a.fileUrl||a.file_url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='&#128247;'" alt="photo"></a>`).join('')}
+      </div>
+    </div>`:
+    `<div style="margin-bottom:1rem;padding:10px;background:var(--cream);border-radius:8px;border:1px dashed var(--tan);font-size:12px;color:var(--text-muted)">&#128247; No photos attached to this ticket.</div>`;
+
+  // Expenses section — always show for closed tickets or when expenses exist
+  const expHtml=(expTotal>0||isClosed)?`
+    <div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px;display:flex;align-items:center;justify-content:space-between">
+      <span>&#128176; <strong>Expenses:</strong> ${expTotal>0?fc(expTotal)+' ('+expCount+' entries)':'None logged'}</span>
+      ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">View</button>`:''}
+    </div>`:'';
+
+  // Action buttons — hide all modifying actions on resolved/closed tickets
+  const actionBtns=isClosed?
+    // Closed ticket — read-only actions only
+    `<div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn sm" onclick="openAttachmentsModal('${id}')">&#128247; Photos</button>
+      ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">&#128176; Expenses</button>`:''}
+      ${session.role==='founder'?`<button class="btn sm warning" onclick="openFounderConcern('${id}')">Raise concern</button>`:''}
+    </div>` :
+    // Active ticket — full actions based on role
+    `<div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${canManage?`
+        <button class="btn sm primary" onclick="openAssignModal('${id}')">${assignee?'Reassign':'Assign'}</button>
+        ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+        ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${expCount})</button>`:''}
+        ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
+        <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
+        <button class="btn sm" onclick="openAssignVendorModal('${id}')">&#127981; Vendor</button>
+      `:''}
+      ${isSupervisor?`
+        <button class="btn sm primary" onclick="openAssignModal('${id}')">${assignee?'Reassign':'Assign'}</button>
+        ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+        ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${expCount})</button>`:''}
+        <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
+      `:''}
+      ${isTech?`
+        ${isMyTicket?`
+          ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
+          <button class="btn sm" onclick="openEstimateModal('${id}')">Estimate</button>
+          ${estimates.some(e=>(e.ticketId||e.ticket_id)===id&&e.status==='approved')?`<button class="btn sm" onclick="openExpModal('${id}')">Expense</button>`:''}
+          ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
+          <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
+          ${!isOnHold?`<button class="btn sm warning" onclick="techCheckIn('${id}','on_way')">On my way</button>`:''}
+          ${!isOnHold?`<button class="btn sm warning" onclick="techCheckIn('${id}','arrived')">Arrived</button>`:''}
+          ${!isOnHold?`<button class="btn sm danger" onclick="openOnHoldModal('${id}')">On Hold</button>`:''}
+          ${isOnHold?`<button class="btn sm success" onclick="resumeTicket('${id}')">Resume</button>`:''}
+        `:`<button class="btn sm primary" onclick="assignToSelf('${id}')">Take ticket</button>`}
+      `:''}
+      ${session.role==='founder'?`<button class="btn sm warning" onclick="openFounderConcern('${id}')">Raise concern</button>`:''}
+    </div>`;
+
   document.getElementById('m-title').textContent=`${t.id} - ${t.title}`;
   document.getElementById('m-body').innerHTML=`
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${sbadge(t)} ${pbadge(t.priority)} <span class="badge b-grey">${t.category}</span>${loc.type==='central_kitchen'?'<span class="badge b-ck">CK</span>':''}</div>
-    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:1rem">${t.desc||'No description.'}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem">${sbadge(t)} ${pbadge(t.priority)} <span class="badge b-grey">${t.category}</span>${loc.type==='central_kitchen'?'<span class="badge b-ck">CK</span>':loc.type==='staff_quarters'?'<span class="badge b-grey">ACC</span>':''}</div>
+    <div style="font-size:13px;color:#555;line-height:1.6;margin-bottom:1rem">${t.desc||t.description||'No description.'}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:1rem">
       <div><span style="color:#aaa">Location:</span> <strong>${state.name} › ${loc.name}</strong></div>
-      <div><span style="color:#aaa">Raised by:</span> <strong>${t.raised_by_name||t.raisedByName||(raiser?raiser.name:'-')}</strong></div>
+      <div><span style="color:#aaa">Raised by:</span> <strong>${raisedByName}</strong></div>
       <div><span style="color:#aaa">Assigned to:</span> <strong>${assignee?assignee.name:'To be assigned'}</strong></div>
-      <div><span style="color:#aaa">Due date:</span> <strong>${t.dueDate||'Not set'}</strong></div>
+      <div><span style="color:#aaa">Due date:</span> <strong>${dueDate}</strong></div>
     </div>
-    ${expTotal>0?`<div style="background:#f0fdf4;border:1px solid #6ee7b7;border-radius:8px;padding:10px 12px;margin-bottom:1rem;font-size:13px;display:flex;align-items:center;justify-content:space-between"><span>💰 <strong>Expenses:</strong> ${fc(expTotal)} (${expCount} entries)</span><button class="btn sm" onclick="openExpModal('${id}')">View expenses</button></div>`:''}
+    ${expHtml}
+    ${photoHtml}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:13px;font-weight:700">Activity</div>
       <button class="btn sm" onclick="aiSummariseTicket('${id}')" style="font-size:11px">AI summarise</button>
     </div>
     <div id="ai-summary-${id}"></div>
     <div class="timeline">
-      <div class="tl-item done"><strong>${raiser?raiser.name:'-'}</strong> raised this ticket <span style="color:#aaa">· ${t.createdAt}</span></div>
-      ${t.comments.map(c=>{const u=getUser(c.user);return`<div class="tl-item active"><strong>${u?u.name:c.user}:</strong> ${c.text} <span style="color:#aaa">· ${c.time}</span></div>`;}).join('')}
-      ${['Resolved','Closed'].includes(t.status)?'<div class="tl-item done" style="color:#059669;font-weight:600">Ticket resolved</div>':''}
+      <div class="tl-item done"><strong>${raisedByName}</strong> raised this ticket <span style="color:#aaa">· ${t.createdAt||t.created_at||''}</span></div>
+      ${(t.comments||[]).map(c=>{const u=getUser(c.user||c.user_id);return`<div class="tl-item active"><strong>${u?u.name:(c.user||c.user_id||'?')}:</strong> ${c.text||c.content||''} <span style="color:#aaa">· ${c.time||c.created_at||''}</span></div>`;}).join('')}
+      ${isClosed?'<div class="tl-item done" style="color:#059669;font-weight:600">Ticket resolved</div>':''}
     </div>
-
-    <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:4px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Actions</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        ${['admin','manager','supervisor','founder'].includes(session.role)?`
-          <button class="btn sm primary" onclick="openAssignModal('${id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
-          ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
-          ${ticketExp(id).length>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${ticketExp(id).length})</button>`:''}
-          ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
-          <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
-        `:''}
-        ${session.role==='technician'?`
-          ${(t.assignedTo===session.id||t.assigned_to===session.id)?`
-            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
-            <button class="btn sm" onclick="openEstimateModal('${id}')">Estimate</button>
-            ${estimates.some(e=>e.ticketId===id&&e.status==='approved')?`<button class="btn sm" onclick="openExpModal('${id}')">Expense</button>`:''}
-            ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
-            <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
-            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm warning" onclick="techCheckIn('${id}','on_way')">On my way</button>`:''}
-            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm warning" onclick="techCheckIn('${id}','arrived')">Arrived</button>`:''}
-            ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm danger" onclick="openOnHoldModal('${id}')">On Hold</button>`:''}
-            ${t.status==='On Hold'?`<button class="btn sm success" onclick="resumeTicket('${id}')">Resume</button>`:''}
-          `:`<button class="btn sm primary" onclick="assignToSelf('${id}')">Take ticket</button>`}
-        `:''}
-        ${session.role==='supervisor'?`
-          <button class="btn sm primary" onclick="openAssignModal('${id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
-          ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
-          ${ticketExp(id).length>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${ticketExp(id).length})</button>`:''}
-          ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
-          <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
-        `:''}
-        ${session.role==='founder'?`<button class="btn sm warning" onclick="openFounderConcern('${id}')">Raise concern</button>`:''}
-      </div>
+    <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${isClosed?'Read only':'Actions'}</div>
+      ${actionBtns}
     </div>
-    <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:4px">
+    ${!isClosed?`
+    <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:12px">
       <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px">Add comment</label>
       <textarea id="cmt-${id}" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:9px 11px;font-size:13px;font-family:inherit;min-height:70px;background:var(--warm-white)" placeholder="Type your update..."></textarea>
       <div style="display:flex;gap:7px;margin-top:8px;justify-content:flex-end">
         <button class="btn" onclick="closeModal()">Close</button>
         <button class="btn primary" onclick="addComment('${id}')">Post comment</button>
       </div>
-    </div>`;
+    </div>`:`
+    <div style="margin-top:12px;display:flex;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Close</button>
+    </div>`}
+  `;
   openModal();
 }
+
 function addComment(id){
   const txt=document.getElementById('cmt-'+id).value.trim();if(!txt)return;
   const t=tickets.find(x=>x.id===id),ts=nowTs();
