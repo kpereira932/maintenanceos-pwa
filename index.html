@@ -699,7 +699,7 @@ function ticketCard(t,compact=false){
         `:''}
       `:`
         ${['admin','manager','supervisor','founder'].includes(session.role)?`
-          <button class="btn sm primary${!t.assignedTo&&!t.assigned_to?' btn-flash':''}" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>
+          ${!['Resolved','Closed'].includes(t.status)?`<button class="btn sm primary${!t.assignedTo&&!t.assigned_to?' btn-flash':''}" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>`:''}
           ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="event.stopPropagation();resolveTicket('${t.id}')">Resolve</button>`:''}
         `:''}
       `}
@@ -709,7 +709,7 @@ function ticketCard(t,compact=false){
 function ticketActions(t){
   let a=`<button class="btn sm" onclick="openTicket('${t.id}')">👁 View</button>`;
   if(['admin','manager','supervisor'].includes(session.role)){
-    a+=`<button class="btn sm primary" onclick="openAssignModal('${t.id}')">👤 ${t.assignedTo?'Reassign':'Assign'}</button>`;
+    if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm primary" onclick="openAssignModal('${t.id}')">👤 ${t.assignedTo?'Reassign':'Assign'}</button>`;
     if(!['Resolved','Closed'].includes(t.status))a+=`<button class="btn sm success" onclick="resolveTicket('${t.id}')">Resolve</button>`;
     a+=`<button class="btn sm" onclick="openExpModal('${t.id}')">💰 Expenses</button>`;
     a+=`<button class="btn sm" onclick="openMaterialsModal('${t.id}')">🔩 Materials</button>`;
