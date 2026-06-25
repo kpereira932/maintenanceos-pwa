@@ -4875,30 +4875,18 @@ window.submitTicket = async function() {
     LOG('Ticket raised',id+' '+title,'p');
   }
 
-  if(hasFile && isLive && supaClient){
+  // Save photo as base64 directly to DB — fast, no Storage timeout
+  if(hasFile){
     try{
       const f=fileInput.files[0];
       const attId='att'+Date.now();
-      const fileName=attId+'_'+f.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      let fileUrl='';
-      const{error:storageErr}=await supaClient.storage.from('ticket-attachments').upload(fileName,f,{cacheControl:'3600',upsert:false});
-      if(!storageErr){
-        const{data:urlData}=supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
-        fileUrl=urlData?.publicUrl||'';
-      } else {
-        fileUrl=await new Promise(resolve=>{const r=new FileReader();r.onload=ev=>resolve(ev.target.result);r.readAsDataURL(f);});
-      }
+      const fileUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.onerror=rej;r.readAsDataURL(f);});
       const attRow={id:attId,ticket_id:id,uploaded_by:session.id,file_name:f.name,file_url:fileUrl,file_type:f.type,file_size:f.size,caption:'Raised with ticket'};
-      const saved=await dbInsert('ticket_attachments',attRow);
-      if(saved) attachments.push({...attRow,ticketId:id,uploadedBy:session.id,fileName:f.name,fileUrl:fileUrl});
-      else showToast('Ticket saved but photo could not be stored');
-    }catch(e){ console.warn('Photo upload failed',e); }
-  } else if(hasFile){
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      attachments.push({id:'att'+Date.now(),ticketId:id,uploadedBy:session.id,fileName:fileInput.files[0].name,fileUrl:ev.target.result,fileType:fileInput.files[0].type,caption:'Raised with ticket',createdAt:nowTs()});
-    };
-    reader.readAsDataURL(fileInput.files[0]);
+      if(isLive){
+        await dbInsert('ticket_attachments',attRow);
+      }
+      attachments.push({...attRow,ticketId:id,uploadedBy:session.id,fileName:f.name,fileUrl});
+    }catch(e){ console.warn('Photo save failed:',e.message); }
   }
 
   const _state=getState(loc.stateId||loc.state_id);
