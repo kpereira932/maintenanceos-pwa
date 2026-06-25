@@ -699,7 +699,7 @@ function ticketCard(t,compact=false){
         `:''}
       `:`
         ${['admin','manager','supervisor','founder'].includes(session.role)?`
-          ${!['Resolved','Closed'].includes(t.status)?`<button class="btn sm primary${!t.assignedTo&&!t.assigned_to?' btn-flash':''}" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>`:''}
+          ${!['Resolved','Closed'].includes(t.status)?`${!['Resolved','Closed'].includes(t.status)?`<button class="btn sm primary${!t.assignedTo&&!t.assigned_to?' btn-flash':''}" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>`:''}`:''}
           ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="event.stopPropagation();resolveTicket('${t.id}')">Resolve</button>`:''}
         `:''}
       `}
