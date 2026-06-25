@@ -5263,7 +5263,8 @@ window.addEventListener('load', async () => {
     const keys = await caches.keys();
     await Promise.all(keys.map(k => caches.delete(k)));
   }
-  console.log('MaintenanceOS v2.6 loaded - ' + new Date().toISOString());
+  // cache-bust: 1782373998
+console.log('MaintenanceOS v2.6 loaded - ' + new Date().toISOString());
   await initSupabase();
   await initPWA();
 });
