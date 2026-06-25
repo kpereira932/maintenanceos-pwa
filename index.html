@@ -4585,6 +4585,17 @@ async function initSupabase() {
     console.log('OK Supabase connected - LIVE MODE');
     updateSyncBar(true);
     startRealtime();
+    // If session was restored from localStorage, load data now that Supabase is ready
+    if(window._sessionRestored && session && session.id){
+      window._sessionRestored = false;
+      (async()=>{
+        await loadLiveData();
+        buildNav();
+        const _destMap = {admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'};
+        navTo(_destMap[session.role]||'dashboard');
+        startLocalChecks();
+      })();
+    }
   } catch(e) {
     console.warn('Supabase offline, local mode:', e.message);
     isLive = false;
@@ -5184,20 +5195,9 @@ function setLoginLang(lang) {
         if(session.locationId){ const _l=getLoc(session.locationId); _locStr=(_l.city||_l.name)+(_l.city?' - '+_l.name:''); }
         else if(session.cityName){ _locStr = session.cityName; }
         document.getElementById('sb-loc').textContent = _locStr;
-        // Show loading state while data loads
-        document.getElementById('main-content').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="width:32px;height:32px;border:3px solid var(--tan);border-top-color:#1B4332;border-radius:50%;animation:spin .8s linear infinite"></div><div style="font-size:13px;color:var(--text-muted)">Loading your data...</div></div>';
-        (async()=>{
-          // Wait for Supabase to be ready (max 5 seconds)
-          let waited = 0;
-          while(!supaClient && waited < 50){
-            await new Promise(r=>setTimeout(r,100));
-            waited++;
-          }
-          await loadLiveData();
-          buildNav();
-          navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
-          startLocalChecks();
-        })();
+        // Show loading spinner - data will load after Supabase connects
+        document.getElementById('main-content').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="width:32px;height:32px;border:3px solid var(--tan);border-top-color:#1B4332;border-radius:50%;animation:spin .8s linear infinite"></div><div style="font-size:13px;color:var(--text-muted)">Connecting...</div></div>';
+        window._sessionRestored = true;
       }
     } catch(e) { localStorage.removeItem('benne_session'); }
   }
