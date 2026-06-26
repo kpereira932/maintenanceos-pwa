@@ -4989,6 +4989,13 @@ async function loadLiveData() {
 
 // Override save operations to write to Supabase
 window.submitTicket = async function() {
+  // Prevent double submission
+  const _submitBtn = document.getElementById('rt-submit');
+  if(_submitBtn){
+    if(_submitBtn.disabled) return;
+    _submitBtn.disabled = true;
+    _submitBtn.innerHTML = '⏳ Submitting...';
+  }
   const raisedByName = (document.getElementById('ri-name')?.value || session.name || '').trim();
   let title = (document.getElementById('ri-t')?.value || '').trim();
   const desc = (document.getElementById('rt-desc')?.value || document.getElementById('ri-d')?.value || '').trim();
@@ -4997,8 +5004,17 @@ window.submitTicket = async function() {
   let category = document.getElementById('ri-c')?.value || '';
   let priority = document.getElementById('ri-p')?.value || 'Medium';
 
-  if(!category){ showToast('Please select an issue type'); return; }
-  if(!hasFile){ showToast('Please add a photo of the issue'); document.getElementById('rt-photo-area')?.scrollIntoView({behavior:'smooth'}); return; }
+  if(!category){
+    showToast('Please select an issue type');
+    if(_submitBtn){_submitBtn.disabled=false;_submitBtn.innerHTML='&#10003;&nbsp; Submit ticket';}
+    return;
+  }
+  if(!hasFile){
+    showToast('Please add a photo of the issue');
+    document.getElementById('rt-photo-area')?.scrollIntoView({behavior:'smooth'});
+    if(_submitBtn){_submitBtn.disabled=false;_submitBtn.innerHTML='&#10003;&nbsp; Submit ticket';}
+    return;
+  }
   if(!title) title = category + ' issue';
 
   let locationId = session.locationId;
