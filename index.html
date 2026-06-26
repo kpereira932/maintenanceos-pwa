@@ -5020,7 +5020,29 @@ window.submitTicket = async function() {
   let locationId = session.locationId;
   const locEl = document.getElementById('ri-loc');
   if(locEl && locEl.value) locationId = locEl.value;
-  if(!locationId){ showToast('Please select a location'); return; }
+  if(!locationId){
+    showToast('Please select a location');
+    if(_submitBtn){_submitBtn.disabled=false;_submitBtn.innerHTML='&#10003;&nbsp; Submit ticket';}
+    return;
+  }
+
+  // Duplicate detection: block same category+location within 5 minutes
+  const _fiveMinAgo = Date.now() - 5 * 60 * 1000;
+  const _duplicate = tickets.find(t => {
+    const tTime = new Date(t.createdAt||t.created_at||0).getTime();
+    return (t.locationId||t.location_id) === locationId
+      && t.category === category
+      && (t.raised_by||t.raisedBy) === session.id
+      && tTime > _fiveMinAgo;
+  });
+  if(_duplicate){
+    if(confirm('A similar ticket (' + _duplicate.id + ') was just raised 5 minutes ago. Are you sure you want to raise another?')){
+      // User confirmed - proceed
+    } else {
+      if(_submitBtn){_submitBtn.disabled=false;_submitBtn.innerHTML='&#10003;&nbsp; Submit ticket';}
+      return;
+    }
+  }
 
   const submitBtn = document.getElementById('rt-submit');
   if(submitBtn){ submitBtn.disabled=true; submitBtn.innerHTML='&#8987; Submitting...'; }
