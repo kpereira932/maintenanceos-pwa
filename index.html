@@ -932,6 +932,50 @@ function applyTF(){
   if(p)f=f.filter(t=>t.priority===p);
   document.getElementById('tlist').innerHTML=f.length?f.map(t=>ticketCard(t)).join(''):'<div class="empty">No tickets match</div>';
 }
+
+function toggleAssignDD(id){
+  const dd=document.getElementById('assign-dd-'+id);
+  if(!dd)return;
+  const isOpen=dd.style.display==='block';
+  document.querySelectorAll('[id^="assign-dd-"]').forEach(el=>el.style.display='none');
+  dd.style.display=isOpen?'none':'block';
+  if(!isOpen){
+    const close=e=>{if(!dd.contains(e.target)){dd.style.display='none';document.removeEventListener('click',close);}};
+    setTimeout(()=>document.addEventListener('click',close),100);
+  }
+}
+
+function openGetQuotation(ticketId){
+  document.getElementById('m-title').textContent='Request quotation';
+  document.getElementById('m-body').innerHTML=`
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Add a note for the quotation request. This will be logged in the ticket activity.</div>
+    <div class="fg"><label>Quotation details</label>
+      <textarea id="quot-note" rows="3" placeholder="What needs to be quoted..." style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="saveQuotationRequest('${ticketId}')">Send request</button>
+    </div>
+  `;
+  openModal();
+}
+
+async function saveQuotationRequest(ticketId){
+  const note=document.getElementById('quot-note')?.value?.trim();
+  if(!note){showToast('Please add quotation details');return;}
+  const comment={id:'c'+Date.now(),ticket_id:ticketId,user_id:session.id,content:'Quotation requested: '+note,created_at:new Date().toISOString()};
+  if(isLive){
+    await dbInsert('comments',comment);
+    await loadLiveData();
+  } else {
+    const t=tickets.find(x=>x.id===ticketId);
+    if(t){t.comments=t.comments||[];t.comments.push({...comment,user:session.id,text:comment.content,time:nowTs()});}
+  }
+  showToast('Quotation request logged');
+  closeModal();
+  openTicket(ticketId);
+}
+
 function openTicket(id){
   const t=tickets.find(x=>x.id===id);if(!t)return;
   const loc=getLoc(t.locationId||t.location_id),state=getState(loc.stateId||loc.state_id||t.stateId);
@@ -976,7 +1020,14 @@ function openTicket(id){
     // Active ticket — full actions based on role
     `<div style="display:flex;gap:6px;flex-wrap:wrap">
       ${canManage?`
-        <button class="btn sm primary" onclick="openAssignModal('${id}')">${assignee?'Reassign':'Assign'}</button>
+        <div style="position:relative;display:inline-block" id="assign-dd-wrap-${id}">
+        <button class="btn sm primary" onclick="toggleAssignDD('${id}')">${assignee?'Reassign':'Assign'} &#9660;</button>
+        <div id="assign-dd-${id}" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--tan);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;min-width:180px;padding:4px 0;margin-top:4px">
+          <div onclick="toggleAssignDD('${id}');openAssignModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128100; Assign to technician</div>
+          <div onclick="toggleAssignDD('${id}');openAssignVendorModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#127981; Call vendor</div>
+          <div onclick="toggleAssignDD('${id}');openGetQuotation('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128203; Get quotation</div>
+        </div>
+      </div>
         ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
         ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${expCount})</button>`:''}
         ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
@@ -984,7 +1035,14 @@ function openTicket(id){
         <button class="btn sm" onclick="openAssignVendorModal('${id}')">&#127981; Vendor</button>
       `:''}
       ${isSupervisor?`
-        <button class="btn sm primary" onclick="openAssignModal('${id}')">${assignee?'Reassign':'Assign'}</button>
+        <div style="position:relative;display:inline-block" id="assign-dd-wrap-${id}">
+        <button class="btn sm primary" onclick="toggleAssignDD('${id}')">${assignee?'Reassign':'Assign'} &#9660;</button>
+        <div id="assign-dd-${id}" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--tan);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;min-width:180px;padding:4px 0;margin-top:4px">
+          <div onclick="toggleAssignDD('${id}');openAssignModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128100; Assign to technician</div>
+          <div onclick="toggleAssignDD('${id}');openAssignVendorModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#127981; Call vendor</div>
+          <div onclick="toggleAssignDD('${id}');openGetQuotation('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128203; Get quotation</div>
+        </div>
+      </div>
         ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
         ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${expCount})</button>`:''}
         <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
@@ -1024,7 +1082,7 @@ function openTicket(id){
     <div id="ai-summary-${id}"></div>
     <div class="timeline">
       <div class="tl-item done"><strong>${raisedByName}</strong> raised this ticket <span style="color:#aaa">· ${t.createdAt||t.created_at||''}</span></div>
-      ${(t.comments||[]).map(c=>{const u=getUser(c.user||c.user_id);return`<div class="tl-item active"><strong>${u?u.name:(c.user||c.user_id||'?')}:</strong> ${c.text||c.content||''} <span style="color:#aaa">· ${c.time||c.created_at||''}</span></div>`;}).join('')}
+      ${[...(t.comments||[])].reverse().map(c=>{const u=getUser(c.user||c.user_id);return`<div class="tl-item active"><strong>${u?u.name:(c.user||c.user_id||'?')}:</strong> ${c.text||c.content||''} <span style="color:#aaa">· ${c.time||c.created_at||''}</span></div>`;}).join('')}
       ${isClosed?'<div class="tl-item done" style="color:#059669;font-weight:600">Ticket resolved</div>':''}
     </div>
     <div style="border-top:1px solid var(--tan);padding-top:12px;margin-top:12px">
@@ -1056,8 +1114,72 @@ function addComment(id){
 }
 function resolveTicket(id){
   const t=tickets.find(x=>x.id===id);if(!t)return;
-  t.status='Resolved';t.updatedAt=nowTs();
-  LOG('Ticket resolved',`${t.id} ${t.title} - ${getLoc(t.locationId).name}`,'g');refreshPage();
+  // Check if ticket has a photo attached
+  const hasPhoto=attachments.some(a=>a.ticketId===id||a.ticket_id===id);
+  if(!hasPhoto){
+    openResolveModal(id);
+    return;
+  }
+  openResolveModal(id);
+}
+
+function openResolveModal(id){
+  const hasPhoto=attachments.some(a=>a.ticketId===id||a.ticket_id===id);
+  document.getElementById('m-title').textContent='Resolve ticket';
+  document.getElementById('m-body').innerHTML=`
+    ${!hasPhoto?'<div style="background:#FEE2E2;border:1px solid #FCA5A5;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#991B1B"><strong>&#9888; Photo required</strong> — Please add a photo of the completed work before resolving.</div>':''}
+    <div class="fg"><label>Resolution notes *</label>
+      <textarea id="res-note" rows="3" placeholder="What was done to fix the issue..." style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:9px 11px;font-size:13px;font-family:inherit"></textarea>
+    </div>
+    ${!hasPhoto?`
+    <div class="fg"><label>Resolution photo * <span style="color:#991B1B">(required)</span></label>
+      <input type="file" id="res-photo" accept="image/*" style="width:100%;border:1.5px solid var(--tan);border-radius:8px;padding:8px;font-size:13px">
+    </div>`:''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="confirmResolve('${id}')">&#10003; Mark resolved</button>
+    </div>
+  `;
+  openModal();
+}
+
+async function confirmResolve(id){
+  const note=document.getElementById('res-note')?.value?.trim();
+  if(!note){showToast('Please add resolution notes');return;}
+  const hasPhoto=attachments.some(a=>a.ticketId===id||a.ticket_id===id);
+  const photoInput=document.getElementById('res-photo');
+  if(!hasPhoto&&(!photoInput||!photoInput.files||!photoInput.files.length)){
+    showToast('Please attach a photo of the completed work');
+    return;
+  }
+  // Upload resolution photo if provided
+  if(photoInput&&photoInput.files&&photoInput.files.length){
+    try{
+      const f=photoInput.files[0];
+      const attId='att'+Date.now();
+      const fileUrl=await new Promise((res,rej)=>{const r=new FileReader();r.onload=ev=>res(ev.target.result);r.onerror=rej;r.readAsDataURL(f);});
+      const attRow={id:attId,ticket_id:id,uploaded_by:session.id,file_name:f.name,file_url:fileUrl,file_type:f.type,file_size:f.size,caption:'Resolution photo'};
+      if(isLive) await dbInsert('ticket_attachments',attRow);
+      attachments.push({...attRow,ticketId:id,uploadedBy:session.id,fileName:f.name,fileUrl});
+    }catch(e){console.warn('Resolution photo save failed:',e);}
+  }
+  const t=tickets.find(x=>x.id===id);if(!t)return;
+  const loc=getLoc(t.locationId||t.location_id);
+  if(isLive){
+    await supaClient.from('tickets').update({status:'Resolved',updated_at:new Date().toISOString()}).eq('id',id);
+    await dbInsert('comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,content:'Resolved: '+note,created_at:new Date().toISOString()});
+    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket resolved',detail:id+' - '+t.title,user_id:session.id,color:'g'});
+    await loadLiveData();
+  } else {
+    t.status='Resolved';t.updatedAt=nowTs();
+    t.comments=t.comments||[];
+    t.comments.push({id:'c'+Date.now(),user:session.id,text:'Resolved: '+note,time:nowTs()});
+    LOG('Ticket resolved',t.id+' '+t.title,'g');
+  }
+  tgOnTicketResolved&&tgOnTicketResolved(t,loc.name,session.name);
+  showToast('Ticket '+id+' resolved!');
+  closeModal();
+  navTo('tickets');
 }
 
 // ============================================================
