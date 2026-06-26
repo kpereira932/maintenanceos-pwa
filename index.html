@@ -473,10 +473,12 @@ function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.clas
 // ============================================================
 function pickRole(r){}  // role selection removed - clean login
 function doLogin(){
+  // Delegate to Supabase login override if available
+  if(window._supaLogin) { window._supaLogin(); return; }
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const pass=document.getElementById('login-pass').value.trim();
   const u=users.find(x=>x.email===email&&x.pass===pass);
-  if(!u){alert('Invalid credentials. Use demo credentials shown below.');return;}
+  if(!u){alert('Invalid credentials. Please check your username and password.');return;}
   session=u;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
@@ -4902,7 +4904,7 @@ async function loadLiveData() {
 
 // Override login to use Supabase
 const _origLogin = doLogin;
-window.doLogin = async function() {
+window._supaLogin = window.doLogin = async function() {
   const email = document.getElementById('login-email')?.value?.trim()?.toLowerCase();
   const pass = document.getElementById('login-pass')?.value?.trim();
   if (isLive) {
