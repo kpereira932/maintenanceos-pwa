@@ -693,7 +693,7 @@ function ticketCard(t,compact=false){
       ${isTechSup?`
         ${(t.assignedTo===session.id||t.assigned_to===session.id||t.supervisor_id===session.id)&&!['Resolved','Closed','On Hold'].includes(t.status)?`
           <button class="btn sm warning" onclick="techCheckIn('${t.id}','on_way')">On my way</button>
-          <button class="btn sm success" onclick="event.stopPropagation();resolveTicket('${t.id}')">Resolve</button>
+          <button class="btn sm success" onclick="event.stopPropagation();openResolveModal('${t.id}')">Resolve</button>
         `:''}
         ${!t.assignedTo&&!t.assigned_to&&!['Resolved','Closed'].includes(t.status)?`
           <button class="btn sm primary" onclick="assignToSelf('${t.id}')">Take ticket</button>
@@ -701,7 +701,7 @@ function ticketCard(t,compact=false){
       `:`
         ${['admin','manager','supervisor','founder'].includes(session.role)?`
           ${!['Resolved','Closed'].includes(t.status)?`${!['Resolved','Closed'].includes(t.status)?`<button class="btn sm primary${!t.assignedTo&&!t.assigned_to?' btn-flash':''}" onclick="openAssignModal('${t.id}')">${t.assignedTo||t.assigned_to?'Reassign':'Assign'}</button>`:''}`:''}
-          ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="event.stopPropagation();resolveTicket('${t.id}')">Resolve</button>`:''}
+          ${!['Resolved','Closed','On Hold'].includes(t.status)?`<button class="btn sm success" onclick="event.stopPropagation();openResolveModal('${t.id}')">Resolve</button>`:''}
         `:''}
       `}
     </div>
@@ -4422,7 +4422,7 @@ function saveNinoKey(){
     alert('Please enter a valid Groq API key (starts with gsk_)');
     return;
   }
-  window._ninoKey = key;
+  window._ninoKey = key; localStorage.setItem('benne_nino_key', key);
   localStorage.setItem('nino_api_key', key);
   closeModal();
   showToast('Nino API key saved! You can now use Nino.');
@@ -5289,6 +5289,10 @@ function setLoginLang(lang) {
       }
     } catch(e) { localStorage.removeItem('benne_session'); }
   }
+
+  // Load saved Nino key
+  const _savedNinoKey = localStorage.getItem('benne_nino_key');
+  if(_savedNinoKey) window._ninoKey = _savedNinoKey;
 
   const saved = localStorage.getItem('benne_lang');
   if (saved) { userLang = saved; setTimeout(() => setLoginLang(saved === 'hindi' ? 'hi' : saved), 100); }
