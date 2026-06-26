@@ -4944,6 +4944,9 @@ window.doLogin = async function() {
     // Auto-assign user codes to anyone missing one
     setTimeout(assignMissingUserCodes, 2000);
     buildNav();
+    // Ensure sidebar is visible
+    const _sb = document.getElementById('main-sidebar');
+    if(_sb) { _sb.style.visibility='visible'; _sb.style.display='flex'; }
     navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
     checkAssetQRLink();
     setTimeout(() => showWelcomeMessage(session), 400);
