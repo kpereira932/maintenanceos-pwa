@@ -518,6 +518,9 @@ function doLogin(){
     else if(session.cityName){locStr=session.cityName;}
     document.getElementById('sb-loc').textContent=locStr;
 
+    // Wait for Supabase to be ready
+    let _waited = 0;
+    while(!supaClient && _waited < 50){ await new Promise(r=>setTimeout(r,100)); _waited++; }
     await loadLiveData();
     buildNav();
     const _sb2=document.getElementById('main-sidebar'); if(_sb2){_sb2.style.visibility='visible';}
