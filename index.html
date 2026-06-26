@@ -473,28 +473,61 @@ function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.clas
 // ============================================================
 function pickRole(r){}  // role selection removed - clean login
 function doLogin(){
-  // Delegate to Supabase login override if available
-  if(window._supaLogin) { window._supaLogin(); return; }
-  const email=document.getElementById('login-email').value.trim().toLowerCase();
-  const pass=document.getElementById('login-pass').value.trim();
-  const u=users.find(x=>x.email===email&&x.pass===pass);
-  if(!u){alert('Invalid credentials. Please check your username and password.');return;}
-  session=u;
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  document.body.classList.add('logged-in');
-  document.getElementById('sb-name').textContent=u.name;
-  document.getElementById('sb-role').innerHTML=roleBadge(u.role);
-  let locStr='Locations';
-  if(u.locationId){const l=getLoc(u.locationId);locStr=(l.city||l.name)+(l.city?' - '+l.name:'');}
-  else if(u.cityName){locStr=u.cityName;}
-  else if(u.stateId){locStr='';}
-  document.getElementById('sb-loc').textContent=locStr;
-var SUPER_NAV=[
-  {s:'Super Admin - Hidden'},{id:'superadmin',i:'',l:'Control panel'},
-  {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
-];
-  buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
+  // Single clean async login - no override needed
+  (async function(){
+    const email = (document.getElementById('login-email')?.value||'').trim().toLowerCase();
+    const pass = (document.getElementById('login-pass')?.value||'').trim();
+    const errEl = document.getElementById('login-error');
+    if(errEl) errEl.style.display='none';
+
+    // Check hardcoded superadmin first
+    const hardcoded = [{id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'}];
+    let userData = hardcoded.find(u=>u.email===email&&u.pass===pass);
+
+    if(!userData && isLive && supaClient){
+      try{
+        const {data,error} = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
+        if(!error && data) userData = data;
+      }catch(e){ console.warn('Supabase login error:',e); }
+    }
+
+    if(!userData){
+      if(errEl){ errEl.textContent='Invalid email or password. Please try again.'; errEl.style.display='block'; }
+      else alert('Invalid email or password. Please try again.');
+      return;
+    }
+
+    session = {...userData,
+      stateId: userData.state_id||userData.stateId,
+      locationId: userData.location_id||userData.locationId,
+      cityName: userData.city_name||userData.cityName,
+      user_code: userData.user_code
+    };
+    localStorage.setItem('benne_session', JSON.stringify(session));
+
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    document.body.classList.add('logged-in');
+    const _tb=document.getElementById('mobile-topbar-el'); if(_tb)_tb.style.display='';
+    const _mbn=document.getElementById('mobile-bottom-nav'); if(_mbn)_mbn.style.display='';
+    const _sb=document.getElementById('main-sidebar'); if(_sb){_sb.style.visibility='visible';}
+    document.getElementById('sb-name').textContent=session.name;
+    document.getElementById('sb-role').innerHTML=roleBadge(session.role);
+    let locStr='Locations';
+    if(session.locationId){const l=getLoc(session.locationId);locStr=(l.city||l.name)+(l.city?' - '+l.name:'');}
+    else if(session.cityName){locStr=session.cityName;}
+    document.getElementById('sb-loc').textContent=locStr;
+
+    await loadLiveData();
+    buildNav();
+    const _sb2=document.getElementById('main-sidebar'); if(_sb2){_sb2.style.visibility='visible';}
+    const dest={admin:'dashboard',manager:'dashboard',supervisor:'dashboard',
+      technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',
+      welfare:'raise',superadmin:'superadmin',founder:'dashboard',
+      'design-manager':'dashboard','design-poc':'design-raise'};
+    navTo(dest[session.role]||'dashboard');
+    startLocalChecks();
+  })();
 }
 function doLogout(){session=null;localStorage.removeItem('benne_session');localStorage.removeItem('benne_nino_key');document.body.classList.remove('logged-in');
   const _tb=document.getElementById('mobile-topbar-el');if(_tb)_tb.style.display='none';
@@ -4903,64 +4936,7 @@ async function loadLiveData() {
 }
 
 // Override login to use Supabase
-const _origLogin = doLogin;
-window._supaLogin = window.doLogin = async function() {
-  const email = document.getElementById('login-email')?.value?.trim()?.toLowerCase();
-  const pass = document.getElementById('login-pass')?.value?.trim();
-  if (isLive) {
-    // Always check local hardcoded users first (superadmin, etc.)
-    const hardcodedUser = [
-      {id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'}
-    ].find(u => u.email === email && u.pass === pass);
-
-    let userData = null;
-    if (hardcodedUser) {
-      userData = hardcodedUser;
-    } else {
-      const { data, error } = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
-      if (error || !data) {
-        const errEl = document.getElementById('login-error');
-        if (errEl) { errEl.textContent = 'Invalid email or password. Please try again.'; errEl.style.display = 'block'; }
-        return;
-      }
-      userData = data;
-    }
-    session = {...userData, stateId: userData.state_id||userData.stateId, locationId: userData.location_id||userData.locationId, cityName: userData.city_name||userData.cityName, user_code: userData.user_code};
-    localStorage.setItem('benne_session', JSON.stringify(session));
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='flex';
-    document.body.classList.add('logged-in');
-    const _tb = document.getElementById('mobile-topbar-el');
-    if(_tb) _tb.style.display='';
-    const _mbn = document.getElementById('mobile-bottom-nav');
-    if(_mbn) _mbn.style.display='';
-    document.getElementById('sb-name').textContent=session.name;
-    document.getElementById('sb-role').innerHTML=roleBadge(session.role);
-    let locStr='Locations';
-    if(session.locationId){const l=getLoc(session.locationId);locStr=(l.city||l.name)+(l.city?' - '+l.name:'');}
-    else if(session.cityName){locStr=session.cityName;}
-    else if(session.stateId){locStr='';}
-    document.getElementById('sb-loc').textContent=locStr;
-    await loadLiveData();
-    // Auto-assign user codes to anyone missing one
-    setTimeout(assignMissingUserCodes, 2000);
-    buildNav();
-    // Ensure sidebar is visible
-    const _sb = document.getElementById('main-sidebar');
-    if(_sb) { _sb.style.visibility='visible'; _sb.style.display='flex'; }
-    navTo({admin:'dashboard',manager:'dashboard',supervisor:'dashboard',technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',welfare:'raise',superadmin:'superadmin',founder:'dashboard','design-manager':'dashboard','design-poc':'design-raise'}[session.role]||'dashboard');
-    checkAssetQRLink();
-    setTimeout(() => showWelcomeMessage(session), 400);
-    // Ask for notification permission after login
-    setTimeout(askNotificationPermission, 2000);
-    setTimeout(showInstallBanner, 5000);
-    startLocalChecks();
-  } else {
-    _origLogin();
-    setTimeout(askNotificationPermission, 2000);
-    startLocalChecks();
-  }
-};
+;
 
 // Override save operations to write to Supabase
 window.submitTicket = async function() {
