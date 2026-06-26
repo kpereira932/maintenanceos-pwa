@@ -934,16 +934,32 @@ function applyTF(){
   document.getElementById('tlist').innerHTML=f.length?f.map(t=>ticketCard(t)).join(''):'<div class="empty">No tickets match</div>';
 }
 
-function toggleAssignDD(id){
-  const dd=document.getElementById('assign-dd-'+id);
-  if(!dd)return;
-  const isOpen=dd.style.display==='block';
-  document.querySelectorAll('[id^="assign-dd-"]').forEach(el=>el.style.display='none');
-  dd.style.display=isOpen?'none':'block';
-  if(!isOpen){
-    const close=e=>{if(!dd.contains(e.target)){dd.style.display='none';document.removeEventListener('click',close);}};
-    setTimeout(()=>document.addEventListener('click',close),100);
-  }
+function toggleAssignDD(id){}
+
+function openAssignOptions(ticketId, currentAssignee){
+  const t = tickets.find(x=>x.id===ticketId);
+  document.getElementById('m-title').textContent = currentAssignee ? 'Reassign ticket' : 'Assign ticket';
+  document.getElementById('m-body').innerHTML = `
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Choose how you want to handle this ticket:</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button onclick="closeModal();setTimeout(()=>openAssignModal('${ticketId}'),100)" style="width:100%;padding:12px 14px;border:1.5px solid var(--tan);border-radius:10px;background:var(--warm-white);font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left">
+        <span style="font-size:20px">&#128100;</span>
+        <div><div style="font-weight:600;color:var(--charcoal)">Assign to technician</div><div style="font-size:11px;color:var(--text-muted)">Send to a technician for repair</div></div>
+      </button>
+      <button onclick="closeModal();setTimeout(()=>openAssignVendorModal('${ticketId}'),100)" style="width:100%;padding:12px 14px;border:1.5px solid var(--tan);border-radius:10px;background:var(--warm-white);font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left">
+        <span style="font-size:20px">&#127981;</span>
+        <div><div style="font-weight:600;color:var(--charcoal)">Call vendor</div><div style="font-size:11px;color:var(--text-muted)">Assign an external vendor to this job</div></div>
+      </button>
+      <button onclick="closeModal();setTimeout(()=>openGetQuotation('${ticketId}'),100)" style="width:100%;padding:12px 14px;border:1.5px solid var(--tan);border-radius:10px;background:var(--warm-white);font-family:inherit;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:10px;text-align:left">
+        <span style="font-size:20px">&#128203;</span>
+        <div><div style="font-weight:600;color:var(--charcoal)">Get quotation</div><div style="font-size:11px;color:var(--text-muted)">Request a cost estimate first</div></div>
+      </button>
+    </div>
+    <div style="margin-top:12px;text-align:right">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+    </div>
+  `;
+  openModal();
 }
 
 function openGetQuotation(ticketId){
@@ -1021,14 +1037,7 @@ function openTicket(id){
     // Active ticket — full actions based on role
     `<div style="display:flex;gap:6px;flex-wrap:wrap">
       ${canManage?`
-        <div style="position:relative;display:inline-block" id="assign-dd-wrap-${id}">
-        <button class="btn sm primary" onclick="toggleAssignDD('${id}')">${assignee?'Reassign':'Assign'} &#9660;</button>
-        <div id="assign-dd-${id}" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--tan);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;min-width:180px;padding:4px 0;margin-top:4px">
-          <div onclick="toggleAssignDD('${id}');openAssignModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128100; Assign to technician</div>
-          <div onclick="toggleAssignDD('${id}');openAssignVendorModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#127981; Call vendor</div>
-          <div onclick="toggleAssignDD('${id}');openGetQuotation('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128203; Get quotation</div>
-        </div>
-      </div>
+        <button class="btn sm primary" onclick="openAssignOptions('${id}','${assignee?assignee.name:''}')">${assignee?'Reassign':'Assign'} &#9660;</button>
         ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
         ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${expCount})</button>`:''}
         ${ticketMaterials(id).length>0?`<button class="btn sm" onclick="openMaterialsModal('${id}')">Materials</button>`:''}
@@ -1036,14 +1045,7 @@ function openTicket(id){
         <button class="btn sm" onclick="openAssignVendorModal('${id}')">&#127981; Vendor</button>
       `:''}
       ${isSupervisor?`
-        <div style="position:relative;display:inline-block" id="assign-dd-wrap-${id}">
-        <button class="btn sm primary" onclick="toggleAssignDD('${id}')">${assignee?'Reassign':'Assign'} &#9660;</button>
-        <div id="assign-dd-${id}" style="display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid var(--tan);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;min-width:180px;padding:4px 0;margin-top:4px">
-          <div onclick="toggleAssignDD('${id}');openAssignModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128100; Assign to technician</div>
-          <div onclick="toggleAssignDD('${id}');openAssignVendorModal('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#127981; Call vendor</div>
-          <div onclick="toggleAssignDD('${id}');openGetQuotation('${id}')" style="padding:8px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--charcoal)" onmouseover="this.style.background='#f5f5f0'" onmouseout="this.style.background=''">&#128203; Get quotation</div>
-        </div>
-      </div>
+        <button class="btn sm primary" onclick="openAssignOptions('${id}','${assignee?assignee.name:''}')">${assignee?'Reassign':'Assign'} &#9660;</button>
         ${!isOnHold?`<button class="btn sm success" onclick="resolveTicket('${id}');closeModal()">Resolve</button>`:''}
         ${expCount>0?`<button class="btn sm" onclick="openExpModal('${id}')">Expenses (${expCount})</button>`:''}
         <button class="btn sm" onclick="openAttachmentsModal('${id}')">Photos</button>
