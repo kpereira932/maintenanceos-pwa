@@ -4973,6 +4973,8 @@ async function loadLiveData() {
       if(re.data) recurringSchedules = re.data;
       if(mt.data) materials = mt.data;
       updateSyncBar(true);
+      // Re-render current page now that all data is loaded
+      if(currentPage) navTo(currentPage);
     }).catch(e=>console.warn('Secondary data load error:',e));
 
   } catch(e) {
