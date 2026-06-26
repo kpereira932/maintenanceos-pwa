@@ -2760,13 +2760,7 @@ function openEditVendor(id){
   openModal();
 }
 function getVendorFormData(){return{name:document.getElementById('vn').value.trim(),specialty:document.getElementById('vs').value,phone:document.getElementById('vp').value.trim(),email:document.getElementById('ve').value.trim(),address:document.getElementById('va').value.trim(),gstin:document.getElementById('vg').value.trim(),notes:document.getElementById('vno').value.trim()};}
-async function saveNewVendor(){
-  const d=getVendorFormData();if(!d.name){alert('Enter vendor name');return;}
-  const row={id:'v'+Date.now(),...d,active:true};
-  if(isLive){await dbInsert('vendors',row);await loadLiveData();showToast('Vendor added');}
-  else vendors.push(row);
-  closeModal();renderVendors();
-}
+async 
 async function saveVendor(id){
   const d=getVendorFormData();
   if(isLive){await dbUpdate('vendors',id,d);await loadLiveData();showToast('Vendor updated');}
@@ -4143,19 +4137,9 @@ function rtSelectTile(el, cat){
   document.querySelector('.rt-progress .rt-prog-step:nth-child(3)').classList.add('active');
 }
 
-function rtClearTile(){
-  document.querySelectorAll('.rt-tile').forEach(t=>t.classList.remove('selected'));
-  document.getElementById('ri-c').value='';
-  document.getElementById('rt-ai-row').style.display='none';
-}
 
-function rtCycleUrg(){
-  const urgs = ['High','Medium','Low'];
-  const idx = urgs.indexOf(window._rtUrg);
-  window._rtUrg = urgs[(idx+1)%3];
-  rtSetUrgBadge(window._rtUrg);
-  document.getElementById('ri-p').value = window._rtUrg;
-}
+
+
 
 function rtSetUrgBadge(urg){
   const b = document.getElementById('rt-urg-badge');
@@ -5088,70 +5072,9 @@ window.resolveTicket = async function(id) {
   openResolveModal(id);
 };
 
-function openResolveModal(id){
-  const t=tickets.find(x=>x.id===id);if(!t)return;
-  document.getElementById('m-title').textContent='Resolve ticket';
-  document.getElementById('m-body').innerHTML=`
-    <div style="background:var(--cream);border-radius:8px;padding:12px;margin-bottom:1rem">
-      <div style="font-weight:600">${t.title}</div>
-      <div style="font-size:12px;color:var(--text-muted);margin-top:3px">${t.id} - ${t.category}</div>
-    </div>
-    <div class="fg">
-      <label>Resolution notes <span style="font-size:10px;color:var(--amber);cursor:pointer" onclick="aiGenerateResolutionNote()">AI improve</span></label>
-      <textarea id="resolve-note" placeholder="Briefly describe what was done..."></textarea>
-    </div>
-    <div class="fg">
-      <label>Resolution photo <span style="color:var(--red)">* required</span></label>
-      <input type="file" id="resolve-photo" accept="image/*,video/*" style="width:100%;border:1.5px solid var(--tan);border-radius:4px;padding:8px 10px;font-size:13px;font-family:inherit">
-      <div style="font-size:11px;color:var(--text-muted);margin-top:3px">Take a photo showing the issue is resolved</div>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
-      <button class="btn" onclick="closeModal()">Cancel</button>
-      <button class="btn success" onclick="confirmResolve('${id}')">Mark as resolved</button>
-    </div>`;
-  openModal();
-}
 
-async function confirmResolve(id){
-  const note=document.getElementById('resolve-note')?.value?.trim();
-  const photoFile=document.getElementById('resolve-photo')?.files?.[0];
-  if(!photoFile){alert('Please attach a resolution photo before resolving');return;}
 
-  // Upload resolution photo first
-  if(isLive && supaClient){
-    try{
-      const attId='att'+Date.now();
-      const fileName=attId+'_resolve_'+photoFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-      const{error}=await supaClient.storage.from('ticket-attachments').upload(fileName,photoFile,{cacheControl:'3600',upsert:false});
-      if(!error){
-        const{data:urlData}=supaClient.storage.from('ticket-attachments').getPublicUrl(fileName);
-        await dbInsert('ticket_attachments',{id:attId,ticket_id:id,uploaded_by:session.id,file_name:photoFile.name,file_url:urlData.publicUrl,file_type:photoFile.type,file_size:photoFile.size,caption:'Resolution photo'});
-      }
-    }catch(e){console.warn('Resolution photo upload failed',e);}
-  }
-
-  if(note){
-    if(isLive) await dbInsert('ticket_comments',{id:'c'+Date.now(),ticket_id:id,user_id:session.id,text:'Resolved: '+note});
-    else { const t=tickets.find(x=>x.id===id); if(t) t.comments.push({user:session.id,text:'Resolved: '+note,time:nowTs()}); }
-  }
-
-  if(isLive){
-    await dbUpdate('tickets',id,{status:'Resolved',updated_at:new Date().toISOString()});
-    await dbInsert('audit_log',{id:'al'+Date.now(),action:'Ticket resolved',detail:id,user_id:session.id,color:'g'});
-    await loadLiveData();
-    showToast('Ticket resolved');
-    // Telegram notification
-    const _rt=tickets.find(x=>x.id===id)||{};
-    const _rtLocId=_rt.location_id||_rt.locationId;
-    const _rloc=getLoc(_rtLocId), _rstate=getState(_rloc.stateId||_rloc.state_id);
-    tgOnTicketResolved(_rt, _rloc.name, _rstate.name, session.name, _rtLocId);
-  }else{
-    const t=tickets.find(x=>x.id===id);
-    if(t){t.status='Resolved';t.updatedAt=nowTs();}
-    LOG('Ticket resolved',id,'g');
-  }
-  refreshPage();
-};
+async ;
 
 window.confirmAssign = async function(id) {
   const techId=document.getElementById('at-t')?.value||null;
