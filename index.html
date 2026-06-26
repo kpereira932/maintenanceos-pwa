@@ -489,13 +489,17 @@ function doLogin(){
   else if(u.cityName){locStr=u.cityName;}
   else if(u.stateId){locStr='';}
   document.getElementById('sb-loc').textContent=locStr;
+var SUPER_NAV=[
+  {s:'Super Admin - Hidden'},{id:'superadmin',i:'',l:'Control panel'},
+  {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
+];
   buildNav();navTo({admin:'locations',manager:'dashboard',technician:'my-tasks',outlet:'raise'}[u.role]);
 }
 function doLogout(){session=null;localStorage.removeItem('benne_session');localStorage.removeItem('benne_nino_key');document.body.classList.remove('logged-in');
   const _tb=document.getElementById('mobile-topbar-el');if(_tb)_tb.style.display='none';
   const _mbn=document.getElementById('mobile-bottom-nav');if(_mbn)_mbn.style.display='none';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
 
-const NAV={
+var NAV={
   admin:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
@@ -551,10 +555,7 @@ NAV2['tech-manager'] = [
   {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
 ];
 Object.assign(NAV, NAV2);
-const SUPER_NAV=[
-  {s:'Super Admin - Hidden'},{id:'superadmin',i:'',l:'Control panel'},
-  {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
-];
+
 
 function buildNav(){
   const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||NAV2[session.role]||[]);
