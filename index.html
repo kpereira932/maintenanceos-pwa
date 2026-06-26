@@ -486,12 +486,19 @@ function doLogin(){
       return;
     }
 
-    // 2. Wait for Supabase (up to 5 seconds)
-    let waited=0;
-    while(!supaClient && waited<50){ await new Promise(r=>setTimeout(r,100)); waited++; }
-
+    // 2. Init Supabase if not ready
     if(!supaClient){
-      if(errEl){errEl.textContent='Connection error. Please refresh and try again.';errEl.style.display='block';}
+      try{ await initSupabase(); }catch(e){ console.warn('initSupabase failed:',e); }
+    }
+    // Wait up to 8 seconds
+    let waited=0;
+    while(!supaClient && waited<80){ await new Promise(r=>setTimeout(r,100)); waited++; }
+
+    // If still no Supabase, try local users array as fallback
+    if(!supaClient){
+      const localUser = users.find(u=>(u.email===email||u.email===raw)&&u.pass===pass);
+      if(localUser){ await _doLoginSuccess(localUser); return; }
+      if(errEl){errEl.textContent='Connection error. Please check your internet and try again.';errEl.style.display='block';}
       return;
     }
 
@@ -540,12 +547,12 @@ async function _doLoginSuccess(userData){
   const _tb=document.getElementById('mobile-topbar-el'); if(_tb)_tb.style.display='';
   const _mbn=document.getElementById('mobile-bottom-nav'); if(_mbn)_mbn.style.display='';
 
-  document.getElementById('sb-name').textContent=session.name;
-  document.getElementById('sb-role').innerHTML=roleBadge(session.role);
+  const _sbname=document.getElementById('sb-name'); if(_sbname)_sbname.textContent=session.name;
+  const _sbrole=document.getElementById('sb-role'); if(_sbrole)_sbrole.innerHTML=roleBadge(session.role);
   let locStr='Locations';
   if(session.locationId){const l=getLoc(session.locationId);locStr=(l.city?l.city+' — ':'')+l.name;}
   else if(session.cityName){locStr=session.cityName;}
-  document.getElementById('sb-loc').textContent=locStr;
+  const _sbloc=document.getElementById('sb-loc'); if(_sbloc)_sbloc.textContent=locStr;
 
   document.getElementById('main-content').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="width:32px;height:32px;border:3px solid var(--tan);border-top-color:#1B4332;border-radius:50%;animation:spin .8s linear infinite"></div><div style="font-size:13px;color:var(--text-muted)">Loading your data...</div></div>';
 
@@ -559,7 +566,11 @@ async function _doLoginSuccess(userData){
   navTo(dest[session.role]||'dashboard');
   startLocalChecks();
 }
-function doLogout(){session=null;localStorage.removeItem('benne_session');localStorage.removeItem('benne_nino_key');document.body.classList.remove('logged-in');
+function doLogout(){
+  session=null;
+  localStorage.removeItem('benne_session');
+  localStorage.removeItem('benne_nino_key');
+  document.body.classList.remove('logged-in');
   const _tb=document.getElementById('mobile-topbar-el');if(_tb)_tb.style.display='none';
   const _mbn=document.getElementById('mobile-bottom-nav');if(_mbn)_mbn.style.display='none';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('demo-hint').textContent='';document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));}
 
