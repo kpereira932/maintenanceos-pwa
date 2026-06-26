@@ -686,6 +686,7 @@ function ticketCard(t,compact=false){
       ${t.dueDate?`<span>📅 ${t.dueDate}${isOD(t)?' <span style="color:var(--red);font-weight:600">(+'+dAgo(t.dueDate)+'d)</span>':''}</span>`:''}
       ${assignee?`<span style="color:var(--green-mid);font-weight:600">🔧 ${assignee.name}</span>`:'<span style="color:var(--red);font-weight:500">To be assigned</span>'}
       ${t.raised_by_name||t.raisedByName?`<span style="color:var(--text-muted)">by ${t.raised_by_name||t.raisedByName}</span>`:''}
+      ${(t.createdAt||t.created_at)?`<span style="color:var(--text-muted);font-size:11px">&#128197; ${new Date(t.createdAt||t.created_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</span>`:''}
     </div>
     ${typeof slaBar === "function" ? slaBar(t) : ""}
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:${(['Resolved','Closed'].includes(t.status))?'8':'6'}px" onclick="event.stopPropagation()">
