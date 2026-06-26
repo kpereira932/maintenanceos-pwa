@@ -473,64 +473,91 @@ function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.clas
 // ============================================================
 function pickRole(r){}  // role selection removed - clean login
 function doLogin(){
-  // Single clean async login - no override needed
   (async function(){
-    const email = (document.getElementById('login-email')?.value||'').trim().toLowerCase();
+    const raw = (document.getElementById('login-email')?.value||'').trim();
     const pass = (document.getElementById('login-pass')?.value||'').trim();
+    const email = raw.toLowerCase();
     const errEl = document.getElementById('login-error');
     if(errEl) errEl.style.display='none';
 
-    // Check hardcoded superadmin first
-    const hardcoded = [{id:'u99',name:'Super Admin',email:'superadmin@benne.in',pass:'Benne@Super2026!',role:'superadmin',stateId:null,locationId:null,specialty:null,avatar:'SA'}];
-    let userData = hardcoded.find(u=>u.email===email&&u.pass===pass);
-
-    if(!userData && isLive && supaClient){
-      try{
-        const {data,error} = await supaClient.from('users').select('*').eq('email',email).eq('pass',pass).single();
-        if(!error && data) userData = data;
-      }catch(e){ console.warn('Supabase login error:',e); }
-    }
-
-    if(!userData){
-      if(errEl){ errEl.textContent='Invalid email or password. Please try again.'; errEl.style.display='block'; }
-      else alert('Invalid email or password. Please try again.');
+    // 1. Superadmin check (hardcoded, never in Supabase)
+    if(email==='superadmin@benne.in' && pass==='Benne@Super2026!'){
+      await _doLoginSuccess({id:'u99',name:'Super Admin',email:'superadmin@benne.in',role:'superadmin',stateId:null,locationId:null,avatar:'SA'});
       return;
     }
 
-    session = {...userData,
-      stateId: userData.state_id||userData.stateId,
-      locationId: userData.location_id||userData.locationId,
-      cityName: userData.city_name||userData.cityName,
-      user_code: userData.user_code
-    };
-    localStorage.setItem('benne_session', JSON.stringify(session));
+    // 2. Wait for Supabase (up to 5 seconds)
+    let waited=0;
+    while(!supaClient && waited<50){ await new Promise(r=>setTimeout(r,100)); waited++; }
 
-    document.getElementById('auth-screen').style.display='none';
-    document.getElementById('app').style.display='flex';
-    document.body.classList.add('logged-in');
-    const _tb=document.getElementById('mobile-topbar-el'); if(_tb)_tb.style.display='';
-    const _mbn=document.getElementById('mobile-bottom-nav'); if(_mbn)_mbn.style.display='';
-    const _sb=document.getElementById('main-sidebar'); if(_sb){_sb.style.visibility='visible';}
-    document.getElementById('sb-name').textContent=session.name;
-    document.getElementById('sb-role').innerHTML=roleBadge(session.role);
-    let locStr='Locations';
-    if(session.locationId){const l=getLoc(session.locationId);locStr=(l.city||l.name)+(l.city?' - '+l.name:'');}
-    else if(session.cityName){locStr=session.cityName;}
-    document.getElementById('sb-loc').textContent=locStr;
+    if(!supaClient){
+      if(errEl){errEl.textContent='Connection error. Please refresh and try again.';errEl.style.display='block';}
+      return;
+    }
 
-    // Wait for Supabase to be ready
-    let _waited = 0;
-    while(!supaClient && _waited < 50){ await new Promise(r=>setTimeout(r,100)); _waited++; }
-    await loadLiveData();
-    buildNav();
-    const _sb2=document.getElementById('main-sidebar'); if(_sb2){_sb2.style.visibility='visible';}
-    const dest={admin:'dashboard',manager:'dashboard',supervisor:'dashboard',
-      technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',
-      welfare:'raise',superadmin:'superadmin',founder:'dashboard',
-      'design-manager':'dashboard','design-poc':'design-raise'};
-    navTo(dest[session.role]||'dashboard');
-    startLocalChecks();
+    // 3. Try username match first, then email
+    let userData = null;
+    try{
+      // Try as username (login field)
+      let res = await supaClient.from('users').select('*').eq('email', email).eq('pass', pass).single();
+      if(res.data) userData = res.data;
+
+      if(!userData){
+        // Try as username field directly
+        res = await supaClient.from('users').select('*').eq('username', raw).eq('pass', pass).single();
+        if(res.data) userData = res.data;
+      }
+
+      if(!userData){
+        // Try username stored in email field (some users have username as email)
+        res = await supaClient.from('users').select('*').ilike('email', raw).eq('pass', pass).single();
+        if(res.data) userData = res.data;
+      }
+    }catch(e){ console.warn('Login query error:', e); }
+
+    if(!userData){
+      if(errEl){errEl.textContent='Invalid email or password. Please try again.';errEl.style.display='block';}
+      return;
+    }
+
+    await _doLoginSuccess(userData);
   })();
+}
+
+async function _doLoginSuccess(userData){
+  session = {
+    ...userData,
+    stateId: userData.state_id||userData.stateId||null,
+    locationId: userData.location_id||userData.locationId||null,
+    cityName: userData.city_name||userData.cityName||null,
+    user_code: userData.user_code||null
+  };
+  localStorage.setItem('benne_session', JSON.stringify(session));
+
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.body.classList.add('logged-in');
+  const _tb=document.getElementById('mobile-topbar-el'); if(_tb)_tb.style.display='';
+  const _mbn=document.getElementById('mobile-bottom-nav'); if(_mbn)_mbn.style.display='';
+
+  document.getElementById('sb-name').textContent=session.name;
+  document.getElementById('sb-role').innerHTML=roleBadge(session.role);
+  let locStr='Locations';
+  if(session.locationId){const l=getLoc(session.locationId);locStr=(l.city?l.city+' — ':'')+l.name;}
+  else if(session.cityName){locStr=session.cityName;}
+  document.getElementById('sb-loc').textContent=locStr;
+
+  document.getElementById('main-content').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:12px"><div style="width:32px;height:32px;border:3px solid var(--tan);border-top-color:#1B4332;border-radius:50%;animation:spin .8s linear infinite"></div><div style="font-size:13px;color:var(--text-muted)">Loading your data...</div></div>';
+
+  await loadLiveData();
+  buildNav();
+
+  const dest={admin:'dashboard',manager:'dashboard',supervisor:'dashboard',
+    technician:'my-tasks','tech-manager':'dashboard',outlet:'raise',
+    welfare:'raise',superadmin:'superadmin',founder:'dashboard',
+    'design-manager':'dashboard','design-poc':'design-raise'};
+  navTo(dest[session.role]||'dashboard');
+  startLocalChecks();
 }
 function doLogout(){session=null;localStorage.removeItem('benne_session');localStorage.removeItem('benne_nino_key');document.body.classList.remove('logged-in');
   const _tb=document.getElementById('mobile-topbar-el');if(_tb)_tb.style.display='none';
