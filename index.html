@@ -466,10 +466,7 @@ function cpText(id){const el=document.getElementById(id);if(!el)return;navigator
 function refreshPage(){
   if(!currentPage) return;
   showToast('Refreshing...');
-  loadLiveData().then(()=>{
-    navTo(currentPage);
-    showToast('Updated');
-  }).catch(()=>navTo(currentPage));
+  loadLiveData().catch(()=>navTo(currentPage));
 }
 function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById(s).style.display='';document.getElementById(h).style.display='none';}
 
@@ -4938,48 +4935,50 @@ async function dbDelete(table, id) {
 
 async function loadLiveData() {
   if (!isLive) return;
-  showToast(' Loading live data...');
   try {
-    const [st,lo,us,ti,ex,am,re,al,cm,vn,mt,att,ci] = await Promise.all([
+    // Critical data first - tickets, locations, states (needed for every page)
+    const [st, lo, ti] = await Promise.all([
       supaClient.from('states').select('*').order('name'),
       supaClient.from('locations').select('*').order('name'),
-      supaClient.from('users').select('*').order('name'),
-      supaClient.from('tickets').select('*').order('created_at',{ascending:false}),
-      supaClient.from('expenses').select('*').order('created_at',{ascending:false}),
-      supaClient.from('amc_records').select('*').order('end_date'),
-      supaClient.from('recurring_schedules').select('*'),
-      supaClient.from('audit_log').select('*').order('created_at',{ascending:false}).limit(100),
-      supaClient.from('ticket_comments').select('*').order('created_at'),
-      supaClient.from('vendors').select('*').order('name'),
-      supaClient.from('materials').select('*').order('created_at',{ascending:false}),
-      supaClient.from('ticket_attachments').select('*').order('created_at',{ascending:false}),
-      supaClient.from('tech_checkins').select('*').order('created_at',{ascending:false}),
+      supaClient.from('tickets').select('*').order('created_at',{ascending:false}).limit(500),
     ]);
-    if (st.data) states = st.data;
-    if (lo.data) locations = lo.data.map(l=>({...l,stateId:l.state_id}));
-    if (us.data) users = us.data.map(u=>({...u,stateId:u.state_id,locationId:u.location_id,cityName:u.city_name,user_code:u.user_code}));
-    if (ti.data) tickets = ti.data.map(t=>({...t,locationId:t.location_id,stateId:t.state_id,raisedBy:t.raised_by,assignedTo:t.assigned_to,dueDate:t.due_date,desc:t.description,comments:[]}));
-    if (cm.data) cm.data.forEach(c=>{ const t=tickets.find(x=>x.id===c.ticket_id); if(t) t.comments.push({user:c.user_id,text:c.text,time:c.created_at?.slice(0,16).replace('T',' ')}); });
-    if (ex.data) expenses = ex.data.map(e=>({...e,ticketId:e.ticket_id,addedBy:e.added_by}));
-    if (am.data) amcRecords = am.data.map(a=>({...a,locationIds:a.location_ids||[],startDate:a.start_date,endDate:a.end_date}));
-    if (re.data) recurringSchedules = re.data.map(r=>({...r,locationIds:r.location_ids||[],next:r.next_due,on:r.active}));
-    if (al.data) auditLog = al.data.map(e=>({t:e.created_at?.slice(0,16).replace('T',' '),a:e.action,d:e.detail||'',c:e.color||'b'}));
-    if (vn.data) vendors = vn.data;
-    if (mt.data) materials = mt.data.map(m=>({...m,ticketId:m.ticket_id,addedBy:m.added_by,unitCost:m.unit_cost,totalCost:m.total_cost,vendorId:m.vendor_id}));
-    if (att.data) attachments = att.data.map(a=>({...a,ticketId:a.ticket_id,uploadedBy:a.uploaded_by,fileName:a.file_name,fileUrl:a.file_url,fileType:a.file_type}));
-    if (ci.data) checkins = ci.data.map(c=>({...c,ticketId:c.ticket_id,techId:c.tech_id}));
-    // Load design lists
-    const dl = await supaClient.from('design_lists').select('*').order('created_at',{ascending:false});
-    if (dl.data) designLists = dl.data.map(d=>({...d,pocId:d.poc_id,locationId:d.location_id,visitDate:d.visit_date,items:d.items||[]}));
-    // Load assets
-    try {
-      const astData = await supaClient.from('asset_register').select('*').order('name');
-      if (astData.data) assets = astData.data.map(a=>({...a,locationId:a.location_id}));
-    } catch(e) { console.warn('Assets not loaded - table may not exist yet'); }
-    showToast('Live data loaded');
+    if(st.data) states = st.data;
+    if(lo.data) locations = lo.data;
+    if(ti.data) tickets = ti.data.map(t=>({...t,locationId:t.location_id,stateId:t.state_id,raisedBy:t.raised_by,assignedTo:t.assigned_to,dueDate:t.due_date,createdAt:t.created_at,updatedAt:t.updated_at,desc:t.description,comments:[]}));
+
+    // Render current page immediately with critical data
+    if(currentPage) navTo(currentPage);
+
+    // Secondary data in background (non-blocking)
+    Promise.all([
+      supaClient.from('users').select('*').order('name'),
+      supaClient.from('expenses').select('*').order('created_at',{ascending:false}),
+      supaClient.from('vendors').select('*').order('name'),
+      supaClient.from('amc_records').select('*').order('end_date'),
+      supaClient.from('ticket_attachments').select('*').order('created_at',{ascending:false}),
+      supaClient.from('ticket_comments').select('*').order('created_at',{ascending:false}),
+      supaClient.from('recurring_schedules').select('*'),
+      supaClient.from('materials').select('*').order('created_at',{ascending:false}),
+    ]).then(([us,ex,vn,am,att,cm,re,mt])=>{
+      if(us.data) users = us.data;
+      if(ex.data) expenses = ex.data;
+      if(vn.data) vendors = vn.data;
+      if(am.data) amcRecords = am.data;
+      if(att.data) attachments = att.data.map(a=>({...a,ticketId:a.ticket_id,uploadedBy:a.uploaded_by,fileName:a.file_name,fileUrl:a.file_url,fileType:a.file_type,fileSize:a.file_size}));
+      if(cm.data) {
+        const byTicket = {};
+        cm.data.forEach(c=>{ const tid=c.ticket_id; if(!byTicket[tid])byTicket[tid]=[]; byTicket[tid].push({id:c.id,user:c.user_id,text:c.content,time:c.created_at,created_at:c.created_at}); });
+        tickets.forEach(t=>{ t.comments=byTicket[t.id]||[]; });
+      }
+      if(re.data) recurringSchedules = re.data;
+      if(mt.data) materials = mt.data;
+      updateSyncBar(true);
+    }).catch(e=>console.warn('Secondary data load error:',e));
+
   } catch(e) {
-    console.error('loadLiveData error',e);
-    showToast(' Using demo data');
+    console.warn('loadLiveData error:', e);
+    isLive = false;
+    updateSyncBar(false);
   }
 }
 
