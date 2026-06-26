@@ -551,9 +551,13 @@ NAV2['tech-manager'] = [
   {s:'Account'},{id:'profile',i:'👤',l:'My profile'},
 ];
 Object.assign(NAV, NAV2);
+const SUPER_NAV=[
+  {s:'Super Admin - Hidden'},{id:'superadmin',i:'',l:'Control panel'},
+  {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
+];
+
 function buildNav(){
-  const _SNAV = typeof SUPER_NAV !== 'undefined' ? SUPER_NAV : [{s:'Super Admin'},{id:'superadmin',i:'',l:'Control panel'}];
-  const items=session.role==='superadmin'?_SNAV:(NAV[session.role]||NAV2[session.role]||[]);
+  const items=session.role==='superadmin'?SUPER_NAV:(NAV[session.role]||NAV2[session.role]||[]);
   document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
     if(i.s)return`<div class="nav-section">${i.s}</div>`;
     return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}');closeSidebar()"><span class="ni">${i.i}</span>${i.l}</div>`;
@@ -2965,10 +2969,7 @@ Tech: ${session.name}
 // ============================================================
 // SUPER ADMIN
 // ============================================================
-const SUPER_NAV=[
-  {s:'Super Admin - Hidden'},{id:'superadmin',i:'',l:'Control panel'},
-  {s:'Everything'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},{id:'users',i:'',l:'Users'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC'},{id:'log',i:'',l:'Audit log'},{id:'reports',i:'',l:'Reports'},{id:'locations',i:'',l:'Locations'},
-];
+
 
 
 async function refreshSuperUsers(){
