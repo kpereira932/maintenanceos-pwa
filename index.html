@@ -463,7 +463,14 @@ function openModal(){document.getElementById('overlay').classList.add('open');}
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
 function closeMO(e){if(e.target===document.getElementById('overlay'))closeModal();}
 function cpText(id){const el=document.getElementById(id);if(!el)return;navigator.clipboard.writeText(el.innerText).catch(()=>{});const btns=(el.closest('.card')||el.parentElement).querySelectorAll('button');btns.forEach(b=>{if(b.textContent.includes('Copy')){const o=b.innerHTML;b.innerHTML='Copied!';setTimeout(()=>b.innerHTML=o,2000);}});}
-function refreshPage(){navTo(currentPage);}
+function refreshPage(){
+  if(!currentPage) return;
+  showToast('Refreshing...');
+  loadLiveData().then(()=>{
+    navTo(currentPage);
+    showToast('Updated');
+  }).catch(()=>navTo(currentPage));
+}
 function showT2(s,h,btn){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');document.getElementById(s).style.display='';document.getElementById(h).style.display='none';}
 
 </script>
