@@ -4334,11 +4334,11 @@ async function sendAIChat() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + GROQ_API_KEY
+        'Authorization': 'Bearer ' + (window._ninoKey || localStorage.getItem('benne_nino_key') || GROQ_API_KEY)
       },
       body: JSON.stringify({
         model: 'llama-3.3-70b-versatile',
-        max_tokens: 500,
+        max_tokens: 600,
         messages: [
           { role: 'system', content: fullSystem },
           ...msgs.slice(-6)
@@ -4346,6 +4346,12 @@ async function sendAIChat() {
       })
     });
     const data = await res.json();
+    if(!res.ok){
+      const errMsg = (data&&data.error)?data.error.message:('HTTP '+res.status);
+      const typingEl2=document.getElementById(typingId);if(typingEl2)typingEl2.remove();
+      addChatMessage('ai','Error: '+errMsg+(res.status===401?' - Please update your Groq API key in My Profile.':''));
+      return;
+    }
     const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond. Please try again.';
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
