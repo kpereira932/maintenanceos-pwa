@@ -75,10 +75,10 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .logout-btn{color:rgba(255,255,255,.3);cursor:pointer;display:flex;align-items:center;gap:6px;margin-top:6px;transition:color .15s}
 .logout-btn:hover{color:rgba(255,255,255,.7)}
 .main{margin-left:240px;flex:1;padding:2rem;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
-.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.75rem;flex-wrap:wrap;gap:10px}
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px}
 .page-title{font-size:22px;font-weight:700;letter-spacing:-.2px;color:var(--green);font-family:'Georgia',serif}
 .page-sub{font-size:12px;color:var(--text-muted);margin-top:3px;letter-spacing:.2px}
-.btn{padding:7px 16px;border-radius:6px;border:1.5px solid var(--tan);background:var(--warm-white);color:var(--charcoal);cursor:pointer;font-size:12px;display:inline-flex;align-items:center;gap:5px;font-family:inherit;white-space:nowrap;text-decoration:none;font-weight:500;transition:all .12s}
+.btn{padding:7px 14px;border-radius:8px;border:1px solid #E2D9CE;background:#fff;color:#1C1C1A;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .12s;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{background:var(--cream);border-color:var(--tan-dark)}
 .btn.primary{background:#C48524;color:#fff;border-color:transparent}
 .btn.primary:hover{background:#C48524}
@@ -94,7 +94,7 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .ml{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;font-weight:700}
 .mv{font-size:28px;font-weight:800;letter-spacing:-.5px;font-family:'Georgia',serif}
 .mv.r{color:var(--red)}.mv.w{color:var(--amber)}.mv.g{color:var(--green-mid)}.mv.b{color:var(--blue)}.mv.p{color:var(--purple)}
-.card{background:var(--warm-white);border-radius:8px;border:1px solid var(--tan);padding:16px 18px;margin-bottom:10px;transition:box-shadow .15s}
+.card{background:#fff;border-radius:10px;border:1px solid #EDE8E1;padding:12px 14px;margin-bottom:8px;transition:box-shadow .15s}
 .card.ov{border-left:4px solid #FCA5A5}
 .card.es{border-left:4px solid var(--red);background:#FFFAFA}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
@@ -206,7 +206,18 @@ tr:hover td{background:var(--cream)}
   .sidebar-overlay{display:none!important}
   .sidebar{left:0!important}
 }
-</style>
+
+    .card:hover{box-shadow:0 2px 12px rgba(0,0,0,.07);border-color:#DDD8D0}
+    .metric{background:#fff;border-radius:10px;padding:14px 16px;border:1px solid #EDE8E1;border-left:3px solid var(--tan)}
+    .metric-num{font-size:26px;font-weight:700;line-height:1;margin:6px 0;letter-spacing:-.5px}
+    .metric-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted)}
+    .tbl-wrap table{border-radius:10px;overflow:hidden}
+    .tbl-wrap th{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+    body *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+    .page-title{letter-spacing:-.3px}
+    .tab-btn{border-radius:8px;font-size:13px;padding:6px 14px;font-weight:500}
+    .tab-btn.active{font-weight:600}
+    </style>
 </head>
 <body>
 
@@ -305,7 +316,7 @@ tr:hover td{background:var(--cream)}
       <div class="logout-btn" onclick="doLogout()">&#8592; Sign out</div>
     </div>
   </div>
-  <div class="main" id="main-content"></div>
+  <div class="main" id="main-content" style="padding:1.5rem 2rem"></div>
 
 <nav class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none"></nav>
 
