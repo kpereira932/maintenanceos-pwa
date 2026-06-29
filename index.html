@@ -658,20 +658,41 @@ function buildNav(){
   var primary=nonSection.filter(function(i){return primaryIds.indexOf(i.id)>-1;});
   var secondary=nonSection.filter(function(i){return primaryIds.indexOf(i.id)===-1&&i.id!=="profile";});
   var profileItem=nonSection.find(function(i){return i.id==="profile";});
+
   function makeItem(i){
-    return "<div class=\"nav-item\" id=\"nav-"+i.id+"\" onclick=\"navTo('"+i.id+"');closeSidebar()\"><span class=\"ni\">"+i.i+"</span>"+i.l+"</div>";
+    return '<div class="nav-item" id="nav-'+i.id+'" onclick="navTo(\''+i.id+'\');closeSidebar()"><span class="ni">'+i.i+'</span>'+i.l+'</div>';
   }
+
   var out=primary.map(makeItem).join("");
+
   if(secondary.length){
-    out+="<div style=\"height:1px;background:rgba(255,255,255,.07);margin:6px 16px\"></div>";
-    out+="<div style=\"padding:10px 20px 4px;font-size:10px;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px\">More</div>";
+    out+='<div style="height:1px;background:rgba(255,255,255,.07);margin:6px 16px"></div>';
+    out+='<div id="nav-more-toggle" onclick="toggleMoreNav()" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin:1px 8px;border-radius:8px;color:rgba(255,255,255,.4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;transition:all .15s" onmouseover="this.style.background=\'rgba(255,255,255,.05)\'" onmouseout="this.style.background=\'\'">More<span id="nav-more-arrow" style="font-size:10px;transition:transform .2s">&#9660;</span></div>';
+    out+='<div id="nav-more-items" style="overflow:hidden;max-height:0;transition:max-height .25s cubic-bezier(.4,0,.2,1)">';
     out+=secondary.map(makeItem).join("");
+    out+='</div>';
   }
+
   if(profileItem){
-    out+="<div style=\"height:1px;background:rgba(255,255,255,.07);margin:6px 16px\"></div>";
+    out+='<div style="height:1px;background:rgba(255,255,255,.07);margin:6px 16px"></div>';
     out+=makeItem(profileItem);
   }
+
   document.getElementById("sidebar-nav").innerHTML=out;
+}
+
+function toggleMoreNav(){
+  var items=document.getElementById("nav-more-items");
+  var arrow=document.getElementById("nav-more-arrow");
+  if(!items)return;
+  var isOpen=items.style.maxHeight!=="0px"&&items.style.maxHeight!=="";
+  if(isOpen){
+    items.style.maxHeight="0";
+    if(arrow)arrow.style.transform="rotate(0deg)";
+  } else {
+    items.style.maxHeight=items.scrollHeight+"px";
+    if(arrow)arrow.style.transform="rotate(180deg)";
+  }
 }
 
 // Stub redirects for missing render functions
