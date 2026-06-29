@@ -12,7 +12,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<link rel="manifest" href="/manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.svg">
 <title>MaintenanceOS v2.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap" rel="stylesheet">
@@ -644,20 +644,34 @@ Object.assign(NAV, NAV2);
 
 
 function buildNav(){
-  var _SUPER_NAV=[
-    {s:'Super Admin'},{id:'superadmin',i:'',l:'Control panel'},
-    {s:'All'},{id:'dashboard',i:'',l:'Dashboard'},{id:'tickets',i:'',l:'Tickets'},
-    {id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
-    {id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},
-    {id:'amc',i:'',l:'AMC tracker'},{id:'reports',i:'',l:'Reports'},
-    {id:'log',i:'',l:'Audit log'},{id:'profile',i:'',l:'My profile'}
+  var _sn=(typeof SUPER_NAV!=="undefined")?SUPER_NAV:[
+    {id:"superadmin",i:"S",l:"Control panel"},{id:"dashboard",i:"D",l:"Dashboard"},
+    {id:"tickets",i:"T",l:"Tickets"},{id:"users",i:"U",l:"Users & roles"},
+    {id:"locations",i:"L",l:"Locations"},{id:"expenses",i:"E",l:"Expenses"},
+    {id:"vendors",i:"V",l:"Vendors"},{id:"amc",i:"A",l:"AMC tracker"},
+    {id:"reports",i:"R",l:"Reports"},{id:"log",i:"G",l:"Audit log"},
+    {id:"profile",i:"P",l:"My profile"}
   ];
-  var _sn = (typeof SUPER_NAV !== 'undefined') ? SUPER_NAV : _SUPER_NAV;
-  const items=session.role==='superadmin'?_sn:(NAV[session.role]||NAV2[session.role]||[]);
-  document.getElementById('sidebar-nav').innerHTML=items.map(i=>{
-    if(i.s)return`<div class="nav-section">${i.s}</div>`;
-    return`<div class="nav-item" id="nav-${i.id}" onclick="navTo('${i.id}');closeSidebar()"><span class="ni">${i.i}</span>${i.l}</div>`;
-  }).join('');
+  var allItems=session.role==="superadmin"?_sn:(NAV[session.role]||NAV2[session.role]||[]);
+  var nonSection=allItems.filter(function(i){return !i.s;});
+  var primaryIds=["dashboard","tickets","locations","users","reports","my-tasks","raise","my-tickets","design-raise","design-my-lists","design-tickets","superadmin"];
+  var primary=nonSection.filter(function(i){return primaryIds.indexOf(i.id)>-1;});
+  var secondary=nonSection.filter(function(i){return primaryIds.indexOf(i.id)===-1&&i.id!=="profile";});
+  var profileItem=nonSection.find(function(i){return i.id==="profile";});
+  function makeItem(i){
+    return "<div class=\"nav-item\" id=\"nav-"+i.id+"\" onclick=\"navTo('"+i.id+"');closeSidebar()\"><span class=\"ni\">"+i.i+"</span>"+i.l+"</div>";
+  }
+  var out=primary.map(makeItem).join("");
+  if(secondary.length){
+    out+="<div style=\"height:1px;background:rgba(255,255,255,.07);margin:6px 16px\"></div>";
+    out+="<div style=\"padding:10px 20px 4px;font-size:10px;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.5px\">More</div>";
+    out+=secondary.map(makeItem).join("");
+  }
+  if(profileItem){
+    out+="<div style=\"height:1px;background:rgba(255,255,255,.07);margin:6px 16px\"></div>";
+    out+=makeItem(profileItem);
+  }
+  document.getElementById("sidebar-nav").innerHTML=out;
 }
 
 // Stub redirects for missing render functions
