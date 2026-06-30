@@ -669,27 +669,46 @@ function buildNav(){
   var primary=nonSection.filter(function(i){return primaryIds.indexOf(i.id)>-1;});
   var secondary=nonSection.filter(function(i){return primaryIds.indexOf(i.id)===-1&&i.id!=="profile";});
   var profileItem=nonSection.find(function(i){return i.id==="profile";});
-
   function makeItem(i){
-    return '<div class="nav-item" id="nav-'+i.id+'" onclick="navTo(\''+i.id+'\');closeSidebar()"><span class="ni">'+i.i+'</span>'+i.l+'</div>';
+    var html="";
+    html+="<div class=" + String.fromCharCode(34) + "nav-item" + String.fromCharCode(34);
+    html+=" id=" + String.fromCharCode(34) + "nav-"+i.id + String.fromCharCode(34);
+    html+=" onclick=" + String.fromCharCode(34) + "navTo(" + String.fromCharCode(39) + i.id + String.fromCharCode(39) + ");closeSidebar()" + String.fromCharCode(34) + ">";
+    html+="<span class=" + String.fromCharCode(34) + "ni" + String.fromCharCode(34) + ">"+i.i+"</span>"+i.l+"</div>";
+    return html;
   }
-
   var out=primary.map(makeItem).join("");
-
   if(secondary.length){
-    out+='<div style="height:1px;background:rgba(255,255,255,.07);margin:6px 16px"></div>';
-    out+='<div id="nav-more-toggle" onclick="toggleMoreNav()" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin:1px 8px;border-radius:8px;color:rgba(255,255,255,.4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;transition:all .15s" onmouseover="this.style.background=\'rgba(255,255,255,.05)\'" onmouseout="this.style.background=\'\'">More<span id="nav-more-arrow" style="font-size:10px;transition:transform .2s">&#9660;</span></div>';
-    out+='<div id="nav-more-items" style="overflow:hidden;max-height:0;transition:max-height .25s cubic-bezier(.4,0,.2,1)">';
+    out+="<div style=" + String.fromCharCode(34) + "height:1px;background:rgba(255,255,255,.08);margin:4px 12px" + String.fromCharCode(34) + "></div>";
+    out+="<div onclick=" + String.fromCharCode(34) + "toggleMoreNav()" + String.fromCharCode(34);
+    out+=" id=" + String.fromCharCode(34) + "nav-more-toggle" + String.fromCharCode(34);
+    out+=" style=" + String.fromCharCode(34) + "display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin:1px 8px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.4);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px" + String.fromCharCode(34) + ">";
+    out+="<span>More</span>";
+    out+="<span id=" + String.fromCharCode(34) + "nav-more-arrow" + String.fromCharCode(34) + " style=" + String.fromCharCode(34) + "font-size:9px;transition:transform .2s ease;display:inline-block" + String.fromCharCode(34) + ">&#9660;</span>";
+    out+="</div>";
+    out+="<div id=" + String.fromCharCode(34) + "nav-more-items" + String.fromCharCode(34) + " style=" + String.fromCharCode(34) + "overflow:hidden;height:0;transition:height .25s ease" + String.fromCharCode(34) + ">";
     out+=secondary.map(makeItem).join("");
-    out+='</div>';
+    out+="</div>";
   }
-
   if(profileItem){
-    out+='<div style="height:1px;background:rgba(255,255,255,.07);margin:6px 16px"></div>';
+    out+="<div style=" + String.fromCharCode(34) + "height:1px;background:rgba(255,255,255,.08);margin:4px 12px" + String.fromCharCode(34) + "></div>";
     out+=makeItem(profileItem);
   }
-
   document.getElementById("sidebar-nav").innerHTML=out;
+}
+
+function toggleMoreNav(){
+  var wrap=document.getElementById("nav-more-items");
+  var arrow=document.getElementById("nav-more-arrow");
+  if(!wrap)return;
+  var isOpen=wrap.style.height!=="0px"&&wrap.style.height!=="";
+  if(isOpen){
+    wrap.style.height="0";
+    if(arrow)arrow.style.transform="rotate(0deg)";
+  } else {
+    wrap.style.height=wrap.scrollHeight+"px";
+    if(arrow)arrow.style.transform="rotate(180deg)";
+  }
 }
 
 function toggleMoreNav(){
