@@ -680,7 +680,7 @@ function buildNav(){
     out+="<span>More</span>";
     out+="<span id=" + String.fromCharCode(34) + "nav-more-arrow" + String.fromCharCode(34) + " style=" + String.fromCharCode(34) + "font-size:9px;transition:transform .2s ease;display:inline-block" + String.fromCharCode(34) + ">&#9660;</span>";
     out+="</div>";
-    out+="<div id=" + String.fromCharCode(34) + "nav-more-items" + String.fromCharCode(34) + " style=" + String.fromCharCode(34) + "overflow:hidden;max-height:0;opacity:0;transition:max-height .3s ease,opacity .2s ease" + String.fromCharCode(34) + ">";
+    out+="<div id=" + String.fromCharCode(34) + "nav-more-items" + String.fromCharCode(34) + " style=" + String.fromCharCode(34) + "overflow:hidden;max-height:0;transition:max-height .3s ease" + String.fromCharCode(34) + ">";
     out+=secondary.map(makeItem).join("");
     out+="</div>";
   }
@@ -698,11 +698,9 @@ function toggleMoreNav(){
   var isOpen=wrap.style.maxHeight&&wrap.style.maxHeight!=="0px";
   if(isOpen){
     wrap.style.maxHeight="0";
-    wrap.style.opacity="0";
     if(arrow)arrow.style.transform="rotate(0deg)";
   } else {
     wrap.style.maxHeight="500px";
-    wrap.style.opacity="1";
     if(arrow)arrow.style.transform="rotate(180deg)";
   }
 }
