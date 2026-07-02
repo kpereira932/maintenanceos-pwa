@@ -110,7 +110,7 @@ body{font-family:'Georgia',serif;background:var(--cream);color:var(--charcoal);f
 .card-meta{display:flex;gap:10px;font-size:12px;color:var(--text-muted);flex-wrap:wrap;align-items:center;margin-top:4px}
 .card-actions{display:flex;gap:5px;margin-top:12px;padding-top:12px;border-top:1px solid var(--tan);flex-wrap:wrap}
 .card-note{font-size:12px;color:var(--text-muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--cream);line-height:1.5}
-.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,45,31,.6);z-index:99999;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto}
+.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:99999;align-items:flex-start;justify-content:center;padding:2rem 1rem;padding-left:calc(220px + 1rem);overflow-y:auto}
 .overlay.open{display:flex}
 .modal{background:var(--warm-white);border-radius:12px;padding:2rem;width:600px;max-width:100%;border:1px solid var(--tan);box-shadow:0 20px 60px rgba(27,67,50,.2)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--tan)}
@@ -211,7 +211,9 @@ tr:hover td{background:var(--cream)}
     .page-title{letter-spacing:-.3px}
     .tab-btn{border-radius:8px;font-size:13px;padding:6px 14px;font-weight:500}
     .tab-btn.active{font-weight:600}
-    </style>
+    
+    @media(max-width:768px){.overlay{padding-left:1rem!important}}
+</style>
 </head>
 <body>
 
@@ -1030,11 +1032,7 @@ function renderDashboard(){
   }
   document.getElementById('main-content').innerHTML=`
     
-    <div style="background:linear-gradient(135deg,#C8862E 0%,#A66E22 100%);border-radius:12px;padding:20px 24px;margin-bottom:1.25rem;color:#fff">
-      <div style="font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
-      <div style="font-size:21px;font-weight:700;letter-spacing:-.3px">Welcome back, ${session.name.split(' ')[0]} 👋</div>
-      <div style="font-size:12px;opacity:.8;margin-top:4px">${session.cityName||'All locations'}</div>
-    </div>
+
     <div class="page-hdr">
       <div><div class="page-title">Dashboard</div><div class="page-sub"><button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       ${['admin','manager','supervisor'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
