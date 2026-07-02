@@ -594,14 +594,14 @@ var NAV={
   admin:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   technician:[
@@ -619,10 +619,10 @@ var NAV={
   outlet:[{id:'my-tickets',i:'',l:'My tickets'},{id:'profile',i:'',l:'My profile'}],
   founder:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
-    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
+    {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},
     {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},{id:'assets',i:'',l:'Asset Register'},
     {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
 };
@@ -630,12 +630,12 @@ const NAV2 = {};
 NAV2['design-manager'] = [
   {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
   {s:'Design'},{id:'design-lists',i:'',l:'Site visit lists'},{id:'design-tickets',i:'',l:'Design tickets'},
-  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'recurring',i:'',l:'Recurring tasks'},{id:'locations',i:'',l:'Locations'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'locations',i:'',l:'Locations'},
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 NAV2['design-poc'] = [
   {s:'Design'},{id:'design-raise',i:'',l:'New site visit'},{id:'design-my-lists',i:'',l:'My lists'},{id:'design-tickets',i:'',l:'Design tickets'},
-  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},{id:'recurring',i:'',l:'Recurring tasks'},
+  {s:'Operations'},{id:'tickets',i:'',l:'All tickets'},
   {s:'Account'},{id:'profile',i:'',l:'My profile'},
 ];
 // Merge NAV2 into NAV so all roles work with one lookup
@@ -1018,8 +1018,13 @@ function renderDashboard(){
     }).join('')}</div>`;
   }
   document.getElementById('main-content').innerHTML=`
+    <div style="background:linear-gradient(135deg,#C8862E 0%,#A66E22 100%);border-radius:12px;padding:20px 24px;margin-bottom:1.25rem;color:#fff">
+      <div style="font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
+      <div style="font-size:21px;font-weight:700;letter-spacing:-.3px">Welcome back, ${session.name.split(' ')[0]} 👋</div>
+      <div style="font-size:12px;opacity:.8;margin-top:4px">${session.cityName||'All locations'}</div>
+    </div>
     <div class="page-hdr">
-      <div><div class="page-title">Dashboard</div><div class="page-sub">Welcome back, ${session.name}<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
+      <div><div class="page-title">Dashboard</div><div class="page-sub"><button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div>
       ${['admin','manager','supervisor'].includes(session.role)?`<button class="btn primary" onclick="navTo('reports')">📊 Generate report</button>`:''}
     </div>
     ${amcAlert>0?`<div class="alert-banner" style="background:#fef3c7;border:1px solid #fcd34d" onclick="navTo('amc')">⚠ ${amcAlert} AMC contract${amcAlert>1?'s':''} need attention to View AMC</div>`:''}
@@ -1597,144 +1602,72 @@ function sendAMCReminder(id){
 // REPORTS
 // ============================================================
 function renderReports(){
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth()+1, 0);
-  const monthName = now.toLocaleString('default', {month:'long', year:'numeric'});
+  const tab = window._reportsTab || 'summary';
+  const tabs = [
+    {id:'summary',l:'Summary'},
+    {id:'expenses',l:'Expenses'},
+    {id:'sla',l:'SLA'},
+    {id:'audit',l:'Audit log'},
+    {id:'recurring',l:'Recurring tasks'},
+  ];
+  const tabBtns = tabs.map(t=>`<button class="tab-btn${tab===t.id?' active':''}" onclick="window._reportsTab='${t.id}';renderReports()">${t.l}</button>`).join('');
 
-  const vis = visT();
-  const monthTickets = vis.filter(t => {
-    const d = new Date(t.createdAt||t.created_at||0);
-    return d >= monthStart && d <= monthEnd;
-  });
-  const monthExp = expenses.filter(e => {
-    const d = new Date(e.createdAt||e.created_at||0);
-    return d >= monthStart && d <= monthEnd;
-  });
-  const totalExpAmt = monthExp.reduce((s,e)=>s+Number(e.amount),0);
-  const resolvedThisMonth = monthTickets.filter(t=>t.status==='Resolved').length;
-  const avgRes = resolvedThisMonth > 0 ? Math.round(monthTickets.filter(t=>t.status==='Resolved').length / monthTickets.length * 100) : 0;
+  // Build content for current tab
+  let content = '';
 
-  // By category
-  const byCat = {};
-  vis.forEach(t => { const c = t.category||'Other'; byCat[c]=(byCat[c]||0)+1; });
-  const catRows = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  if(tab==='summary'){
+    const vis = visT();
+    const open = vis.filter(t=>t.status==='Open').length;
+    const inProg = vis.filter(t=>t.status==='In Progress').length;
+    const resolved = vis.filter(t=>t.status==='Resolved').length;
+    const escalated = vis.filter(isESC).length;
+    const total = vis.length;
+    const byLoc = {};
+    vis.forEach(t=>{const l=getLoc(t.locationId||t.location_id);const n=l.name||'Unknown';if(!byLoc[n])byLoc[n]={open:0,resolved:0};if(t.status==='Resolved')byLoc[n].resolved++;else byLoc[n].open++;});
+    content = `
+      <div class="metrics" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:1.5rem">
+        <div class="metric"><div class="metric-label">Total</div><div class="metric-num">${total}</div></div>
+        <div class="metric" style="border-left-color:#2563EB"><div class="metric-label">Open</div><div class="metric-num" style="color:#2563EB">${open}</div></div>
+        <div class="metric" style="border-left-color:#7C3AED"><div class="metric-label">In progress</div><div class="metric-num" style="color:#7C3AED">${inProg}</div></div>
+        <div class="metric" style="border-left-color:#059669"><div class="metric-label">Resolved</div><div class="metric-num" style="color:#059669">${resolved}</div></div>
+        <div class="metric" style="border-left-color:#DC2626"><div class="metric-label">Escalated</div><div class="metric-num" style="color:#DC2626">${escalated}</div></div>
+      </div>
+      <div class="card" style="margin-bottom:1rem">
+        <div style="font-weight:600;margin-bottom:12px;font-size:14px">By location</div>
+        ${Object.entries(byLoc).sort((a,b)=>b[1].open-a[1].open).map(([name,d])=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+            <span>${name}</span>
+            <span><span style="color:#2563EB;font-weight:600">${d.open} open</span> &nbsp; <span style="color:#059669">${d.resolved} resolved</span></span>
+          </div>`).join('')}
+      </div>`;
+  }
 
-  // By location
-  const byLoc = {};
-  vis.forEach(t => {
-    const lid = t.locationId||t.location_id;
-    if (!byLoc[lid]) byLoc[lid] = {open:0,resolved:0,exp:0};
-    if (t.status==='Resolved') byLoc[lid].resolved++;
-    else byLoc[lid].open++;
-  });
-  expenses.forEach(e => {
-    const t = tickets.find(x=>x.id===(e.ticketId||e.ticket_id));
-    if (t) {
-      const lid = t.locationId||t.location_id;
-      if (byLoc[lid]) byLoc[lid].exp += Number(e.amount);
-    }
-  });
+  if(tab==='expenses'){
+    renderExpenses();
+    return;
+  }
+
+  if(tab==='sla'){
+    renderSLA();
+    return;
+  }
+
+  if(tab==='audit'){
+    renderAuditLog();
+    return;
+  }
+
+  if(tab==='recurring'){
+    renderRecurring();
+    return;
+  }
 
   document.getElementById('main-content').innerHTML = `
     <div class="page-hdr">
-      <div><div class="page-title">Reports</div><div class="page-sub">${monthName}</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn sm" onclick="refreshPage()">&#8635; Refresh</button>
-        <button class="btn primary" onclick="downloadPDFReport()">&#8595; Download PDF</button>
-        <button class="btn success" onclick="exportToGoogleSheets()">&#8599; Google Sheets</button>
-      </div>
+      <div><div class="page-title">Reports</div><div class="page-sub">All insights in one place</div></div>
     </div>
-
-    <!-- Month selector -->
-    <div style="display:flex;gap:8px;margin-bottom:1.5rem;flex-wrap:wrap">
-      <button class="tab-btn active" onclick="loadMonthReport(0,this)">This month</button>
-      <button class="tab-btn" onclick="loadMonthReport(-1,this)">Last month</button>
-      <button class="tab-btn" onclick="loadMonthReport(-2,this)">2 months ago</button>
-      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
-        <label style="font-size:12px;color:var(--text-muted)">Custom from</label>
-        <input type="date" id="rep-from" style="border:1.5px solid var(--tan);border-radius:4px;padding:5px 8px;font-size:12px">
-        <label style="font-size:12px;color:var(--text-muted)">to</label>
-        <input type="date" id="rep-to" style="border:1.5px solid var(--tan);border-radius:4px;padding:5px 8px;font-size:12px">
-        <button class="btn sm primary" onclick="applyCustomDateReport()">Apply</button>
-      </div>
-    </div>
-
-    <!-- KEY METRICS -->
-    <div class="metrics" style="margin-bottom:1.5rem" id="rep-metrics">
-      <div class="met"><div class="met-bar" style="background:var(--blue)"></div><div class="ml">Total tickets</div><div class="mv b">${monthTickets.length}</div></div>
-      <div class="met"><div class="met-bar" style="background:var(--green-mid)"></div><div class="ml">Resolved</div><div class="mv g">${resolvedThisMonth}</div></div>
-      <div class="met"><div class="met-bar" style="background:var(--red)"></div><div class="ml">Still open</div><div class="mv r">${monthTickets.filter(t=>!['Resolved','Closed'].includes(t.status)).length}</div></div>
-      <div class="met"><div class="met-bar" style="background:var(--amber)"></div><div class="ml">Total spend</div><div class="mv w" style="font-size:18px">${fc(totalExpAmt)}</div></div>
-      <div class="met"><div class="met-bar" style="background:var(--purple)"></div><div class="ml">Resolution rate</div><div class="mv p">${avgRes}%</div></div>
-    </div>
-
-    <!-- TWO COLUMN -->
-    <div class="two-col" id="rep-tables">
-      <!-- BY CATEGORY -->
-      <div>
-        <div class="section-title" style="margin-bottom:10px">Issues by category</div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Category</th><th>Count</th><th>%</th></tr></thead>
-          <tbody>${catRows.map(([cat,count])=>`<tr>
-            <td>${cat}</td>
-            <td><strong>${count}</strong></td>
-            <td>
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="flex:1;height:6px;background:var(--tan);border-radius:3px;overflow:hidden"><div style="height:100%;width:${Math.round(count/vis.length*100)}%;background:var(--amber);border-radius:3px"></div></div>
-                <span style="font-size:11px;color:var(--text-muted);width:28px">${Math.round(count/vis.length*100)}%</span>
-              </div>
-            </td>
-          </tr>`).join('')}</tbody>
-        </table></div>
-      </div>
-
-      <!-- BY LOCATION -->
-      <div>
-        <div class="section-title" style="margin-bottom:10px">By location</div>
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>Location</th><th>Open</th><th>Resolved</th><th>Spend</th></tr></thead>
-          <tbody>${Object.entries(byLoc).map(([lid,data])=>{
-            const loc=getLoc(lid);
-            return `<tr>
-              <td><strong>${loc.city?loc.city+' - ':''}${loc.name}</strong></td>
-              <td style="color:var(--amber)">${data.open}</td>
-              <td style="color:var(--green-mid)">${data.resolved}</td>
-              <td style="font-size:12px">${data.exp>0?fc(data.exp):'-'}</td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table></div>
-      </div>
-    </div>
-
-    <!-- ALL TICKETS TABLE for export -->
-    <div style="margin-top:1.5rem">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="section-title">All tickets this period</div>
-        <button class="btn sm" onclick="toggleRepTickets(this)">Show tickets</button>
-      </div>
-      <div id="rep-all-tickets" style="display:none">
-        <div class="tbl-wrap"><table>
-          <thead><tr><th>ID</th><th>Title</th><th>Location</th><th>Category</th><th>Urgency</th><th>Status</th><th>Raised by</th><th>Assigned to</th><th>Days open</th></tr></thead>
-          <tbody>${monthTickets.map(t=>{
-            const loc=getLoc(t.locationId||t.location_id);
-            const tech=t.assignedTo||t.assigned_to?getUser(t.assignedTo||t.assigned_to):null;
-            const days=Math.round((Date.now()-new Date(t.createdAt||t.created_at||0).getTime())/(1000*60*60*24));
-            return `<tr>
-              <td style="font-size:11px;color:var(--amber)">${t.id}</td>
-              <td style="font-size:12px">${t.title}</td>
-              <td style="font-size:12px">${loc.city?loc.city+' - ':''}${loc.name}</td>
-              <td style="font-size:12px">${t.category||'-'}</td>
-              <td>${pbadge(t.priority)}</td>
-              <td>${sbadge(t)}</td>
-              <td style="font-size:12px">${t.raised_by_name||t.raisedByName||'-'}</td>
-              <td style="font-size:12px">${tech?tech.name:'-'}</td>
-              <td style="text-align:center">${days}</td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table></div>
-      </div>
-    </div>
+    <div class="tab-btns" style="margin-bottom:1.25rem;display:flex;gap:6px;flex-wrap:wrap">${tabBtns}</div>
+    ${content}
   `;
 }
 
