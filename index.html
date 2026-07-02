@@ -1018,6 +1018,14 @@ function renderDashboard(){
     }).join('')}</div>`;
   }
   document.getElementById('main-content').innerHTML=`
+    <div style="background:linear-gradient(135deg,#C8862E 0%,#A66E22 100%);border-radius:14px;padding:22px 24px;margin-bottom:1.25rem;color:#fff;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:13px;opacity:.8;margin-bottom:4px">🙏 Namaskara,</div>
+        <div style="font-size:22px;font-weight:700;letter-spacing:-.3px">${session.name.split(' ')[0]}</div>
+        <div style="font-size:12px;opacity:.75;margin-top:4px">${session.cityName||'All locations'} &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
+      </div>
+      <div style="text-align:right;font-size:32px;opacity:.6">🏪</div>
+    </div>
     <div style="background:linear-gradient(135deg,#C8862E 0%,#A66E22 100%);border-radius:12px;padding:20px 24px;margin-bottom:1.25rem;color:#fff">
       <div style="font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
       <div style="font-size:21px;font-weight:700;letter-spacing:-.3px">Welcome back, ${session.name.split(' ')[0]} 👋</div>
@@ -1403,11 +1411,20 @@ function confirmAssign(id){
 // ============================================================
 // EXPENSES
 // ============================================================
-function renderExpenses(){
+function renderExpenses(fromReports){
   const pend=expenses.filter(e=>!e.approved),appr=expenses.filter(e=>e.approved);
   const total=expenses.reduce((s,e)=>s+Number(e.amount),0);
   const pendTotal=pend.reduce((s,e)=>s+Number(e.amount),0);
   document.getElementById('main-content').innerHTML=`
+    ${fromReports?`<div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem">
+      <button class="btn sm" onclick="window._reportsTab='summary';renderReports()" style="display:flex;align-items:center;gap:6px">&#8592; Reports</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="tab-btn${window._reportsTab==='expenses'?' active':''}" onclick="window._reportsTab='expenses';renderReports()">Expenses</button>
+        <button class="tab-btn${window._reportsTab==='sla'?' active':''}" onclick="window._reportsTab='sla';renderReports()">SLA</button>
+        <button class="tab-btn${window._reportsTab==='audit'?' active':''}" onclick="window._reportsTab='audit';renderReports()">Audit log</button>
+        <button class="tab-btn${window._reportsTab==='recurring'?' active':''}" onclick="window._reportsTab='recurring';renderReports()">Recurring</button>
+      </div>
+    </div>`:''}
     <div class="page-hdr"><div><div class="page-title">Expenses</div><div class="page-sub">All ticket costs<button class="btn sm" onclick="refreshPage()" style="white-space:nowrap">&#8635; Refresh</button></div></div></div>
     <div class="metrics">
       <div class="met"><div class="met-bar" style="background:#059669"></div><div class="ml">Total expenses</div><div class="mv g" style="font-size:20px">${fc(total)}</div></div>
@@ -1642,25 +1659,11 @@ function renderReports(){
       </div>`;
   }
 
-  if(tab==='expenses'){
-    renderExpenses();
-    return;
-  }
-
-  if(tab==='sla'){
-    renderSLA();
-    return;
-  }
-
-  if(tab==='audit'){
-    renderAuditLog();
-    return;
-  }
-
-  if(tab==='recurring'){
-    renderRecurring();
-    return;
-  }
+  // Sub-pages render inline within reports
+  if(tab==='expenses'){ renderExpenses(true); return; }
+  if(tab==='sla'){ renderSLA(true); return; }
+  if(tab==='audit'){ renderAuditLog(true); return; }
+  if(tab==='recurring'){ renderRecurring(true); return; }
 
   document.getElementById('main-content').innerHTML = `
     <div class="page-hdr">
