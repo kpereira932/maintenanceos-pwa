@@ -823,6 +823,7 @@ function applyLanguage() {
 
 
 function navTo(p){
+  if(p!=="reports")window._reportsTab=null;
   currentPage=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.querySelectorAll('.mbn-item').forEach(n=>n.classList.remove('active'));
