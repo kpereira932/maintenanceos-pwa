@@ -581,6 +581,17 @@ async function _doLoginSuccess(userData){
     'design-manager':'dashboard','design-poc':'design-raise'};
   navTo(dest[session.role]||'dashboard');
   startLocalChecks();
+  // Namaskara splash
+  var _sp=document.getElementById('login-splash');
+  if(_sp){
+    var _sn=document.getElementById('splash-name');
+    var _sr=document.getElementById('splash-role');
+    if(_sn)_sn.textContent=session.name.split(' ')[0];
+    if(_sr)_sr.textContent=session.cityName||'All locations';
+    _sp.style.display='flex';
+    _sp.style.opacity='1';
+    setTimeout(function(){_sp.style.opacity='0';setTimeout(function(){_sp.style.display='none';},500);},2000);
+  }
 }
 function doLogout(){
   session=null;
@@ -1018,14 +1029,7 @@ function renderDashboard(){
     }).join('')}</div>`;
   }
   document.getElementById('main-content').innerHTML=`
-    <div style="background:linear-gradient(135deg,#C8862E 0%,#A66E22 100%);border-radius:14px;padding:22px 24px;margin-bottom:1.25rem;color:#fff;display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-size:13px;opacity:.8;margin-bottom:4px">🙏 Namaskara,</div>
-        <div style="font-size:22px;font-weight:700;letter-spacing:-.3px">${session.name.split(' ')[0]}</div>
-        <div style="font-size:12px;opacity:.75;margin-top:4px">${session.cityName||'All locations'} &nbsp;·&nbsp; ${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
-      </div>
-      <div style="text-align:right;font-size:32px;opacity:.6">🏪</div>
-    </div>
+    
     <div style="background:linear-gradient(135deg,#C8862E 0%,#A66E22 100%);border-radius:12px;padding:20px 24px;margin-bottom:1.25rem;color:#fff">
       <div style="font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</div>
       <div style="font-size:21px;font-weight:700;letter-spacing:-.3px">Welcome back, ${session.name.split(' ')[0]} 👋</div>
