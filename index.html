@@ -314,9 +314,9 @@ tr:hover td{background:var(--cream)}
 
 <nav class="mobile-bottom-nav" id="mobile-bottom-nav" style="display:none"></nav>
 
-</div>
+</div><!-- end #app -->
 
-<!-- MODAL -->
+<!-- MODAL - outside #app to avoid stacking context issues -->
 <div class="overlay" id="overlay" onclick="closeMO(event)">
   <div class="modal">
     <div class="modal-hdr">
@@ -595,13 +595,13 @@ var NAV={
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Setup'},{id:'locations',i:'',l:'Locations'},{id:'users',i:'',l:'Users & roles'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'performance',i:'',l:'Team performance'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   manager:[
     {s:'Overview'},{id:'dashboard',i:'',l:'Dashboard'},
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'notifications',i:'',l:'Notifications'},{id:'recurring',i:'',l:'Recurring tasks'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'performance',i:'',l:'Team performance'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
   technician:[
@@ -622,7 +622,7 @@ var NAV={
     {s:'Operations'},{id:'tickets',i:'',l:'Tickets'},{id:'expenses',i:'',l:'Expenses'},{id:'vendors',i:'',l:'Vendors'},{id:'amc',i:'',l:'AMC tracker'},{id:'recurring',i:'',l:'Recurring tasks'},
     {s:'Design'},{id:'design-lists',i:'',l:'Design lists'},{id:'assets',i:'',l:'Asset Register'},
     {s:'People'},{id:'users',i:'',l:'Users & roles'},{id:'locations',i:'',l:'Locations'},
-    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'performance',i:'',l:'Team performance'},{id:'log',i:'',l:'Audit log'},
+    {s:'Insights'},{id:'reports',i:'',l:'Reports'},{id:'sla',i:'',l:'SLA tracker'},{id:'log',i:'',l:'Audit log'},
     {s:'Account'},{id:'profile',i:'',l:'My profile'},
   ],
 };
