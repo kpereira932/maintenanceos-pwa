@@ -786,7 +786,7 @@ function renderTickets(){
 
 function ticketCard(t){
   var loc = getLoc(t.location_id);
-  var city = getCity(loc.city_id);
+  var city = getCity(loc.city);
   var assignee = t.assigned_to ? getUser(t.assigned_to) : null;
   var attCount = ticketAttachments(t.id).length;
 
@@ -824,7 +824,7 @@ function ticketCard(t){
 // ============================================================
 function openRaiseTicket(){
   var locOptions = locations.map(function(l){
-    var c = getCity(l.city_id);
+    var c = getCity(l.city);
     return '<option value="'+l.id+'">'+c.name+' – '+l.name+'</option>';
   }).join('');
 
@@ -916,7 +916,7 @@ function openTicket(id){
   var t = tickets.find(function(x){ return x.id===id; });
   if(!t) return;
   var loc = getLoc(t.location_id);
-  var city = getCity(loc.city_id);
+  var city = getCity(loc.city);
   var raiser = getUser(t.raised_by);
   var assignee = t.assigned_to ? getUser(t.assigned_to) : null;
   var cmnts = ticketComments(id);
@@ -1174,7 +1174,7 @@ function renderLocations(){
   var byCity = {};
   cities.forEach(function(c){ byCity[c.id] = {city:c, locs:[]}; });
   locations.forEach(function(l){
-    if(byCity[l.city_id]) byCity[l.city_id].locs.push(l);
+    if(byCity[l.city]) byCity[l.city].locs.push(l);
   });
 
   var html = '<div class="fade-in"><div class="page-hdr"><div><div class="page-title">Locations</div><div class="page-sub">'+cities.length+' cities · '+locations.length+' locations</div></div>'
@@ -1221,7 +1221,7 @@ function openAddLocation(cityId){
 async function saveLoc(cityId){
   var name = (document.getElementById('loc-name').value||'').trim();
   if(!name){ showToast('Please enter location name'); return; }
-  var l = {id:genId('L'), name:name, type:document.getElementById('loc-type').value, city_id:cityId, created_at:nowISO()};
+  var l = {id:genId('L'), name:name, type:document.getElementById('loc-type').value, city:cityId, created_at:nowISO()};
   await dbInsert('locations', l);
   locations.push(l);
   closeModal(); showToast('Location added'); renderLocations();
@@ -1278,7 +1278,7 @@ async function saveUser(){
   var cityId = document.getElementById('u-city').value || null;
   var cityName = cityId ? (getCity(cityId).name) : null;
   if(!name||!uname||!pass){ showToast('Please fill all required fields'); return; }
-  var u = {id:genId('U'),name:name,username:uname,pass:pass,role:role,city_id:cityId,city_name:cityName,created_at:nowISO()};
+  var u = {id:genId('U'),name:name,username:uname,pass:pass,role:role,city:cityId,city_name:cityName,created_at:nowISO()};
   await dbInsert('users',u);
   users.push(u);
   closeModal(); showToast('User added'); renderUsers();
