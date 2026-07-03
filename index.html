@@ -191,8 +191,8 @@ select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns
       <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px">MaintenanceOS</div>
     </div>
     <div class="fg">
-      <label>Username</label>
-      <input class="inp" id="l-user" type="text" placeholder="Enter your username" autocomplete="username">
+      <label>Username / Email</label>
+      <input class="inp" id="l-user" type="text" placeholder="Enter your username or email" autocomplete="username">
     </div>
     <div class="fg" style="position:relative">
       <label>Password</label>
@@ -333,7 +333,7 @@ async function doLogin(){
   try{
     var {data, error} = await supaDB.from('users')
       .select('*')
-      .or('username.eq.'+user+',email.eq.'+user)
+      .eq('email', user)
       .eq('pass', pass)
       .single();
     if(error || !data){ showErr('Invalid username or password'); return; }
@@ -412,7 +412,7 @@ function doLogout(){
     document.getElementById('auth').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
     document.getElementById('sb-av').textContent = initials(s.name);
-    document.getElementById('sb-name').textContent = s.name;
+    document.getElementById('sb-name').textContent = s.name || s.email || 'User';
     document.getElementById('sb-role-text').textContent = roleLabel(s.role);
     document.getElementById('main').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:10px"><div class="spinner"></div><div style="font-size:13px;color:var(--muted)">Loading...</div></div>';
     initDB().then(function(){
@@ -1259,7 +1259,7 @@ function openAddUser(){
   openModal('Add user',
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     +'<div class="fg"><label>Full name *</label><input class="inp" id="u-name" placeholder="Full name"></div>'
-    +'<div class="fg"><label>Username *</label><input class="inp" id="u-uname" placeholder="username"></div>'
+    +'<div class="fg"><label>Username / Email *</label><input class="inp" id="u-uname" placeholder="username or email"></div>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     +'<div class="fg"><label>Password *</label><input class="inp" id="u-pass" type="password" placeholder="Password"></div>'
