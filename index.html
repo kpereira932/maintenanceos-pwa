@@ -386,7 +386,8 @@ function homeFor(role){
   var map = {
     superadmin:'dashboard', admin:'dashboard', founder:'dashboard',
     manager:'dashboard', supervisor:'dashboard',
-    technician:'my-tasks', 'design-manager':'design', 'design-poc':'design'
+    technician:'my-tasks', 'design-manager':'design', 'design-poc':'design',
+    outlet:'raise-ticket', ck:'raise-ticket'
   };
   return map[role] || 'dashboard';
 }
@@ -525,6 +526,22 @@ var NAV = {
 };
 
 function buildNav(){
+  if(session.role==='outlet'||session.role==='ck'){
+    var outletNav=[
+      {id:'raise-ticket',i:'➕',l:'Raise ticket'},
+      {id:'my-tickets',i:'🎫',l:'My tickets'},
+      {id:'profile',i:'👤',l:'My profile',more:true},
+    ];
+    var outHtml=outletNav.filter(function(i){return !i.more;}).map(function(i){
+      return '<div class="nav-item" id="ni-'+i.id+'" onclick="navTo(\''+i.id+'\');closeSidebar()"><span class="ni">'+i.i+'</span>'+i.l+'</div>';
+    }).join('');
+    outHtml+='<div class="nav-divider"></div>';
+    outHtml+=outletNav.filter(function(i){return i.more;}).map(function(i){
+      return '<div class="nav-item" id="ni-'+i.id+'" onclick="navTo(\''+i.id+'\');closeSidebar()"><span class="ni">'+i.i+'</span>'+i.l+'</div>';
+    }).join('');
+    document.getElementById('sb-nav').innerHTML=outHtml;
+    return;
+  }
   var items = NAV[session.role] || NAV.admin;
   var primary = items.filter(function(i){ return !i.more; });
   var more = items.filter(function(i){ return i.more && i.id !== 'profile'; });
@@ -578,6 +595,8 @@ function navTo(page){
     dashboard: renderDashboard,
     tickets: renderTickets,
     'my-tasks': renderMyTasks,
+    'raise-ticket': function(){ openRaiseTicket(); },
+    'my-tickets': renderMyTickets,
     locations: renderLocations,
     users: renderUsers,
     reports: renderReports,
@@ -801,36 +820,33 @@ function ticketCard(t){
   var city = getCity(loc.city);
   var assignee = t.assigned_to ? getUser(t.assigned_to) : null;
   var attCount = ticketAttachments(t.id).length;
-
+  var isClosed = t.status === 'Resolved';
   var actions = '';
-  if(!['Resolved'].includes(t.status)){
+  if(!isClosed){
     if(!t.assigned_to){
-      // Unassigned - flash assign button
-      if(canSupervise()){
-        actions += '<button class="btn sm primary" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')" style="animation:flash-assign 1.5s infinite">Assign ▾</button>';
-      }
+      if(canSupervise()) actions += '<button class="btn sm primary" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')" style="animation:flash-assign 1.5s infinite">Assign ▾</button>';
     } else {
-      // Assigned - managers can reassign
       if(['admin','manager','superadmin'].includes(session.role)){
-        actions += '<button class="btn sm" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')" style="border-color:var(--amber);color:var(--amber-dark)">Reassign ▾</button>';
+        actions += '<button class="btn sm" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')" style="border-color:var(--amber);color:var(--amber-dark)">Reassign tech</button>';
       }
-      if(['admin','manager','supervisor','superadmin'].includes(session.role) || (isTech() && t.assigned_to === session.id)){
-        actions += '<button class="btn sm success" onclick="event.stopPropagation();openResolve(\''+t.id+'\')" >Resolve</button>';
+      if(canSupervise()){
+        actions += '<button class="btn sm" onclick="event.stopPropagation();openVendorAssign(\''+t.id+'\')" style="border-color:#7C3AED;color:#7C3AED">Call vendor</button>';
       }
-      if(['technician','supervisor'].includes(session.role) && t.assigned_to === session.id){
-        actions += '<button class="btn sm" onclick="event.stopPropagation();requestHold(\''+t.id+'\')" style="border-color:#92400E;color:#92400E">Hold</button>';
+      if(['technician','supervisor'].includes(session.role) && t.assigned_to===session.id){
+        actions += '<button class="btn sm" onclick="event.stopPropagation();requestHold(\''+t.id+'\')" style="border-color:#92400E;color:#92400E">Request hold</button>';
+      }
+      if(canSupervise() || (isTech() && t.assigned_to===session.id)){
+        actions += '<button class="btn sm success" onclick="event.stopPropagation();openResolve(\''+t.id+'\')">Resolve</button>';
       }
     }
   }
-
   return '<div class="ticket-card" onclick="openTicket(\''+t.id+'\')">'
     +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
     +'<span class="ticket-id">'+t.id+'</span>'+statusBadge(t.status)+priorityBadge(t.priority)
-    +(t.is_recurring?'<span class="badge b-amber">🔄 Recurring</span>':'')
-    +'</div>'
+    +(t.is_recurring?'<span class="badge b-amber">🔄</span>':'')+'</div>'
     +'<div class="ticket-title">'+t.title+'</div>'
     +'<div class="ticket-meta">'
-    +'<span>📍 '+(city.name||'')+' – '+loc.name+'</span>'
+    +'<span>📍 '+(city.name?city.name+' – ':'')+loc.name+'</span>'
     +'<span>📅 '+dateStr(t.created_at)+'</span>'
     +(assignee?'<span style="color:var(--green);font-weight:500">👤 '+assignee.name+'</span>':'<span style="color:var(--red)">⚠ Unassigned</span>')
     +(attCount?'<span>📷 '+attCount+'</span>':'')
@@ -1012,6 +1028,30 @@ function openTicket(id){
 // ============================================================
 // ASSIGN TICKET
 // ============================================================
+
+function openVendorAssign(ticketId){
+  openModal('Call vendor',
+    '<div class="fg"><label>Vendor name *</label><input class="inp" id="v-name" placeholder="e.g. Sharma Electricals"></div>'
+    +'<div class="fg"><label>Phone</label><input class="inp" id="v-phone" type="tel" placeholder="98XXXXXXXX"></div>'
+    +'<div class="fg"><label>Notes</label><textarea class="inp" id="v-note" rows="2" placeholder="What needs to be done..."></textarea></div>'
+    +'<div class="btn-row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button>'
+    +'<button class="btn primary" style="background:#7C3AED;border-color:#7C3AED" onclick="saveVendorCall(\''+ticketId+'\')">Call vendor</button></div>'
+  );
+}
+async function saveVendorCall(ticketId){
+  var name = (document.getElementById('v-name').value||'').trim();
+  if(!name){showToast('Please enter vendor name');return;}
+  var phone = (document.getElementById('v-phone').value||'').trim();
+  var note = (document.getElementById('v-note').value||'').trim();
+  var msg = 'Vendor called: '+name+(phone?' ('+phone+')':'')+(note?' — '+note:'');
+  await dbInsert('comments',{id:genId('C'),ticket_id:ticketId,user_id:session.id,content:msg,created_at:nowISO()});
+  await dbUpdate('tickets',ticketId,{status:'In Progress',updated_at:nowISO()});
+  var t=tickets.find(function(x){return x.id===ticketId;});
+  if(t)t.status='In Progress';
+  tgNotifyManagers('📞 Vendor called for '+ticketId+': '+name+(phone?' '+phone:''));
+  closeModal();showToast('Vendor logged');
+  await loadData();renderTickets();
+}
 function openAssignTicket(ticketId){
   var techOptions = users.filter(function(u){ return u.role==='technician'; })
     .map(function(u){ return '<option value="'+u.id+'">'+u.name+'</option>'; }).join('');
@@ -1183,6 +1223,20 @@ async function saveExpense(ticketId){
 // ============================================================
 // MY TASKS (Technician)
 // ============================================================
+
+function renderMyTickets(){
+  var mine=tickets.filter(function(t){
+    if(session.location_id) return t.location_id===session.location_id;
+    return t.raised_by===session.id;
+  });
+  document.getElementById('main').innerHTML='<div class="fade-in">'
+    +'<div class="page-hdr"><div><div class="page-title">My Tickets</div>'
+    +'<div class="page-sub">'+mine.length+' tickets</div></div>'
+    +'<button class="btn primary" onclick="openRaiseTicket()">+ Raise ticket</button></div>'
+    +(mine.length?mine.map(function(t){return ticketCard(t);}).join('')
+    :'<div class="empty"><div class="empty-icon">🎫</div><div class="empty-text">No tickets yet</div></div>')
+    +'</div>';
+}
 function renderMyTasks(){
   var myTickets = tickets.filter(function(t){ return t.assigned_to === session.id; });
   var open = myTickets.filter(function(t){ return t.status !== 'Resolved'; });
@@ -1200,31 +1254,39 @@ function renderMyTasks(){
 // LOCATIONS
 // ============================================================
 function renderLocations(){
-  var canEdit = ['admin','superadmin'].includes(session.role);
-  var byCity = {};
-  cities.forEach(function(c){ byCity[c.id] = {city:c, locs:[]}; });
-  locations.forEach(function(l){
-    if(byCity[l.city]) byCity[l.city].locs.push(l);
-  });
+  var canEdit=['admin','superadmin'].includes(session.role);
+  var byCity={};
+  cities.forEach(function(c){byCity[c.id]={city:c,locs:[]};});
+  locations.forEach(function(l){if(byCity[l.city])byCity[l.city].locs.push(l);});
 
-  var html = '<div class="fade-in"><div class="page-hdr"><div><div class="page-title">Locations</div><div class="page-sub">'+cities.length+' cities · '+locations.length+' locations</div></div>'
-    + (canEdit ? '<button class="btn primary" onclick="openAddCity()">+ Add city</button>' : '')
-    + '</div>';
+  var html2='<div class="fade-in"><div class="page-hdr"><div><div class="page-title">Locations</div>'
+    +'<div class="page-sub">'+cities.length+' cities · '+locations.length+' locations</div></div>'
+    +(canEdit?'<button class="btn primary" onclick="openAddCity()">+ Add city</button>':'')+'</div>';
 
   Object.values(byCity).forEach(function(cb){
-    html += '<div style="margin-bottom:1.5rem">';
-    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
-    html += '<div style="font-size:16px;font-weight:700">📍 '+cb.city.name+'</div>';
-    html += (canEdit ? '<button class="btn sm" onclick="openAddLocation(\''+cb.city.id+'\')">+ Add location</button>' : '');
-    html += '</div>';
-    html += cb.locs.map(function(l){
-      var openCount = tickets.filter(function(t){ return t.location_id===l.id && t.status!=='Resolved'; }).length;
-      return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:600">'+l.name+'</div><div style="font-size:12px;color:var(--muted)">'+l.type+'</div></div><span class="badge b-'+(openCount?'high':'grey')+'">'+openCount+' open</span></div></div>';
-    }).join('');
-    html += '</div>';
+    html2+='<div style="margin-bottom:1.5rem">';
+    html2+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+    html2+='<div style="font-size:16px;font-weight:700">📍 '+cb.city.name+'</div>';
+    html2+=(canEdit?'<button class="btn sm" onclick="openAddLocation(\''+cb.city.id+'\')">+ Add location</button>':'');
+    html2+='</div>';
+    cb.locs.forEach(function(l){
+      var openCount=tickets.filter(function(t){return t.location_id===l.id&&t.status!=='Resolved';}).length;
+      var locUser=users.find(function(u){return u.location_id===l.id;});
+      html2+='<div class="card">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center">'
+        +'<div>'
+        +'<div style="font-weight:600">'+l.name+'</div>'
+        +'<div style="font-size:12px;color:var(--muted)">'+l.type+(locUser?' · Login: <code style="background:var(--cream);padding:1px 4px;border-radius:3px">'+locUser.email+'</code>':'')+'</div>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+        +'<span class="badge b-'+(openCount?'high':'grey')+'">'+openCount+' open</span>'
+        +(canEdit?'<button class="btn xs" onclick="event.stopPropagation();deleteLocation(\''+l.id+'\')" style="background:#FEE2E2;border-color:#FCA5A5;color:#991B1B;padding:3px 8px">✕ Delete</button>':'')
+        +'</div></div></div>';
+    });
+    html2+='</div>';
   });
 
-  document.getElementById('main').innerHTML = html + '</div>';
+  document.getElementById('main').innerHTML=html2+'</div>';
 }
 
 
@@ -1256,20 +1318,20 @@ function openAddLocation(cityId){
 }
 
 async function saveLoc(cityId){
-  var name = (document.getElementById('loc-name').value||'').trim();
-  if(!name){ showToast('Please enter location name'); return; }
-  var locType = document.getElementById('loc-type').value;
-  var locId = genId('L');
-  var city = getCity(cityId);
-  var l = {id:locId, name:name, type:locType, city:cityId, created_at:nowISO()};
-  await dbInsert('locations', l);
+  var name=(document.getElementById('loc-name').value||'').trim();
+  if(!name){showToast('Please enter location name');return;}
+  var locType=document.getElementById('loc-type').value;
+  var locId=genId('L');
+  var city=getCity(cityId);
+  var l={id:locId,name:name,type:locType,city:cityId,created_at:nowISO()};
+  var saved=await dbInsert('locations',l);
+  if(!saved){showToast('Error saving location');return;}
   locations.push(l);
-  // Auto-create outlet login
-  var loginEmail = name.toLowerCase().replace(/[^a-z0-9]/g,'') + (locType==='Central Kitchen'?'.ck':'');
-  var loginPass = 'Benne@2026!';
-  var role = locType==='Central Kitchen'?'ck':'outlet';
-  var u = {id:genId('U'),name:name,email:loginEmail,pass:loginPass,role:role,location_id:locId,city_name:city.name||'',created_at:nowISO()};
-  await dbInsert('users', u);
+  var loginEmail=name.toLowerCase().replace(/[^a-z0-9]/g,'')+(locType==='Central Kitchen'?'.ck':'');
+  var loginPass='Benne@2026!';
+  var role=locType==='Central Kitchen'?'ck':'outlet';
+  var u={id:genId('U'),name:name,email:loginEmail,pass:loginPass,role:role,location_id:locId,city_name:city.name||'',created_at:nowISO()};
+  await dbInsert('users',u);
   users.push(u);
   closeModal();
   showToast('Added! Login: '+loginEmail+' / Benne@2026!');
@@ -1304,36 +1366,53 @@ function renderUsers(){
 }
 
 function openAddUser(){
-  var cityOptions = cities.map(function(c){ return '<option value="'+c.id+'">'+c.name+'</option>'; }).join('');
+  var cityOpts = cities.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>';}).join('');
+  var locOpts = locations.map(function(l){var c=getCity(l.city);return '<option value="'+l.id+'">'+(c.name||'')+' – '+l.name+'</option>';}).join('');
   openModal('Add user',
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     +'<div class="fg"><label>Full name *</label><input class="inp" id="u-name" placeholder="Full name"></div>'
-    +'<div class="fg"><label>Username / Email *</label><input class="inp" id="u-uname" placeholder="username or email"></div>'
+    +'<div class="fg"><label>Username *</label><input class="inp" id="u-uname" placeholder="e.g. sohel.mumbai"></div>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     +'<div class="fg"><label>Password *</label><input class="inp" id="u-pass" type="password" placeholder="Password"></div>'
-    +'<div class="fg"><label>Role *</label><select class="inp" id="u-role"><option value="technician">Technician</option><option value="supervisor">Supervisor</option><option value="manager">Manager</option><option value="founder">Founder</option><option value="admin">Admin</option><option value="design-poc">Design POC</option><option value="design-manager">Design Manager</option></select></div>'
+    +'<div class="fg"><label>Role *</label><select class="inp" id="u-role" onchange="onRoleChange(this.value)">'
+    +'<option value="technician">Technician</option>'
+    +'<option value="supervisor">Supervisor</option>'
+    +'<option value="manager">Manager</option>'
+    +'<option value="founder">Founder</option>'
+    +'<option value="admin">Admin</option>'
+    +'<option value="outlet">Outlet</option>'
+    +'<option value="ck">Central Kitchen</option>'
+    +'<option value="design-poc">Design POC</option>'
+    +'<option value="design-manager">Design Manager</option>'
+    +'</select></div>'
     +'</div>'
-    +'<div class="fg"><label>City</label><select class="inp" id="u-city"><option value="">All cities</option>'+cityOptions+'</select></div>'+ '<div class="fg" id="u-loc-wrap"><label>Linked location <span style="font-size:11px;color:var(--muted)">(for Outlet/CK)</span></label>'+'<select class="inp" id="u-location"><option value="">Select location</option>'+ locations.map(function(l){var c=getCity(l.city);return '<option value="'+l.id+'">'+c.name+' – '+l.name+'</option>';}).join('')+ '</select></div>'
+    +'<div class="fg"><label>City</label><select class="inp" id="u-city"><option value="">All cities</option>'+cityOpts+'</select></div>'
+    +'<div class="fg" id="u-loc-wrap" style="display:none"><label>Linked location <span style="color:var(--red)">*</span></label><select class="inp" id="u-location"><option value="">Select location</option>'+locOpts+'</select></div>'
     +'<div class="btn-row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveUser()">Add user</button></div>'
   );
 }
+function onRoleChange(role){
+  var wrap=document.getElementById('u-loc-wrap');
+  if(wrap) wrap.style.display=['outlet','ck'].includes(role)?'block':'none';
+}
 
 async function saveUser(){
-  var name = (document.getElementById('u-name').value||'').trim();
-  var uname = (document.getElementById('u-uname').value||'').trim().toLowerCase();
-  var pass = (document.getElementById('u-pass').value||'').trim();
-  var role = document.getElementById('u-role').value;
-  var cityId = document.getElementById('u-city').value || null;
-  var cityName = cityId ? (getCity(cityId).name) : null;
-  var locationId = document.getElementById('u-location') ? (document.getElementById('u-location').value || null) : null;
-  if(!name||!uname||!pass){ showToast('Please fill all required fields'); return; }
-  var u = {id:genId('U'),name:name,email:uname,pass:pass,role:role,city_name:cityName,location_id:locationId,created_at:nowISO()};
-  var saved = await dbInsert('users', u);
-  if(!saved){ showToast('Error — username may already exist'); return; }
+  var name=(document.getElementById('u-name').value||'').trim();
+  var uname=(document.getElementById('u-uname').value||'').trim().toLowerCase();
+  var pass=(document.getElementById('u-pass').value||'').trim();
+  var role=document.getElementById('u-role').value;
+  var cityId=document.getElementById('u-city').value||null;
+  var cityName=cityId?getCity(cityId).name:null;
+  var locId=document.getElementById('u-location')?document.getElementById('u-location').value||null:null;
+  if(!name||!uname||!pass){showToast('Please fill all required fields');return;}
+  if(['outlet','ck'].includes(role)&&!locId){showToast('Please select a location for outlet/CK users');return;}
+  var u={id:genId('U'),name:name,email:uname,pass:pass,role:role,city_name:cityName,location_id:locId,created_at:nowISO()};
+  var saved=await dbInsert('users',u);
+  if(!saved){showToast('Error saving user — username may already exist');return;}
   users.push(u);
   closeModal();
-  showToast('User added!');
+  showToast(name+' added successfully!');
   renderUsers();
 }
 
@@ -1614,31 +1693,26 @@ async function saveProfile(){
 
 // ── TELEGRAM NOTIFICATIONS ──────────────────────────────────────────────────
 var TG_TOKEN = '8844109324:AAGG3_D1ujUVVKm1TSF5hdVCc9HpmkpB9N4';
+// Group chat IDs — set these to your Telegram group chat IDs
+var TG_MANAGERS_GROUP = ''; // Set your managers group chat ID here
+var TG_DESIGN_GROUP = '';   // Set your design team group chat ID here
+var TG_ALL_GROUP = '';      // Set your all-staff group chat ID here
 
 async function tgSend(chatId, msg){
-  if(!chatId) return;
+  if(!chatId||chatId==='') return;
   try{
-    await fetch('https://api.telegram.org/bot'+TG_TOKEN+'/sendMessage',{
+    fetch('https://api.telegram.org/bot'+TG_TOKEN+'/sendMessage',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({chat_id:chatId, text:msg, parse_mode:'HTML'})
+      body:JSON.stringify({chat_id:chatId,text:msg,parse_mode:'HTML'})
     });
-  }catch(e){ console.warn('TG error:', e.message); }
+  }catch(e){ console.warn('TG error:',e.message); }
 }
-
-function tgNotifyManagers(msg){
-  users.filter(function(u){ return ['manager','admin','superadmin'].includes(u.role) && u.telegram_id; })
-    .forEach(function(u){ tgSend(u.telegram_id, msg); });
-}
-
-function tgNotifyDesignManagers(msg){
-  users.filter(function(u){ return u.role==='design-manager' && u.telegram_id; })
-    .forEach(function(u){ tgSend(u.telegram_id, msg); });
-}
-
+function tgNotifyManagers(msg){ tgSend(TG_MANAGERS_GROUP, msg); tgSend(TG_ALL_GROUP, msg); }
+function tgNotifyDesignManagers(msg){ tgSend(TG_DESIGN_GROUP, msg); }
 function tgNotifyUser(userId, msg){
-  var u = getUser(userId);
-  if(u && u.telegram_id) tgSend(u.telegram_id, msg);
+  var u=getUser(userId);
+  if(u&&u.telegram_id) tgSend(u.telegram_id, msg);
 }
 
 // ============================================================
