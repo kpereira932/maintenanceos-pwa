@@ -924,6 +924,7 @@ async function submitTicket(){
   }
 
   tickets.unshift({...ticket, raised_by: session.id});
+  tgNotifyManagers('🎫 <b>New ticket raised</b>\n'+ticketId+': '+title+'\nLocation: '+getLoc(locId).name+'\nRaised by: '+session.name+'\nPriority: '+priority);
   closeModal();
   showToast('Ticket '+ticketId+' raised!');
   renderTickets();
@@ -1044,6 +1045,8 @@ async function confirmAssign(ticketId){
     await dbInsert('comments',{id:genId('C'),ticket_id:ticketId,user_id:session.id,content:'Assigned to '+tech.name+(note?' — '+note:''),created_at:nowISO()});
   }
 
+  tgNotifyUser(techId, '📋 <b>Ticket assigned to you</b>\nTicket: '+ticketId+'\nAssigned by: '+session.name);
+  tgNotifyManagers('👤 <b>Ticket assigned</b>\n'+ticketId+' assigned to '+tech.name+' by '+session.name);
   closeModal();
   showToast('Assigned to '+tech.name);
   await loadData();
@@ -1084,6 +1087,7 @@ async function confirmResolve(ticketId){
   var t = tickets.find(function(x){ return x.id===ticketId; });
   if(t){ t.status='Resolved'; t.resolved_at=nowISO(); }
 
+  tgNotifyManagers('✅ <b>Ticket resolved</b>\n'+ticketId+' resolved by '+session.name);
   closeModal();
   showToast('Ticket resolved!');
   await loadData();
@@ -1112,6 +1116,12 @@ async function postComment(ticketId){
   var saved = await dbInsert('comments', c);
   if(saved){
     comments.push({...c});
+    var ct = tickets.find(function(x){return x.id===ticketId;});
+    if(ct){
+      if(ct.raised_by && ct.raised_by!==session.id) tgNotifyUser(ct.raised_by, '💬 <b>Comment on your ticket</b>\n'+ticketId+': '+ct.title+'\n'+session.name+': '+text);
+      if(ct.assigned_to && ct.assigned_to!==session.id) tgNotifyUser(ct.assigned_to, '💬 <b>Comment on your task</b>\n'+ticketId+': '+ct.title+'\n'+session.name+': '+text);
+    }
+    tgNotifyManagers('💬 Comment on '+ticketId+' by '+session.name+': '+text.slice(0,80));
     showToast('Comment posted');
     openTicket(ticketId);
   } else {
@@ -1248,10 +1258,22 @@ function openAddLocation(cityId){
 async function saveLoc(cityId){
   var name = (document.getElementById('loc-name').value||'').trim();
   if(!name){ showToast('Please enter location name'); return; }
-  var l = {id:genId('L'), name:name, type:document.getElementById('loc-type').value, city:cityId, created_at:nowISO()};
+  var locType = document.getElementById('loc-type').value;
+  var locId = genId('L');
+  var city = getCity(cityId);
+  var l = {id:locId, name:name, type:locType, city:cityId, created_at:nowISO()};
   await dbInsert('locations', l);
   locations.push(l);
-  closeModal(); showToast('Location added'); renderLocations();
+  // Auto-create outlet login
+  var loginEmail = name.toLowerCase().replace(/[^a-z0-9]/g,'') + (locType==='Central Kitchen'?'.ck':'');
+  var loginPass = 'Benne@2026!';
+  var role = locType==='Central Kitchen'?'ck':'outlet';
+  var u = {id:genId('U'),name:name,email:loginEmail,pass:loginPass,role:role,location_id:locId,city_name:city.name||'',created_at:nowISO()};
+  await dbInsert('users', u);
+  users.push(u);
+  closeModal();
+  showToast('Added! Login: '+loginEmail+' / Benne@2026!');
+  renderLocations();
 }
 
 // ============================================================
@@ -1292,7 +1314,7 @@ function openAddUser(){
     +'<div class="fg"><label>Password *</label><input class="inp" id="u-pass" type="password" placeholder="Password"></div>'
     +'<div class="fg"><label>Role *</label><select class="inp" id="u-role"><option value="technician">Technician</option><option value="supervisor">Supervisor</option><option value="manager">Manager</option><option value="founder">Founder</option><option value="admin">Admin</option><option value="design-poc">Design POC</option><option value="design-manager">Design Manager</option></select></div>'
     +'</div>'
-    +'<div class="fg"><label>City</label><select class="inp" id="u-city"><option value="">All cities</option>'+cityOptions+'</select></div>'
+    +'<div class="fg"><label>City</label><select class="inp" id="u-city"><option value="">All cities</option>'+cityOptions+'</select></div>'+ '<div class="fg" id="u-loc-wrap"><label>Linked location <span style="font-size:11px;color:var(--muted)">(for Outlet/CK)</span></label>'+'<select class="inp" id="u-location"><option value="">Select location</option>'+ locations.map(function(l){var c=getCity(l.city);return '<option value="'+l.id+'">'+c.name+' – '+l.name+'</option>';}).join('')+ '</select></div>'
     +'<div class="btn-row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveUser()">Add user</button></div>'
   );
 }
@@ -1501,7 +1523,9 @@ async function saveDesignList(){
     designItems.push(di);
   }
   designLists.push(dl);
-  closeModal(); showToast('Design list submitted for approval');
+  tgNotifyDesignManagers('🎨 <b>New design list submitted</b>\n'+title+' by '+session.name+'\n'+items.length+' items pending approval');
+  closeModal();
+  showToast('Design list submitted for approval');
   renderDesign();
 }
 
@@ -1565,7 +1589,7 @@ function renderProfile(){
     +'<div><div style="font-size:18px;font-weight:700">'+session.name+'</div><div style="margin-top:4px">'+roleBadge(session.role)+'</div></div>'
     +'</div>'
     +'<div class="fg"><label>Full name</label><input class="inp" id="p-name" value="'+session.name+'"></div>'
-    +'<div class="fg"><label>New password <span style="color:var(--muted)">(leave blank to keep)</span></label><input class="inp" id="p-pass" type="password" placeholder="New password"></div>'
+    +'<div class="fg"><label>New password <span style="color:var(--muted)">(leave blank to keep)</span></label><input class="inp" id="p-pass" type="password" placeholder="New password"></div>'+'<div class="fg"><label>Telegram Chat ID <span style="color:var(--muted);font-size:11px">(for notifications — get from @userinfobot)</span></label><input class="inp" id="p-tg" placeholder="e.g. 123456789" value="'+(session.telegram_id||'')+'"></div>'
     +'<button class="btn primary" onclick="saveProfile()">Save changes</button>'
     +'</div></div>';
 }
@@ -1574,14 +1598,47 @@ async function saveProfile(){
   var name = (document.getElementById('p-name').value||'').trim();
   var pass = (document.getElementById('p-pass').value||'').trim();
   if(!name){ showToast('Name cannot be empty'); return; }
+  var tgId = (document.getElementById('p-tg').value||'').trim() || null;
   var updates = {name:name};
   if(pass) updates.pass = pass;
+  if(tgId) updates.telegram_id = tgId;
+  session.telegram_id = tgId;
   await dbUpdate('users', session.id, updates);
   session.name = name;
   localStorage.setItem('mos_session', JSON.stringify(session));
   document.getElementById('sb-name').textContent = name;
   document.getElementById('sb-av').textContent = initials(name);
   showToast('Profile saved');
+}
+
+
+// ── TELEGRAM NOTIFICATIONS ──────────────────────────────────────────────────
+var TG_TOKEN = '8844109324:AAGG3_D1ujUVVKm1TSF5hdVCc9HpmkpB9N4';
+
+async function tgSend(chatId, msg){
+  if(!chatId) return;
+  try{
+    await fetch('https://api.telegram.org/bot'+TG_TOKEN+'/sendMessage',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({chat_id:chatId, text:msg, parse_mode:'HTML'})
+    });
+  }catch(e){ console.warn('TG error:', e.message); }
+}
+
+function tgNotifyManagers(msg){
+  users.filter(function(u){ return ['manager','admin','superadmin'].includes(u.role) && u.telegram_id; })
+    .forEach(function(u){ tgSend(u.telegram_id, msg); });
+}
+
+function tgNotifyDesignManagers(msg){
+  users.filter(function(u){ return u.role==='design-manager' && u.telegram_id; })
+    .forEach(function(u){ tgSend(u.telegram_id, msg); });
+}
+
+function tgNotifyUser(userId, msg){
+  var u = getUser(userId);
+  if(u && u.telegram_id) tgSend(u.telegram_id, msg);
 }
 
 // ============================================================
