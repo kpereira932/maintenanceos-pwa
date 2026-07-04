@@ -756,7 +756,19 @@ function renderDashboard(){
 
 function miniTicketCard(t){
   var loc = getLoc(t.location_id);
-  return '<div class="ticket-card" onclick="openTicket(\''+t.id+'\')"><div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="ticket-id">'+t.id+'</span>'+statusBadge(t.status)+priorityBadge(t.priority)+'</div><div class="ticket-title">'+t.title+'</div><div class="ticket-meta"><span>📍 '+loc.name+'</span><span>📅 '+dateStr(t.created_at)+'</span></div></div>';
+  var city = getCity(loc.city);
+  var assignee = t.assigned_to ? getUser(t.assigned_to) : null;
+  var assigneeHtml = assignee
+    ? '<span style="color:var(--green);font-weight:500">👤 '+assignee.name+'</span>'
+    : '<span style="color:var(--red)">⚠ Unassigned</span>';
+  return '<div class="ticket-card" onclick="openTicket(\''+t.id+'\')">'
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span class="ticket-id">'+t.id+'</span>'+statusBadge(t.status)+priorityBadge(t.priority)+'</div>'
+    +'<div class="ticket-title">'+t.title+'</div>'
+    +'<div class="ticket-meta">'
+    +'<span>📍 '+(city.name||'')+' – '+loc.name+'</span>'
+    +'<span>📅 '+dateStr(t.created_at)+'</span>'
+    +assigneeHtml
+    +'</div></div>';
 }
 
 // ============================================================
@@ -792,31 +804,39 @@ function ticketCard(t){
 
   var actions = '';
   if(!['Resolved'].includes(t.status)){
-    if(canSupervise()){
-      actions += '<button class="btn sm primary" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')">Assign ▾</button>';
-    }
-    if(['admin','manager','supervisor','superadmin'].includes(session.role) || (isTech() && t.assigned_to === session.id)){
-      actions += '<button class="btn sm success" onclick="event.stopPropagation();openResolve(\''+t.id+'\')">Resolve</button>';
-    }
-    if(['technician','supervisor'].includes(session.role) && t.assigned_to === session.id){
-      actions += '<button class="btn sm" onclick="event.stopPropagation();requestHold(\''+t.id+'\')" style="border-color:#92400E;color:#92400E">Hold</button>';
+    if(!t.assigned_to){
+      // Unassigned - flash assign button
+      if(canSupervise()){
+        actions += '<button class="btn sm primary" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')" style="animation:flash-assign 1.5s infinite">Assign ▾</button>';
+      }
+    } else {
+      // Assigned - managers can reassign
+      if(['admin','manager','superadmin'].includes(session.role)){
+        actions += '<button class="btn sm" onclick="event.stopPropagation();openAssignTicket(\''+t.id+'\')" style="border-color:var(--amber);color:var(--amber-dark)">Reassign ▾</button>';
+      }
+      if(['admin','manager','supervisor','superadmin'].includes(session.role) || (isTech() && t.assigned_to === session.id)){
+        actions += '<button class="btn sm success" onclick="event.stopPropagation();openResolve(\''+t.id+'\')" >Resolve</button>';
+      }
+      if(['technician','supervisor'].includes(session.role) && t.assigned_to === session.id){
+        actions += '<button class="btn sm" onclick="event.stopPropagation();requestHold(\''+t.id+'\')" style="border-color:#92400E;color:#92400E">Hold</button>';
+      }
     }
   }
 
   return '<div class="ticket-card" onclick="openTicket(\''+t.id+'\')">'
-    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-    + '<span class="ticket-id">'+t.id+'</span>'+statusBadge(t.status)+priorityBadge(t.priority)
-    + (t.is_recurring ? '<span class="badge b-amber">🔄 Recurring</span>' : '')
-    + '</div>'
-    + '<div class="ticket-title">'+t.title+'</div>'
-    + '<div class="ticket-meta">'
-    + '<span>📍 '+city.name+' – '+loc.name+'</span>'
-    + '<span>📅 '+dateStr(t.created_at)+'</span>'
-    + (assignee ? '<span>👤 '+assignee.name+'</span>' : '<span style="color:#DC2626">Unassigned</span>')
-    + (attCount ? '<span>📷 '+attCount+'</span>' : '')
-    + '</div>'
-    + (actions ? '<div class="ticket-actions">'+actions+'</div>' : '')
-    + '</div>';
+    +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+    +'<span class="ticket-id">'+t.id+'</span>'+statusBadge(t.status)+priorityBadge(t.priority)
+    +(t.is_recurring?'<span class="badge b-amber">🔄 Recurring</span>':'')
+    +'</div>'
+    +'<div class="ticket-title">'+t.title+'</div>'
+    +'<div class="ticket-meta">'
+    +'<span>📍 '+(city.name||'')+' – '+loc.name+'</span>'
+    +'<span>📅 '+dateStr(t.created_at)+'</span>'
+    +(assignee?'<span style="color:var(--green);font-weight:500">👤 '+assignee.name+'</span>':'<span style="color:var(--red)">⚠ Unassigned</span>')
+    +(attCount?'<span>📷 '+attCount+'</span>':'')
+    +'</div>'
+    +(actions?'<div class="ticket-actions">'+actions+'</div>':'')
+    +'</div>';
 }
 
 // ============================================================
@@ -1197,6 +1217,13 @@ function renderLocations(){
   document.getElementById('main').innerHTML = html + '</div>';
 }
 
+
+async function deleteLocation(locId){
+  if(!confirm('Delete this location?')) return;
+  if(isLive) await supaDB.from('locations').delete().eq('id',locId);
+  locations=locations.filter(function(l){return l.id!==locId;});
+  showToast('Location deleted'); renderLocations();
+}
 function openAddCity(){
   openModal('Add city', '<div class="fg"><label>City name *</label><input class="inp" id="city-name" placeholder="e.g. Bangalore"></div><div class="btn-row" style="justify-content:flex-end"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveCity()">Add city</button></div>');
 }
@@ -1277,11 +1304,15 @@ async function saveUser(){
   var role = document.getElementById('u-role').value;
   var cityId = document.getElementById('u-city').value || null;
   var cityName = cityId ? (getCity(cityId).name) : null;
+  var locationId = document.getElementById('u-location') ? (document.getElementById('u-location').value || null) : null;
   if(!name||!uname||!pass){ showToast('Please fill all required fields'); return; }
-  var u = {id:genId('U'),name:name,username:uname,pass:pass,role:role,city:cityId,city_name:cityName,created_at:nowISO()};
-  await dbInsert('users',u);
+  var u = {id:genId('U'),name:name,email:uname,pass:pass,role:role,city_name:cityName,location_id:locationId,created_at:nowISO()};
+  var saved = await dbInsert('users', u);
+  if(!saved){ showToast('Error — username may already exist'); return; }
   users.push(u);
-  closeModal(); showToast('User added'); renderUsers();
+  closeModal();
+  showToast('User added!');
+  renderUsers();
 }
 
 function editUser(userId){
@@ -1433,7 +1464,7 @@ function renderDesign(){
 
 function openNewDesignList(){
   openModal('New design list',
-    '<div class="fg"><label>List title *</label><input class="inp" id="dl-title" placeholder="e.g. Chowpatty May 2026 Requirements"></div>'
+    '<div class="fg"><label>List title *</label><input class="inp" id="dl-title" placeholder="e.g. Chowpatty May 2026 Requirements"></div>'+ '<div class="fg"><label>Location</label><select class="inp" id="dl-loc"><option value="">All / Not specific</option>'+ locations.map(function(l){var c=getCity(l.city);return '<option value="'+l.id+'">'+c.name+' – '+l.name+'</option>';}).join('')+ '</select></div>'
     +'<div id="dl-items"><div class="fg"><label>Items</label></div><div id="dl-item-list"><div class="dl-item-row" style="display:flex;gap:8px;margin-bottom:8px"><input class="inp" placeholder="Item description" style="flex:1"><input class="inp" placeholder="Qty" style="width:60px" type="number" value="1"><button class="btn sm danger" onclick="this.parentElement.remove()" style="flex-shrink:0">✕</button></div></div>'
     +'<button class="btn sm" onclick="addDLItem()" style="margin-top:4px">+ Add item</button></div>'
     +'<div class="btn-row" style="justify-content:flex-end;margin-top:14px"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="saveDesignList()">Submit for approval</button></div>'
@@ -1462,7 +1493,7 @@ async function saveDesignList(){
   });
   if(!items.length){ showToast('Please add at least one item'); return; }
   var listId = genId('DL');
-  var dl = {id:listId, title:title, created_by:session.id, status:'pending', created_at:nowISO()};
+  var dlLoc=document.getElementById('dl-loc')?document.getElementById('dl-loc').value||null:null; var dl={id:listId,title:title,created_by:session.id,location_id:dlLoc,status:'pending',created_at:nowISO()};
   await dbInsert('design_lists', dl);
   for(var i=0; i<items.length; i++){
     var di = {id:genId('DI'), list_id:listId, item:items[i].item, quantity:items[i].quantity, status:'pending', sort_order:i, created_at:nowISO()};
@@ -1505,7 +1536,7 @@ async function approveItem(itemId){
     // Create ticket for this item
     var dl = designLists.find(function(l){ return l.id===item.list_id; });
     var ticketId = genId('T');
-    var t = {id:ticketId, title:'[Design] '+item.item, description:'Qty: '+item.quantity+'. From design list: '+(dl?dl.title:''), category:'Design', priority:'Medium', status:'Open', location_id:null, raised_by:session.id, raised_by_name:session.name, is_recurring:false, created_at:nowISO()};
+    var t={id:ticketId,title:'[Design] '+item.item,description:'Qty: '+item.quantity+'. From design list: '+(dl?dl.title:''),category:'Design',priority:'Medium',status:'Open',location_id:dl?dl.location_id:null,raised_by:session.id,raised_by_name:session.name,is_recurring:false,created_at:nowISO()};
     await dbInsert('tickets', t);
     tickets.unshift(t);
     showToast('Approved — ticket '+ticketId+' created');
